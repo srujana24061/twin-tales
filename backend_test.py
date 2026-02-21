@@ -145,8 +145,10 @@ class StoryCraftAPITester:
             self.log_test("Character ID Check", False, "No ID in create response", "high")
             return False
 
+        self.character_id = char_id  # Store for photo upload test
+
         # Get characters list
-        success, _ = self.run_test(
+        success, chars_response = self.run_test(
             "List Characters",
             "GET",
             "characters",
@@ -155,8 +157,14 @@ class StoryCraftAPITester:
         if not success:
             return False
 
+        # Check that reference_image field exists in character response
+        if isinstance(chars_response, list) and len(chars_response) > 0:
+            char_has_ref_image_field = 'reference_image' in chars_response[0] or any('reference_image' in char for char in chars_response)
+            if not char_has_ref_image_field:
+                print("⚠️  Warning: Characters don't have reference_image field yet")
+
         # Get single character
-        success, _ = self.run_test(
+        success, single_char = self.run_test(
             "Get Character",
             "GET",
             f"characters/{char_id}",
@@ -177,14 +185,74 @@ class StoryCraftAPITester:
         if not success:
             return False
 
-        # Delete character
+        return True  # Don't delete character yet - needed for photo upload test
+
+    def test_character_photo_upload(self):
+        """Test character photo upload functionality"""
+        if not self.character_id:
+            print("❌ No character ID available for photo upload test")
+            return False
+
+        # Test photo upload endpoint structure (no actual file)
+        print(f"\n🔍 Testing Character Photo Upload Endpoint...")
+        url = f"{self.base_url}/api/characters/{self.character_id}/upload-photo"
+        headers = {}
+        if self.token:
+            headers['Authorization'] = f'Bearer {self.token}'
+
+        try:
+            # Test without file (should fail)
+            response = requests.post(url, headers=headers, timeout=10)
+            if response.status_code == 422:  # FastAPI validation error for missing file
+                print("✅ Photo upload endpoint exists and validates file requirement")
+                self.log_test("Photo Upload Endpoint Validation", True, "Endpoint validates missing file correctly")
+                
+                # Test with invalid character ID
+                fake_char_id = str(uuid.uuid4())
+                fake_url = f"{self.base_url}/api/characters/{fake_char_id}/upload-photo"
+                fake_response = requests.post(fake_url, headers=headers, timeout=10)
+                if fake_response.status_code == 404:
+                    print("✅ Photo upload returns 404 for non-existent character")
+                    self.log_test("Photo Upload 404 Test", True, "Returns 404 for invalid character ID")
+                else:
+                    print(f"❌ Expected 404 for fake character, got {fake_response.status_code}")
+                    self.log_test("Photo Upload 404 Test", False, f"Expected 404, got {fake_response.status_code}")
+                
+                return True
+            else:
+                print(f"❌ Expected 422 for missing file, got {response.status_code}")
+                print(f"   Response: {response.text[:200]}")
+                self.log_test("Photo Upload Endpoint Validation", False, f"Expected 422, got {response.status_code}")
+                return False
+        except Exception as e:
+            print(f"❌ Photo upload test error: {str(e)}")
+            self.log_test("Photo Upload Endpoint Test", False, f"Exception: {str(e)}")
+            return False
+
+    def test_media_endpoint(self):
+        """Test media serving endpoint"""
+        # Test with fake media ID (should return 404)
+        fake_media_id = str(uuid.uuid4())
         success, _ = self.run_test(
-            "Delete Character",
-            "DELETE",
-            f"characters/{char_id}",
-            200
+            "Media Endpoint (404 Test)",
+            "GET",
+            f"media/{fake_media_id}",
+            404,
+            auth_required=False  # Media endpoint is public
         )
         return success
+
+    def cleanup_test_character(self):
+        """Clean up test character"""
+        if self.character_id:
+            success, _ = self.run_test(
+                "Delete Test Character",
+                "DELETE",
+                f"characters/{self.character_id}",
+                200
+            )
+            return success
+        return True
 
     def test_story_crud(self):
         """Test story CRUD operations"""

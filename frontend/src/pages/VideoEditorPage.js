@@ -134,9 +134,7 @@ export const VideoEditorPage = () => {
   };
 
   const totalDuration = scenes.filter(s => s.include_in_video).reduce((a, s) => a + Number(s.duration_seconds || 5), 0);
-  const hasVideo = scenes.some(s => s.video_url);
   const hasAudio = scenes.some(s => s.audio_url);
-  const hasImages = scenes.some(s => s.image_url);
   const hasRenderable = scenes.some(s => s.include_in_video && (s.video_url || s.image_url));
 
   if (loading) return <div className="max-w-5xl mx-auto px-4 py-20 text-center"><Loader2 className="w-8 h-8 animate-spin text-[#6366F1] mx-auto" /></div>;

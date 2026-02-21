@@ -63,12 +63,44 @@ export const VideoEditorPage = () => {
     finally { setReordering(false); }
   };
 
-  const updateDuration = async (sceneId, value) => {
+  const saveSceneSettings = async (sceneId, updates) => {
+    try {
+      await api.put(`/stories/${storyId}/scenes/${sceneId}`, updates);
+    } catch (err) {
+      toast.error('Failed to update scene settings');
+    }
+  };
+
+  const updateDuration = (sceneId, value) => {
     setScenes(prev => prev.map(s => s.id === sceneId ? { ...s, duration_seconds: value } : s));
   };
 
+  const commitDuration = async (sceneId, value) => {
+    await saveSceneSettings(sceneId, { duration_seconds: value });
+  };
+
+  const handleTrimChange = (sceneId, field, value) => {
+    setScenes(prev => prev.map(s => s.id === sceneId ? { ...s, [field]: value } : s));
+  };
+
+  const commitTrim = async (sceneId, field, value) => {
+    const normalized = value === '' ? null : Number(value);
+    const payload = field === 'trim_start_seconds'
+      ? { trim_start_seconds: normalized ?? 0 }
+      : { trim_end_seconds: normalized };
+    await saveSceneSettings(sceneId, payload);
+  };
+
+  const updateTransition = async (sceneId, value) => {
+    setScenes(prev => prev.map(s => s.id === sceneId ? { ...s, transition_type: value } : s));
+    await saveSceneSettings(sceneId, { transition_type: value });
+  };
+
   const toggleScene = (sceneId) => {
-    setScenes(prev => prev.map(s => s.id === sceneId ? { ...s, include: !s.include } : s));
+    const target = scenes.find(s => s.id === sceneId);
+    const nextValue = !(target?.include_in_video ?? true);
+    setScenes(prev => prev.map(s => s.id === sceneId ? { ...s, include_in_video: nextValue } : s));
+    saveSceneSettings(sceneId, { include_in_video: nextValue });
   };
 
   const exportVideo = async () => {

@@ -5,28 +5,27 @@ import { toast } from 'sonner';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
 /**
- * Hook for handling Fotor API cartoonization
- * Manages template fetching, job creation, and polling
+ * Hook for handling Gemini-powered image style conversion
+ * Supports multiple artistic styles: cartoon, anime, pixar, toy, comic, watercolor, sketch, realistic
  */
-export const useCartoonization = () => {
+export const useImageStyleConversion = () => {
   const [templates, setTemplates] = useState([]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
-  const [generating, setGenerating] = useState(false);
-  const [pollingTaskId, setPollingTaskId] = useState(null);
-  const [cartoonResult, setCartoonResult] = useState(null);
+  const [converting, setConverting] = useState(false);
+  const [styledResult, setStyledResult] = useState(null);
 
   /**
-   * Fetch available cartoon templates from Fotor
+   * Fetch available style templates
    */
   const fetchTemplates = useCallback(async () => {
     setLoadingTemplates(true);
     try {
-      const { data } = await api.get('/fotor/templates');
+      const { data } = await api.get('/image-styles/templates');
       setTemplates(data.templates || []);
       return data.templates || [];
     } catch (error) {
-      console.error('Failed to fetch templates:', error);
-      toast.error('Failed to load cartoon styles');
+      console.error('Failed to fetch style templates:', error);
+      toast.error('Failed to load style options');
       return [];
     } finally {
       setLoadingTemplates(false);
@@ -34,13 +33,13 @@ export const useCartoonization = () => {
   }, []);
 
   /**
-   * Start cartoonization job
-   * @param {string} imageUrl - Full URL of the image to cartoonize
-   * @param {string} templateId - Selected template ID
+   * Convert image to selected artistic style
+   * @param {string} imageUrl - Full URL of the image to convert
+   * @param {string} style - Selected style (cartoon, anime, pixar, etc.)
    */
-  const startCartoonization = useCallback(async (imageUrl, templateId = 'cartoon_1') => {
-    setGenerating(true);
-    setCartoonResult(null);
+  const convertImageStyle = useCallback(async (imageUrl, style = 'cartoon') => {
+    setConverting(true);
+    setStyledResult(null);
     
     try {
       // Convert relative API URLs to absolute URLs
@@ -49,109 +48,57 @@ export const useCartoonization = () => {
         fullImageUrl = `${BACKEND_URL}${imageUrl}`;
       }
 
-      const { data } = await api.post('/fotor/generate', {
+      toast.info(`Converting to ${style} style...`);
+
+      const { data } = await api.post('/image-styles/convert', {
         image_url: fullImageUrl,
-        template_id: templateId
+        style: style
       });
 
-      const taskId = data.task_id;
-      if (!taskId) {
-        throw new Error('No task ID returned');
+      if (data.status === 'completed' && data.result_base64) {
+        // Convert base64 to data URL for display
+        const dataUrl = `data:image/png;base64,${data.result_base64}`;
+        setStyledResult({
+          url: dataUrl,
+          base64: data.result_base64,
+          style: style
+        });
+        toast.success(`${style.charAt(0).toUpperCase() + style.slice(1)} style applied!`);
+        return {
+          url: dataUrl,
+          base64: data.result_base64,
+          style: style
+        };
+      } else {
+        throw new Error('No image data in response');
       }
-
-      setPollingTaskId(taskId);
-      toast.success('Cartoonization started! This may take a moment...');
-      
-      // Start polling
-      await pollTaskStatus(taskId);
-      
-      return taskId;
     } catch (error) {
-      console.error('Cartoonization failed:', error);
-      toast.error(error.response?.data?.detail || 'Failed to start cartoonization');
-      setGenerating(false);
+      console.error('Style conversion failed:', error);
+      toast.error(error.response?.data?.detail || 'Failed to convert image style');
       throw error;
+    } finally {
+      setConverting(false);
     }
   }, []);
 
   /**
-   * Poll task status until completion
-   * @param {string} taskId - Fotor task ID
-   * @param {number} maxAttempts - Maximum polling attempts
+   * Reset conversion state
    */
-  const pollTaskStatus = useCallback(async (taskId, maxAttempts = 60) => {
-    let attempts = 0;
-
-    const poll = async () => {
-      if (attempts >= maxAttempts) {
-        setGenerating(false);
-        setPollingTaskId(null);
-        toast.error('Cartoonization timed out. Please try again.');
-        return null;
-      }
-
-      try {
-        const { data } = await api.get(`/fotor/tasks/${taskId}`);
-        const status = data.status?.toLowerCase();
-
-        if (status === 'completed' || status === 'success') {
-          // Success!
-          setCartoonResult(data.result_url);
-          setGenerating(false);
-          setPollingTaskId(null);
-          toast.success('Cartoonization completed!');
-          return data.result_url;
-        } else if (status === 'failed' || status === 'error') {
-          // Failed
-          setGenerating(false);
-          setPollingTaskId(null);
-          toast.error('Cartoonization failed. Please try again.');
-          return null;
-        } else {
-          // Still processing - poll again after 2 seconds
-          attempts++;
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          return poll();
-        }
-      } catch (error) {
-        console.error('Polling error:', error);
-        attempts++;
-        // Continue polling on error (might be temporary network issue)
-        if (attempts < maxAttempts) {
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          return poll();
-        } else {
-          setGenerating(false);
-          setPollingTaskId(null);
-          toast.error('Failed to check cartoonization status');
-          return null;
-        }
-      }
-    };
-
-    return poll();
-  }, []);
-
-  /**
-   * Reset cartoonization state
-   */
-  const resetCartoonization = useCallback(() => {
-    setCartoonResult(null);
-    setPollingTaskId(null);
-    setGenerating(false);
+  const resetConversion = useCallback(() => {
+    setStyledResult(null);
+    setConverting(false);
   }, []);
 
   return {
     // State
     templates,
     loadingTemplates,
-    generating,
-    pollingTaskId,
-    cartoonResult,
+    converting,
+    styledResult,
     
     // Actions
     fetchTemplates,
-    startCartoonization,
-    resetCartoonization
+    convertImageStyle,
+    resetConversion
   };
 };

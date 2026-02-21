@@ -859,30 +859,69 @@ async def run_video_generation(story_id: str, job_id: str):
         user_id = story.get("owner_id", "unknown")
         total = len(scenes)
 
-        # Collect character reference images for video
+        # Collect character info + reference images for video
+        characters = []
         char_ref_images = []
         for cid in story.get("character_ids", []):
             c = await db.characters.find_one({"id": cid}, {"_id": 0})
-            if c and c.get("reference_image_s3_key"):
-                try:
-                    fresh_url = s3_service.get_signed_url(c["reference_image_s3_key"], expires=3600)
-                    char_ref_images.append(fresh_url)
-                except Exception:
-                    pass
-            elif c and c.get("reference_image_asset_id"):
-                asset = await db.media_assets.find_one({"id": c["reference_image_asset_id"]}, {"_id": 0})
-                if asset and asset.get("s3_url"):
-                    char_ref_images.append(asset["s3_url"])
+            if c:
+                characters.append(c)
+                if c.get("reference_image_s3_key"):
+                    try:
+                        fresh_url = s3_service.get_signed_url(c["reference_image_s3_key"], expires=3600)
+                        char_ref_images.append(fresh_url)
+                    except Exception:
+                        pass
+                elif c.get("reference_image_asset_id"):
+                    asset = await db.media_assets.find_one({"id": c["reference_image_asset_id"]}, {"_id": 0})
+                    if asset and asset.get("s3_url"):
+                        char_ref_images.append(asset["s3_url"])
 
         for i, scene in enumerate(scenes):
             try:
+                # Build rich prompt with character details (from uploaded reference code pattern)
+                char_desc_parts = []
+                for c in characters:
+                    name = c.get("name", "")
+                    traits = ", ".join(c.get("personality_traits", []))
+                    desc = name
+                    if traits:
+                        desc += f" ({traits})"
+                    if c.get("description"):
+                        desc += f" - {c['description'][:60]}"
+                    char_desc_parts.append(desc)
+
                 vid_prompt = scene.get("video_prompt") or scene.get("image_prompt", "")
-                vid_prompt = f"{vid_prompt}. Child-friendly animated scene, {story.get('visual_style', 'cartoon')} style, vibrant colors, safe for children."
+                if char_desc_parts:
+                    vid_prompt += f". Characters: {'; '.join(char_desc_parts)}"
+                vid_prompt += f". Setting: {scene.get('scene_title', '')}. {story.get('visual_style', 'cartoon')} style, child-friendly, vibrant colors."
                 if len(vid_prompt) > 2000:
                     vid_prompt = vid_prompt[:2000]
 
-                logger.info(f"Generating video for scene {i+1}/{total}")
-                result = await minimax_service.generate_video(vid_prompt, subject_references=char_ref_images if char_ref_images else None)
+                # Determine generation type: use image-to-video if scene has an image
+                first_frame_url = None
+                gen_type = "text-to-video"
+                if scene.get("image_url"):
+                    img_asset_id = scene["image_url"].split("/")[-1]
+                    img_asset = await db.media_assets.find_one({"id": img_asset_id}, {"_id": 0})
+                    if img_asset:
+                        if img_asset.get("s3_key"):
+                            try:
+                                first_frame_url = s3_service.get_signed_url(img_asset["s3_key"], expires=3600)
+                                gen_type = "image-to-video"
+                            except Exception:
+                                pass
+                        elif img_asset.get("s3_url"):
+                            first_frame_url = img_asset["s3_url"]
+                            gen_type = "image-to-video"
+
+                logger.info(f"Generating video for scene {i+1}/{total} ({gen_type})")
+                result = await minimax_service.generate_video(
+                    vid_prompt,
+                    subject_references=char_ref_images if char_ref_images else None,
+                    first_frame_image=first_frame_url,
+                    generation_type=gen_type
+                )
 
                 if result.get("url"):
                     s3_key = f"users/{user_id}/stories/{story_id}/scenes/{scene['scene_number']}/video.mp4"
@@ -893,7 +932,7 @@ async def run_video_generation(story_id: str, job_id: str):
                         "id": asset_id, "type": "video", "format": "mp4",
                         "s3_key": s3_key, "s3_url": s3_url,
                         "scene_id": scene["id"], "story_id": story_id,
-                        "provider": "minimax",
+                        "provider": "minimax", "generation_type": gen_type,
                         "created_at": datetime.now(timezone.utc).isoformat()
                     })
                     await db.scenes.update_one(

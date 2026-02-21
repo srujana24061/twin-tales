@@ -210,6 +210,35 @@ async def delete_character(char_id: str, user: dict = Depends(get_current_user))
     return {"message": "Character deleted"}
 
 
+@api_router.post("/characters/{char_id}/upload-photo")
+async def upload_character_photo(char_id: str, file: UploadFile = File(...), user: dict = Depends(get_current_user)):
+    char = await db.characters.find_one({"id": char_id, "owner_id": user["id"]})
+    if not char:
+        raise HTTPException(status_code=404, detail="Character not found")
+
+    allowed = {"image/jpeg", "image/png", "image/webp", "image/jpg"}
+    if file.content_type not in allowed:
+        raise HTTPException(status_code=400, detail="Only JPEG, PNG, WEBP images allowed")
+
+    ext = file.content_type.split("/")[-1]
+    if ext == "jpeg":
+        ext = "jpg"
+    contents = await file.read()
+    if len(contents) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large (max 10MB)")
+
+    s3_key = f"users/{user['id']}/characters/{char_id}/photo.{ext}"
+    s3_url = await s3_service.upload(s3_key, contents, file.content_type)
+
+    await db.characters.update_one(
+        {"id": char_id},
+        {"$set": {"reference_image": s3_url, "reference_image_s3_key": s3_key}}
+    )
+
+    updated = await db.characters.find_one({"id": char_id}, {"_id": 0})
+    return updated
+
+
 # ==================== STORY ROUTES ====================
 
 @api_router.post("/stories")

@@ -2231,6 +2231,13 @@ async def get_dashboard_stats(user: dict = Depends(get_current_user)):
     }
 
 
+# ==================== WELLBEING MODULE ====================
+
+from wellbeing import wellbeing_router, inject_deps as wellbeing_inject
+wellbeing_inject(db, EMERGENT_LLM_KEY, JWT_SECRET, pwd_context, logger)
+api_router.include_router(wellbeing_router)
+
+
 # ==================== APP SETUP ====================
 
 app.include_router(api_router)

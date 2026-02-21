@@ -60,7 +60,7 @@ class MiniMaxService:
             "Content-Type": "application/json"
         }
 
-    async def generate_image(self, prompt: str, aspect_ratio: str = "16:9") -> list:
+    async def generate_image(self, prompt: str, aspect_ratio: str = "16:9", reference_images: list = None) -> list:
         payload = {
             "model": "image-01",
             "prompt": prompt,
@@ -68,6 +68,8 @@ class MiniMaxService:
             "response_format": "url",
             "n": 1
         }
+        if reference_images:
+            payload["images"] = reference_images[:3]
         response = await asyncio.to_thread(
             requests.post,
             f"{self.base_url}/image_generation",

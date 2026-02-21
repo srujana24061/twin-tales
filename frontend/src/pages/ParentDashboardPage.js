@@ -87,6 +87,7 @@ export default function ParentDashboardPage() {
       setData(d);
       setCapMinutes(d.settings?.session_cap_minutes || 25);
       setCapEnabled(d.settings?.session_cap_enabled ?? true);
+      setParentEmail(d.settings?.parent_email || '');
     } catch (err) {
       if (err.response?.status === 403 || err.response?.status === 401) {
         localStorage.removeItem('storycraft_parent_token');

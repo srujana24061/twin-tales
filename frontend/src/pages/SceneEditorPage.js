@@ -86,11 +86,12 @@ export const SceneEditorPage = () => {
     finally { setSavingScene(null); }
   };
 
-  const regenerateImage = async (sceneId) => {
+  const regenerateImage = async (sceneId, providerOverride) => {
     setRegenScene(sceneId);
+    const provider = providerOverride || imageProvider;
     try {
-      const { data } = await api.post(`/stories/${storyId}/scenes/${sceneId}/regenerate-image`);
-      toast.success('Image regeneration started!');
+      const { data } = await api.post(`/stories/${storyId}/scenes/${sceneId}/regenerate-image`, { provider });
+      toast.success(`Image regeneration started (${provider === 'minimax' ? 'MiniMax' : 'Nano Banana'})!`);
       pollJob(data.job_id, null, () => { loadStory(); setRegenScene(null); toast.success('New image!'); },
         (err) => { setRegenScene(null); toast.error(err || 'Image gen failed'); });
     } catch (err) { setRegenScene(null); toast.error('Failed'); }

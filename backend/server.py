@@ -2279,14 +2279,18 @@ api_router.include_router(wellbeing_router)
 @api_router.post("/media/presigned-url")
 async def get_presigned_upload_url(filename: str, content_type: str, user: dict = Depends(get_current_user)):
     try:
-        file_ext = filename.split('.')[-1] if '.' in filename else 'bin'
-        unique_filename = f"{uuid.uuid4()}.{file_ext}"
+        file_ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else 'bin'
+        unique_filename = f"{uuid.uuid4().hex}.{file_ext}"
         s3_key = f"user-uploads/{user['id']}/{unique_filename}"
-        presigned_url = s3_service.s3_client.generate_presigned_url(
-            'put_object', Params={'Bucket': s3_service.bucket_name, 'Key': s3_key, 'ContentType': content_type}, ExpiresIn=3600
+        # PUT presigned URL — client uploads directly to S3
+        presigned_put_url = s3_service.s3.generate_presigned_url(
+            'put_object',
+            Params={'Bucket': s3_service.bucket, 'Key': s3_key, 'ContentType': content_type},
+            ExpiresIn=3600
         )
-        s3_url = f"https://{s3_service.bucket_name}.s3.{s3_service.region}.amazonaws.com/{s3_key}"
-        return {"presigned_url": presigned_url, "s3_url": s3_url}
+        # GET presigned URL — used to view/play the file after upload
+        presigned_get_url = s3_service.get_signed_url(s3_key, expires=604800)
+        return {"presigned_url": presigned_put_url, "s3_url": presigned_get_url, "s3_key": s3_key}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -198,7 +198,7 @@ export const SceneGridEditor = () => {
               onStartEdit={() => setEditingScene(scene.id)}
               onSaveEdit={(text) => updateSceneText(scene.id, text)}
               onCancelEdit={() => setEditingScene(null)}
-              onGenerateImage={() => generateSceneImage(scene.id, scene.text)}
+              onGenerateImage={() => generateSceneImage(scene.id, scene.scene_text)}
               onGenerateVideo={() => generateSceneVideo(scene.id, scene.image_url)}
               onUploadImage={(file) => uploadMedia(scene.id, file, 'image')}
               onUploadVideo={(file) => uploadMedia(scene.id, file, 'video')}

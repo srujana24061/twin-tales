@@ -172,7 +172,7 @@ export const DashboardPage = () => {
                 {storySuggestions.map((s, i) => (
                   <motion.button
                     key={i}
-                    onClick={() => navigate('/stories/new')}
+                    onClick={() => navigate('/stories/new', { state: { suggestion: s } })}
                     whileHover={{ y: -4 }} whileTap={{ scale: 0.97 }}
                     data-testid={`suggestion-card-${i}`}
                     className={`text-left p-4 rounded-2xl bg-gradient-to-br ${TONE_COLORS[s.tone] || 'from-indigo-500 to-purple-500'} text-white shadow-md`}

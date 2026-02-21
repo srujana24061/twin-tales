@@ -36,14 +36,16 @@ export const AuthPage = ({ mode: initialMode }) => {
   };
 
   return (
-    <div className="min-h-screen bg-paper flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen theme-page-bg flex items-center justify-center p-4 relative overflow-hidden">
       <motion.div
-        className="absolute w-96 h-96 bg-[#6366F1] rounded-full opacity-10 blur-3xl -top-20 -left-20"
+        className="absolute w-96 h-96 rounded-full opacity-15 blur-3xl -top-20 -left-20"
+        style={{ background: 'hsl(var(--primary))' }}
         animate={{ scale: [1, 1.1, 1] }}
         transition={{ duration: 8, repeat: Infinity }}
       />
       <motion.div
-        className="absolute w-80 h-80 bg-[#F59E0B] rounded-full opacity-10 blur-3xl bottom-0 right-0"
+        className="absolute w-80 h-80 rounded-full opacity-10 blur-3xl bottom-0 right-0"
+        style={{ background: 'hsl(var(--secondary))' }}
         animate={{ scale: [1, 1.05, 1] }}
         transition={{ duration: 6, repeat: Infinity }}
       />

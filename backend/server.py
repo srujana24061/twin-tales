@@ -756,9 +756,9 @@ async def get_story(story_id: str, user: dict = Depends(get_current_user)):
     story["scenes"] = await db.scenes.find({"story_id": story_id}, {"_id": 0}).sort("scene_number", 1).to_list(100)
     story["scene_count"] = len(story["scenes"])
     # Fetch music URL if exists
-    music_asset = await db.media_assets.find_one({"story_id": story_id, "type": "music"}, {"_id": 0, "id": 1})
+    music_asset = await db.media_assets.find_one({"story_id": story_id, "type": "music"}, {"_id": 0})
     if music_asset:
-        story["music_url"] = f"/api/media/{music_asset['id']}"
+        story["music_url"] = music_asset.get("s3_url") or f"/api/media/{music_asset['id']}"
     characters = []
     for cid in story.get("character_ids", []):
         c = await db.characters.find_one({"id": cid}, {"_id": 0})

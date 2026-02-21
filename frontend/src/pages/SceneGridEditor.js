@@ -344,14 +344,18 @@ const SceneCard = ({
                 size="sm"
                 variant="outline"
                 onClick={onGenerateImage}
+                disabled={isGeneratingImage}
                 className="flex-1 rounded-lg"
                 style={{ borderColor: 'var(--glass-border)', color: 'var(--text-primary)' }}
                 data-testid={`generate-image-btn-${scene.id}`}
               >
-                <Sparkles className="w-3 h-3 mr-2" />
-                {scene.image_url ? 'Regenerate Image' : 'Generate Image'}
+                {isGeneratingImage ? (
+                  <><Loader2 className="w-3 h-3 mr-2 animate-spin" /> Generating...</>
+                ) : (
+                  <><Sparkles className="w-3 h-3 mr-2" />{scene.image_url ? 'Regenerate Image' : 'Generate Image'}</>
+                )}
               </Button>
-              {scene.image_url && (
+              {scene.image_url && !isGeneratingImage && (
                 <Button
                   size="sm"
                   variant="outline"
@@ -368,6 +372,7 @@ const SceneCard = ({
                 size="sm"
                 variant="outline"
                 onClick={() => imageInputRef.current?.click()}
+                disabled={isGeneratingImage}
                 className="rounded-lg"
                 style={{ borderColor: 'var(--glass-border)' }}
                 title="Upload image"

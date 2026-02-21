@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   ArrowLeft, Edit2, Save, Image as ImageIcon, Video, Upload, 
-  Sparkles, Loader2, CheckCircle, Play, X
+  Sparkles, Loader2, CheckCircle, Play, X, RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -321,14 +321,27 @@ const SceneCard = ({
                 style={{ borderColor: 'var(--glass-border)', color: 'var(--text-primary)' }}
               >
                 <Sparkles className="w-3 h-3 mr-2" />
-                Generate Image
+                {scene.image_url ? 'Regenerate Image' : 'Generate Image'}
               </Button>
+              {scene.image_url && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={onGenerateImage}
+                  className="rounded-lg"
+                  style={{ borderColor: 'var(--glass-border)', color: 'var(--primary)' }}
+                  title="Regenerate image"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                </Button>
+              )}
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => imageInputRef.current?.click()}
                 className="rounded-lg"
                 style={{ borderColor: 'var(--glass-border)' }}
+                title="Upload image"
               >
                 <Upload className="w-3 h-3" />
               </Button>

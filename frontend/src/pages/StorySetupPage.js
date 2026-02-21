@@ -29,6 +29,19 @@ const lengths = [
   { value: 'long', label: 'Long (8 scenes)' },
 ];
 
+const imageProviders = [
+  { value: 'nano_banana', label: 'Gemini Nano Banana (Default)' },
+  { value: 'minimax', label: 'MiniMax Hailuo' },
+];
+
+const aspectRatios = [
+  { value: '16:9', label: '16:9 Widescreen' },
+  { value: '4:3', label: '4:3 Classic' },
+  { value: '1:1', label: '1:1 Square' },
+  { value: '3:4', label: '3:4 Portrait' },
+  { value: '9:16', label: '9:16 Vertical' },
+];
+
 export const StorySetupPage = () => {
   const navigate = useNavigate();
   const [characters, setCharacters] = useState([]);

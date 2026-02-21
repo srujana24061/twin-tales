@@ -463,6 +463,111 @@ class StoryCraftAPITester:
         self.run_test("Cleanup Media Test Story", "DELETE", f"stories/{story_id}", 200)
         return True
 
+    def test_phase4_video_editor_endpoints(self):
+        """Test Phase 4 Video Editor endpoints"""
+        # Create a story with scenes for testing
+        story_data = {
+            "title": "Phase 4 Video Test Story", 
+            "tone": "adventure",
+            "visual_style": "cartoon",
+            "story_length": "short",
+            "user_topic": "Testing Phase 4 features"
+        }
+        success, story_response = self.run_test(
+            "Create Story for Phase 4 Tests",
+            "POST",
+            "stories",
+            200,
+            data=story_data
+        )
+        if not success:
+            return False
+
+        story_id = story_response.get('id')
+        if not story_id:
+            return False
+
+        # Test export-video endpoint (should return 400 because no scenes)
+        success, export_response = self.run_test(
+            "Export Video (No Scenes)",
+            "POST",
+            f"stories/{story_id}/export-video",
+            400  # Should fail because story has no scenes yet
+        )
+
+        # Test reorder-scenes endpoint with empty array (should work even with no scenes)
+        reorder_data = {"scene_ids": []}
+        success, reorder_response = self.run_test(
+            "Reorder Scenes (Empty)",
+            "PUT",
+            f"stories/{story_id}/reorder-scenes",
+            200,
+            data=reorder_data
+        )
+        if success and isinstance(reorder_response, list):
+            print(f"   ✅ Reorder returned {len(reorder_response)} scenes")
+
+        # Test generate-ad endpoint (should return 400 because no scenes)
+        ad_data = {
+            "platform": "instagram",
+            "style": "emotional", 
+            "cta_text": "Watch the full story!"
+        }
+        success, ad_response = self.run_test(
+            "Generate Ad (No Scenes)",
+            "POST",
+            f"stories/{story_id}/generate-ad",
+            400,  # Should fail because story has no scenes yet
+            data=ad_data
+        )
+
+        # Test list ads endpoint (should work even with no ads)
+        success, ads_response = self.run_test(
+            "List Ads (Empty)",
+            "GET",
+            f"stories/{story_id}/ads",
+            200
+        )
+        if success and isinstance(ads_response, list):
+            print(f"   ✅ Ads list returned {len(ads_response)} ads")
+
+        # Test 404 for non-existent story on new endpoints
+        fake_story_id = str(uuid.uuid4())
+        
+        success, _ = self.run_test(
+            "Export Video (404 Test)",
+            "POST",
+            f"stories/{fake_story_id}/export-video", 
+            404
+        )
+
+        success, _ = self.run_test(
+            "Reorder Scenes (404 Test)",
+            "PUT",
+            f"stories/{fake_story_id}/reorder-scenes",
+            404,
+            data={"scene_ids": []}
+        )
+
+        success, _ = self.run_test(
+            "Generate Ad (404 Test)",
+            "POST",
+            f"stories/{fake_story_id}/generate-ad",
+            404,
+            data=ad_data
+        )
+
+        success, _ = self.run_test(
+            "List Ads (404 Test)",
+            "GET",
+            f"stories/{fake_story_id}/ads",
+            404
+        )
+
+        # Cleanup
+        self.run_test("Cleanup Phase 4 Test Story", "DELETE", f"stories/{story_id}", 200)
+        return True
+
     def run_all_tests(self):
         """Run comprehensive API test suite"""
         print("🚀 Starting StoryCraft API Phase 2 Testing...")

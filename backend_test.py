@@ -633,6 +633,228 @@ class StoryCraftAPITester:
         self.run_test("Cleanup Phase 4 Test Story", "DELETE", f"stories/{story_id}", 200)
         return True
 
+    def test_gemini_nano_banana_integration(self):
+        """Test Gemini Nano Banana Image Generation Integration"""
+        print("\n🍌 Testing Gemini Nano Banana Image Generation Integration...")
+        all_tests_passed = True
+
+        # Test 1: Create story with nano_banana image provider
+        print("\n📝 Test 1: Create story with nano_banana image provider")
+        story_data_nano = {
+            "title": "Nano Banana Test Story",
+            "tone": "funny",
+            "visual_style": "cartoon",
+            "story_length": "short",
+            "image_provider": "nano_banana",
+            "image_aspect_ratio": "16:9",
+            "user_topic": "A magical adventure with Gemini Nano Banana"
+        }
+        success, story_response = self.run_test(
+            "Create Story with Nano Banana Provider",
+            "POST",
+            "stories",
+            200,
+            data=story_data_nano
+        )
+        
+        if not success:
+            all_tests_passed = False
+        else:
+            nano_story_id = story_response.get('id')
+            # Verify the story saved the image provider correctly
+            success, story_details = self.run_test(
+                "Verify Nano Banana Provider Saved",
+                "GET",
+                f"stories/{nano_story_id}",
+                200
+            )
+            if success:
+                saved_provider = story_details.get('image_provider')
+                if saved_provider == 'nano_banana':
+                    print(f"   ✅ Story correctly saved image_provider as 'nano_banana'")
+                    self.log_test("Nano Banana Provider Storage", True, "Provider correctly saved in database")
+                else:
+                    print(f"   ❌ Story saved image_provider as '{saved_provider}', expected 'nano_banana'")
+                    self.log_test("Nano Banana Provider Storage", False, f"Provider saved as '{saved_provider}', expected 'nano_banana'", "high")
+                    all_tests_passed = False
+            else:
+                all_tests_passed = False
+
+        # Test 2: Create story with minimax image provider
+        print("\n📝 Test 2: Create story with minimax image provider")
+        story_data_minimax = {
+            "title": "MiniMax Test Story",
+            "tone": "adventure",
+            "visual_style": "realistic",
+            "story_length": "short", 
+            "image_provider": "minimax",
+            "image_aspect_ratio": "1:1",
+            "user_topic": "Testing MiniMax image generation"
+        }
+        success, story_response = self.run_test(
+            "Create Story with MiniMax Provider",
+            "POST",
+            "stories",
+            200,
+            data=story_data_minimax
+        )
+        
+        if not success:
+            all_tests_passed = False
+        else:
+            minimax_story_id = story_response.get('id')
+            # Verify the story saved the image provider correctly
+            success, story_details = self.run_test(
+                "Verify MiniMax Provider Saved",
+                "GET",
+                f"stories/{minimax_story_id}",
+                200
+            )
+            if success:
+                saved_provider = story_details.get('image_provider')
+                if saved_provider == 'minimax':
+                    print(f"   ✅ Story correctly saved image_provider as 'minimax'")
+                    self.log_test("MiniMax Provider Storage", True, "Provider correctly saved in database")
+                else:
+                    print(f"   ❌ Story saved image_provider as '{saved_provider}', expected 'minimax'")
+                    self.log_test("MiniMax Provider Storage", False, f"Provider saved as '{saved_provider}', expected 'minimax'", "high")
+                    all_tests_passed = False
+            else:
+                all_tests_passed = False
+
+        # Test 3: Test different aspect ratios
+        print("\n📝 Test 3: Test different aspect ratios support")
+        aspect_ratios = ["16:9", "4:3", "1:1", "3:4", "9:16"]
+        for aspect_ratio in aspect_ratios:
+            story_data_aspect = {
+                "title": f"Aspect Ratio {aspect_ratio} Test",
+                "tone": "funny",
+                "visual_style": "cartoon",
+                "story_length": "short",
+                "image_provider": "nano_banana",
+                "image_aspect_ratio": aspect_ratio,
+                "user_topic": f"Testing aspect ratio {aspect_ratio}"
+            }
+            success, story_response = self.run_test(
+                f"Create Story with Aspect Ratio {aspect_ratio}",
+                "POST",
+                "stories",
+                200,
+                data=story_data_aspect
+            )
+            if not success:
+                all_tests_passed = False
+                continue
+            
+            aspect_story_id = story_response.get('id')
+            success, story_details = self.run_test(
+                f"Verify Aspect Ratio {aspect_ratio} Saved",
+                "GET",
+                f"stories/{aspect_story_id}",
+                200
+            )
+            if success:
+                saved_ratio = story_details.get('image_aspect_ratio')
+                if saved_ratio == aspect_ratio:
+                    print(f"   ✅ Aspect ratio {aspect_ratio} correctly saved")
+                    self.log_test(f"Aspect Ratio {aspect_ratio} Storage", True, f"Ratio correctly saved as {aspect_ratio}")
+                else:
+                    print(f"   ❌ Aspect ratio saved as '{saved_ratio}', expected '{aspect_ratio}'")
+                    self.log_test(f"Aspect Ratio {aspect_ratio} Storage", False, f"Ratio saved as '{saved_ratio}', expected '{aspect_ratio}'", "high")
+                    all_tests_passed = False
+            else:
+                all_tests_passed = False
+            
+            # Cleanup aspect ratio test story
+            self.run_test(f"Cleanup Aspect Ratio {aspect_ratio} Story", "DELETE", f"stories/{aspect_story_id}", 200)
+
+        # Test 4: Test regenerate image endpoint with different providers (mock test since we don't have actual scenes)
+        print("\n📝 Test 4: Test image regeneration endpoints")
+        
+        # First, test the regenerate endpoint structure with a fake scene
+        fake_scene_id = str(uuid.uuid4())
+        
+        # Test with nano_banana provider
+        regen_data_nano = {"provider": "nano_banana"}
+        success, _ = self.run_test(
+            "Image Regeneration Nano Banana (Fake Scene)",
+            "POST",
+            f"stories/{nano_story_id}/scenes/{fake_scene_id}/regenerate-image",
+            404,  # Should return 404 because scene doesn't exist
+            data=regen_data_nano
+        )
+        # 404 is expected and shows endpoint exists
+
+        # Test with minimax provider
+        regen_data_minimax = {"provider": "minimax"}
+        success, _ = self.run_test(
+            "Image Regeneration MiniMax (Fake Scene)",
+            "POST",
+            f"stories/{minimax_story_id}/scenes/{fake_scene_id}/regenerate-image",
+            404,  # Should return 404 because scene doesn't exist
+            data=regen_data_minimax
+        )
+        # 404 is expected and shows endpoint exists
+
+        # Test with invalid story ID
+        fake_story_id = str(uuid.uuid4())
+        success, _ = self.run_test(
+            "Image Regeneration (Fake Story)",
+            "POST",
+            f"stories/{fake_story_id}/scenes/{fake_scene_id}/regenerate-image",
+            404,
+            data=regen_data_nano
+        )
+
+        # Test 5: Test default provider behavior
+        print("\n📝 Test 5: Test default provider behavior")
+        story_data_default = {
+            "title": "Default Provider Test Story",
+            "tone": "funny",
+            "visual_style": "cartoon",
+            "story_length": "short",
+            "user_topic": "Testing default image provider"
+            # Note: no image_provider specified, should default to nano_banana
+        }
+        success, story_response = self.run_test(
+            "Create Story with Default Provider",
+            "POST", 
+            "stories",
+            200,
+            data=story_data_default
+        )
+        
+        if success:
+            default_story_id = story_response.get('id')
+            success, story_details = self.run_test(
+                "Verify Default Provider",
+                "GET",
+                f"stories/{default_story_id}",
+                200
+            )
+            if success:
+                saved_provider = story_details.get('image_provider')
+                if saved_provider == 'nano_banana':
+                    print(f"   ✅ Default image provider is correctly set to 'nano_banana'")
+                    self.log_test("Default Provider Test", True, "Default provider correctly set to nano_banana")
+                else:
+                    print(f"   ❌ Default provider is '{saved_provider}', expected 'nano_banana'")
+                    self.log_test("Default Provider Test", False, f"Default provider is '{saved_provider}', expected 'nano_banana'", "high")
+                    all_tests_passed = False
+            
+            # Cleanup
+            self.run_test("Cleanup Default Provider Story", "DELETE", f"stories/{default_story_id}", 200)
+        else:
+            all_tests_passed = False
+
+        # Cleanup main test stories
+        if 'nano_story_id' in locals():
+            self.run_test("Cleanup Nano Banana Test Story", "DELETE", f"stories/{nano_story_id}", 200)
+        if 'minimax_story_id' in locals():
+            self.run_test("Cleanup MiniMax Test Story", "DELETE", f"stories/{minimax_story_id}", 200)
+
+        return all_tests_passed
+
     def run_all_tests(self):
         """Run comprehensive API test suite"""
         print("🚀 Starting StoryCraft API Phase 2 Testing...")

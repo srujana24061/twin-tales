@@ -154,6 +154,20 @@ def enqueue_task(task, *args):
         task.delay(*args)
 
 
+def run_celery_async(coro):
+    async def _runner():
+        local_client = AsyncIOMotorClient(mongo_url)
+        local_db = local_client[os.environ['DB_NAME']]
+        original_db = globals().get("db")
+        globals()["db"] = local_db
+        try:
+            await coro
+        finally:
+            globals()["db"] = original_db
+            local_client.close()
+    asyncio.run(_runner())
+
+
 # ==================== AUTH ROUTES ====================
 
 @api_router.post("/auth/register")

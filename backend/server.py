@@ -438,6 +438,134 @@ async def save_styled_character_image(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== DATA MIGRATION ROUTES ====================
+
+@api_router.post("/admin/migrate-to-s3-urls")
+async def migrate_media_urls_to_s3(user: dict = Depends(get_current_user)):
+    """
+    Migrate all /api/media/ URLs to direct S3 URLs
+    Updates: scenes, characters, stories, jobs
+    """
+    try:
+        migration_stats = {
+            "scenes_updated": 0,
+            "characters_updated": 0,
+            "stories_updated": 0,
+            "jobs_updated": 0,
+            "errors": []
+        }
+        
+        # Helper function to get S3 URL from /api/media/ URL
+        async def get_s3_url(media_url):
+            if not media_url or not media_url.startswith("/api/media/"):
+                return media_url
+            
+            asset_id = media_url.split("/")[-1]
+            asset = await db.media_assets.find_one({"id": asset_id}, {"_id": 0})
+            if asset and asset.get("s3_url"):
+                return asset["s3_url"]
+            return media_url  # Return original if not found
+        
+        # 1. Update Scenes
+        logger.info("Migrating scenes...")
+        scenes = await db.scenes.find({}, {"_id": 0}).to_list(10000)
+        for scene in scenes:
+            updates = {}
+            
+            if scene.get("image_url", "").startswith("/api/media/"):
+                s3_url = await get_s3_url(scene["image_url"])
+                if s3_url != scene["image_url"]:
+                    updates["image_url"] = s3_url
+            
+            if scene.get("video_url", "").startswith("/api/media/"):
+                s3_url = await get_s3_url(scene["video_url"])
+                if s3_url != scene["video_url"]:
+                    updates["video_url"] = s3_url
+            
+            if scene.get("audio_url", "").startswith("/api/media/"):
+                s3_url = await get_s3_url(scene["audio_url"])
+                if s3_url != scene["audio_url"]:
+                    updates["audio_url"] = s3_url
+            
+            if updates:
+                await db.scenes.update_one(
+                    {"id": scene["id"]},
+                    {"$set": updates}
+                )
+                migration_stats["scenes_updated"] += 1
+        
+        # 2. Update Characters
+        logger.info("Migrating characters...")
+        characters = await db.characters.find({}, {"_id": 0}).to_list(10000)
+        for char in characters:
+            updates = {}
+            
+            if char.get("reference_image", "").startswith("/api/media/"):
+                s3_url = await get_s3_url(char["reference_image"])
+                if s3_url != char["reference_image"]:
+                    updates["reference_image"] = s3_url
+            
+            if char.get("styled_photo_url", "").startswith("/api/media/"):
+                s3_url = await get_s3_url(char["styled_photo_url"])
+                if s3_url != char["styled_photo_url"]:
+                    updates["styled_photo_url"] = s3_url
+            
+            if updates:
+                await db.characters.update_one(
+                    {"id": char["id"]},
+                    {"$set": updates}
+                )
+                migration_stats["characters_updated"] += 1
+        
+        # 3. Update Stories
+        logger.info("Migrating stories...")
+        stories = await db.stories.find({}, {"_id": 0}).to_list(10000)
+        for story in stories:
+            updates = {}
+            
+            if story.get("music_url", "").startswith("/api/media/"):
+                s3_url = await get_s3_url(story["music_url"])
+                if s3_url != story["music_url"]:
+                    updates["music_url"] = s3_url
+            
+            if updates:
+                await db.stories.update_one(
+                    {"id": story["id"]},
+                    {"$set": updates}
+                )
+                migration_stats["stories_updated"] += 1
+        
+        # 4. Update Jobs
+        logger.info("Migrating jobs...")
+        jobs = await db.generation_jobs.find({}, {"_id": 0}).to_list(10000)
+        for job in jobs:
+            updates = {}
+            
+            if job.get("result_url", "").startswith("/api/media/"):
+                s3_url = await get_s3_url(job["result_url"])
+                if s3_url != job["result_url"]:
+                    updates["result_url"] = s3_url
+            
+            if updates:
+                await db.generation_jobs.update_one(
+                    {"id": job["id"]},
+                    {"$set": updates}
+                )
+                migration_stats["jobs_updated"] += 1
+        
+        logger.info(f"Migration complete: {migration_stats}")
+        
+        return {
+            "success": True,
+            "message": "Media URLs migrated to S3",
+            "stats": migration_stats
+        }
+        
+    except Exception as e:
+        logger.error(f"Migration error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ==================== DOODLE TO CHARACTER ROUTES ====================
 
 @api_router.post("/doodle/convert-to-character")

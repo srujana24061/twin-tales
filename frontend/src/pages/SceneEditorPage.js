@@ -330,7 +330,7 @@ export const SceneEditorPage = () => {
                 {/* Scene Image */}
                 {scene.image_url && (
                   <div className={`relative ${aspectRatioClass} bg-slate-100`}>
-                    <img src={`${BACKEND_URL}${scene.image_url}`} alt={`Scene ${scene.scene_number}`}
+                    <img src={scene.image_url} alt={`Scene ${scene.scene_number}`}
                       className="w-full h-full object-cover" data-testid={`scene-image-${scene.id}`} />
                     <div className="absolute top-4 left-4">
                       <Badge className="bg-black/50 text-white backdrop-blur-sm rounded-full px-3 py-1 text-xs">

@@ -377,7 +377,7 @@ export const DoodleToStoryPage = () => {
                   <div>
                     <p className="text-sm font-bold text-[#94A3B8] uppercase mb-3">AI-Enhanced Character</p>
                     <img 
-                      src={`${BACKEND_URL}${convertedImage}`} 
+                      src={convertedImage} 
                       alt="Converted character"
                       className="w-full border-2 border-slate-200 rounded-xl"
                     />

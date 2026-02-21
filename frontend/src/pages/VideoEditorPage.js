@@ -219,7 +219,7 @@ export const VideoEditorPage = () => {
                 {/* Thumbnail */}
                 <div className="w-20 h-14 rounded-xl overflow-hidden bg-slate-100 flex-shrink-0">
                   {scene.image_url ? (
-                    <img src={`${BACKEND_URL}${scene.image_url}`} alt="" className="w-full h-full object-cover" />
+                    <img src={scene.image_url} alt="" className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <Image className="w-5 h-5 text-[#CBD5E1]" />

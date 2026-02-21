@@ -352,8 +352,10 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Gemini Nano Banana frontend integration fully verified"
-  stuck_tasks: []
+    - "Wellbeing Backend API Testing Complete"
+    - "OpenAI Budget Limitation Identified"
+  stuck_tasks:
+    - "Wellbeing Check-in conversational flow (external AI budget constraint)"
   test_all: false
   test_priority: "high_first"
 

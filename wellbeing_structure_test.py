@@ -7,7 +7,7 @@ import json
 from datetime import datetime, timezone
 
 # Configuration
-BASE_URL = "https://storycraft-ai-87.preview.emergentagent.com"
+BASE_URL = "https://craft-stories-3.preview.emergentagent.com"
 API_BASE = f"{BASE_URL}/api"
 
 # Test user credentials

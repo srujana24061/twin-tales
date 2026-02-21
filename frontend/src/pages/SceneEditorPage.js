@@ -329,7 +329,7 @@ export const SceneEditorPage = () => {
               >
                 {/* Scene Image */}
                 {scene.image_url && (
-                  <div className="relative aspect-[16/9] bg-slate-100">
+                  <div className={`relative ${aspectRatioClass} bg-slate-100`}>
                     <img src={`${BACKEND_URL}${scene.image_url}`} alt={`Scene ${scene.scene_number}`}
                       className="w-full h-full object-cover" data-testid={`scene-image-${scene.id}`} />
                     <div className="absolute top-4 left-4">

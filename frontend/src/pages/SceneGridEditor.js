@@ -51,29 +51,50 @@ export const SceneGridEditor = () => {
     }
   };
 
-  const generateSceneImage = async (sceneId, sceneText) => {
+  const pollJob = (jobId, onDone) => {
+    const interval = setInterval(async () => {
+      try {
+        const { data } = await api.get(`/jobs/${jobId}`);
+        if (data.status === 'completed') {
+          clearInterval(interval);
+          onDone(null);
+          await loadData();
+        } else if (data.status === 'failed') {
+          clearInterval(interval);
+          onDone(data.error_message || 'Generation failed');
+        }
+      } catch (_) {}
+    }, 3000);
+    return interval;
+  };
+
+  const generateSceneImage = async (sceneId) => {
+    setGeneratingImages(prev => ({ ...prev, [sceneId]: true }));
     try {
-      toast.info('Generating image...');
-      const { data } = await api.post(`/scenes/${sceneId}/generate-image`, {
-        prompt: sceneText
-      });
+      toast.info('Generating image with Nano Banana...');
+      await api.post(`/scenes/${sceneId}/generate-image`);
       await loadData();
       toast.success('Image generated!');
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Failed to generate image');
+    } finally {
+      setGeneratingImages(prev => ({ ...prev, [sceneId]: false }));
     }
   };
 
-  const generateSceneVideo = async (sceneId, imageUrl) => {
-    if (!imageUrl) {
-      toast.error('Generate or upload an image first');
-      return;
-    }
+  const generateSceneVideo = async (sceneId) => {
+    setGeneratingVideos(prev => ({ ...prev, [sceneId]: true }));
     try {
-      toast.info('Generating video...');
-      await api.post(`/scenes/${sceneId}/generate-video`);
-      toast.success('Video generation started! You\'ll be notified when ready.');
+      toast.info('Generating video with Nano Banana...');
+      const { data } = await api.post(`/scenes/${sceneId}/generate-video`);
+      toast.success('Video generation started! Hang tight...');
+      pollJob(data.job_id, (err) => {
+        setGeneratingVideos(prev => ({ ...prev, [sceneId]: false }));
+        if (err) toast.error(err);
+        else toast.success('Video ready!');
+      });
     } catch (err) {
+      setGeneratingVideos(prev => ({ ...prev, [sceneId]: false }));
       toast.error('Failed to generate video');
     }
   };

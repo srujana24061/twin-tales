@@ -11,6 +11,7 @@ import { SceneEditorPage } from "@/pages/SceneEditorPage";
 import { VideoEditorPage } from "@/pages/VideoEditorPage";
 import { AdStudioPage } from "@/pages/AdStudioPage";
 import { TaskHistoryPage } from "@/pages/TaskHistoryPage";
+import { DoodleToStoryPage } from "@/pages/DoodleToStoryPage";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 function App() {
@@ -24,6 +25,7 @@ function App() {
           <Route path="/register" element={<AuthPage mode="register" />} />
           <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
           <Route path="/characters" element={<ProtectedRoute><CharacterBuilderPage /></ProtectedRoute>} />
+          <Route path="/doodle-to-story" element={<ProtectedRoute><DoodleToStoryPage /></ProtectedRoute>} />
           <Route path="/stories/new" element={<ProtectedRoute><StorySetupPage /></ProtectedRoute>} />
           <Route path="/stories/:storyId/generate" element={<ProtectedRoute><StoryGenerationPage /></ProtectedRoute>} />
           <Route path="/stories/:storyId/edit" element={<ProtectedRoute><SceneEditorPage /></ProtectedRoute>} />

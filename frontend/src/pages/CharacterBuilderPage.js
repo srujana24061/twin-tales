@@ -259,6 +259,127 @@ export const CharacterBuilderPage = () => {
                       onChange={handlePhotoSelect} className="hidden" data-testid="char-photo-file-input" />
                   </div>
 
+                  {/* Cartoonization Options - Show after character is created and photo uploaded */}
+                  {showCartoonOptions && uploadedCharacterUrl && (
+                    <motion.div 
+                      initial={{ opacity: 0, height: 0 }} 
+                      animate={{ opacity: 1, height: 'auto' }}
+                      className="space-y-3 p-4 bg-gradient-to-br from-[#EEF2FF] to-[#F0F9FF] rounded-xl border border-[#6366F1]/20"
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <Sparkles className="w-4 h-4 text-[#6366F1]" />
+                        <h4 className="font-semibold text-sm text-[#1E293B]">Cartoonize Photo</h4>
+                      </div>
+
+                      {/* Template Selector */}
+                      <div className="space-y-2">
+                        <Label className="text-xs">Cartoon Style</Label>
+                        <Select value={selectedTemplate} onValueChange={setSelectedTemplate} disabled={generating}>
+                          <SelectTrigger className="h-10 rounded-lg bg-white" data-testid="cartoon-template-select">
+                            <SelectValue placeholder="Select style" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {loadingTemplates ? (
+                              <SelectItem value="loading" disabled>Loading styles...</SelectItem>
+                            ) : templates.length > 0 ? (
+                              templates.map(t => (
+                                <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="cartoon_1">Classic Cartoon</SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Cartoonize Button */}
+                      <Button
+                        type="button"
+                        onClick={handleCartoonize}
+                        disabled={generating}
+                        data-testid="cartoonize-btn"
+                        className="w-full h-10 rounded-lg bg-[#6366F1] hover:bg-[#4F46E5] text-white text-sm"
+                      >
+                        {generating ? (
+                          <>
+                            <motion.div
+                              animate={{ rotate: 360 }}
+                              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                              className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full mr-2"
+                            />
+                            Cartoonizing...
+                          </>
+                        ) : (
+                          <>
+                            <Wand2 className="w-4 h-4 mr-2" /> Cartoonize Image
+                          </>
+                        )}
+                      </Button>
+
+                      {/* Show result when cartoonization is complete */}
+                      {cartoonResult && (
+                        <motion.div 
+                          initial={{ opacity: 0, y: 10 }} 
+                          animate={{ opacity: 1, y: 0 }}
+                          className="space-y-3"
+                        >
+                          <div className="grid grid-cols-2 gap-3">
+                            {/* Original */}
+                            <div 
+                              onClick={() => setUseCartoonizedVersion(false)}
+                              className={`cursor-pointer rounded-lg border-2 overflow-hidden transition-all ${
+                                !useCartoonizedVersion 
+                                  ? 'border-[#6366F1] ring-2 ring-[#6366F1]/20' 
+                                  : 'border-slate-200 hover:border-slate-300'
+                              }`}
+                              data-testid="select-original-btn"
+                            >
+                              <div className="aspect-square bg-slate-100">
+                                <img 
+                                  src={photoPreview || `${BACKEND_URL}${uploadedCharacterUrl}`} 
+                                  alt="Original" 
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              <div className={`p-2 text-center text-xs font-medium ${
+                                !useCartoonizedVersion ? 'bg-[#6366F1] text-white' : 'bg-white text-[#64748B]'
+                              }`}>
+                                Original
+                              </div>
+                            </div>
+
+                            {/* Cartoonized */}
+                            <div 
+                              onClick={() => setUseCartoonizedVersion(true)}
+                              className={`cursor-pointer rounded-lg border-2 overflow-hidden transition-all ${
+                                useCartoonizedVersion 
+                                  ? 'border-[#6366F1] ring-2 ring-[#6366F1]/20' 
+                                  : 'border-slate-200 hover:border-slate-300'
+                              }`}
+                              data-testid="select-cartoon-btn"
+                            >
+                              <div className="aspect-square bg-slate-100">
+                                <img 
+                                  src={cartoonResult} 
+                                  alt="Cartoonized" 
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              <div className={`p-2 text-center text-xs font-medium ${
+                                useCartoonizedVersion ? 'bg-[#6366F1] text-white' : 'bg-white text-[#64748B]'
+                              }`}>
+                                Cartoonized
+                              </div>
+                            </div>
+                          </div>
+                          <p className="text-xs text-[#64748B] text-center">
+                            Select which version to use for this character
+                          </p>
+                        </motion.div>
+                      )}
+                    </motion.div>
+                  )}
+
                   {/* Name */}
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Name</Label>

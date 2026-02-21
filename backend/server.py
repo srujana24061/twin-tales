@@ -983,8 +983,25 @@ async def run_audio_generation(story_id: str, job_id: str, voice_style: str = "s
                 if not narration.strip():
                     continue
 
-                logger.info(f"Generating audio for scene {i+1}/{total}")
-                audio_bytes = await minimax_service.generate_tts(narration, voice_id)
+                audio_bytes = None
+                provider = "minimax"
+
+                # Try MiniMax TTS first
+                try:
+                    logger.info(f"Trying MiniMax TTS for scene {i+1}/{total}")
+                    audio_bytes = await minimax_service.generate_tts(narration, voice_id)
+                except Exception as mm_err:
+                    logger.warning(f"MiniMax TTS failed: {mm_err}. Falling back to ElevenLabs...")
+
+                # Fallback to ElevenLabs
+                if not audio_bytes:
+                    try:
+                        logger.info(f"Using ElevenLabs TTS for scene {i+1}/{total}")
+                        audio_bytes = await elevenlabs_service.generate_tts(narration, voice_style)
+                        provider = "elevenlabs"
+                    except Exception as el_err:
+                        logger.error(f"ElevenLabs TTS also failed: {el_err}")
+                        raise Exception(f"Both TTS providers failed. MiniMax: {mm_err}, ElevenLabs: {el_err}")
 
                 s3_key = f"users/{user_id}/stories/{story_id}/scenes/{scene['scene_number']}/narration.mp3"
                 s3_url = await s3_service.upload(s3_key, audio_bytes, 'audio/mpeg')
@@ -994,14 +1011,14 @@ async def run_audio_generation(story_id: str, job_id: str, voice_style: str = "s
                     "id": asset_id, "type": "audio", "format": "mp3",
                     "s3_key": s3_key, "s3_url": s3_url,
                     "scene_id": scene["id"], "story_id": story_id,
-                    "provider": "minimax",
+                    "provider": provider,
                     "created_at": datetime.now(timezone.utc).isoformat()
                 })
                 await db.scenes.update_one(
                     {"id": scene["id"]},
                     {"$set": {"audio_url": f"/api/media/{asset_id}"}}
                 )
-                logger.info(f"Audio uploaded to S3 for scene {i+1}")
+                logger.info(f"Audio ({provider}) uploaded to S3 for scene {i+1}")
             except Exception as e:
                 logger.error(f"Audio gen failed for scene {scene['id']}: {e}")
 

@@ -440,6 +440,43 @@ async def save_styled_character_image(
 
 # ==================== STORY ROUTES ====================
 
+@api_router.post("/stories/fix-statuses")
+async def fix_story_statuses(user: dict = Depends(get_current_user)):
+    """
+    Utility endpoint to fix story statuses
+    Sets stories with scenes to 'generated' if they're stuck in 'generating'
+    """
+    try:
+        # Find all stories for this user
+        stories = await db.stories.find({"owner_id": user["id"]}, {"_id": 0}).to_list(1000)
+        fixed_count = 0
+        
+        for story in stories:
+            # Count scenes for this story
+            scene_count = await db.scenes.count_documents({"story_id": story["id"]})
+            
+            # If story has scenes but is not marked as generated, fix it
+            if scene_count > 0 and story.get("status") not in ["generated", "completed"]:
+                await db.stories.update_one(
+                    {"id": story["id"]},
+                    {"$set": {
+                        "status": "generated",
+                        "scene_count": scene_count
+                    }}
+                )
+                fixed_count += 1
+                logger.info(f"Fixed status for story {story['id']} ({story.get('title')}) with {scene_count} scenes")
+        
+        return {
+            "success": True,
+            "fixed_count": fixed_count,
+            "message": f"Fixed {fixed_count} story statuses"
+        }
+    except Exception as e:
+        logger.error(f"Fix story statuses error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @api_router.post("/stories")
 async def create_story(data: StoryCreate, user: dict = Depends(get_current_user)):
     story_id = str(uuid.uuid4())

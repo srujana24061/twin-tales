@@ -1646,6 +1646,11 @@ def batch_video_generation_task(story_id: str, job_id: str):
     """Celery task wrapper for batch video generation"""
     asyncio.run(run_batch_video_generation(story_id, job_id))
 
+
+# Audio generation continues here (orphaned code needs to be integrated)
+async def run_audio_generation_content(story_id: str, job_id: str, voice_style: str):
+    """Continue audio generation logic"""
+    try:
         story = await db.stories.find_one({"id": story_id}, {"_id": 0})
         scenes = await db.scenes.find({"story_id": story_id}, {"_id": 0}).sort("scene_number", 1).to_list(100)
         user_id = story.get("owner_id", "unknown")

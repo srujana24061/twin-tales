@@ -1187,7 +1187,8 @@ async def run_ffmpeg_export(story_id: str, job_id: str):
         )
 
         story = await db.stories.find_one({"id": story_id}, {"_id": 0})
-        scenes = await db.scenes.find({"story_id": story_id}, {"_id": 0}).sort("scene_number", 1).to_list(100)
+        scenes_raw = await db.scenes.find({"story_id": story_id}, {"_id": 0}).sort("scene_number", 1).to_list(100)
+        scenes = [s for s in scenes_raw if s.get("include_in_video", True)]
         user_id = story.get("owner_id", "unknown")
 
         if not scenes:
@@ -1199,55 +1200,70 @@ async def run_ffmpeg_export(story_id: str, job_id: str):
             scene_dir = os.path.join(tmpdir, f"scene_{i}")
             os.makedirs(scene_dir, exist_ok=True)
 
-            duration = scene.get("duration_seconds", 8)
+            duration = scene.get("duration_seconds") or DEFAULT_SCENE_DURATION
+            duration = max(1, float(duration))
+            trim_start = max(0, float(scene.get("trim_start_seconds") or 0))
+            trim_end = scene.get("trim_end_seconds")
+            if trim_end is not None:
+                trim_end = float(trim_end)
+                if trim_end > trim_start:
+                    duration = max(0.5, trim_end - trim_start)
+
+            transition_type = scene.get("transition_type", "cut")
             has_video = False
             has_image = False
             has_audio = False
 
-            # Download scene video
             if scene.get("video_url"):
                 vid_path = os.path.join(scene_dir, "video.mp4")
                 has_video = await download_media_file(scene["video_url"], vid_path)
 
-            # Download scene image
             if scene.get("image_url"):
                 img_path = os.path.join(scene_dir, "image.png")
                 has_image = await download_media_file(scene["image_url"], img_path)
 
-            # Download narration audio
             if scene.get("audio_url"):
                 aud_path = os.path.join(scene_dir, "narration.mp3")
                 has_audio = await download_media_file(scene["audio_url"], aud_path)
 
             out_path = os.path.join(scene_dir, "output.mp4")
-
-            if has_video:
-                if has_audio:
-                    cmd = ["ffmpeg", "-y", "-i", vid_path, "-i", aud_path,
-                           "-c:v", "libx264", "-c:a", "aac", "-shortest",
-                           "-pix_fmt", "yuv420p", out_path]
-                else:
-                    cmd = ["ffmpeg", "-y", "-i", vid_path,
-                           "-c:v", "libx264", "-c:a", "aac",
-                           "-pix_fmt", "yuv420p", out_path]
-            elif has_image:
-                if has_audio:
-                    cmd = ["ffmpeg", "-y", "-loop", "1", "-i", img_path, "-i", aud_path,
-                           "-c:v", "libx264", "-t", str(duration), "-pix_fmt", "yuv420p",
-                           "-c:a", "aac", "-shortest",
-                           "-vf", "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2",
-                           out_path]
-                else:
-                    cmd = ["ffmpeg", "-y", "-loop", "1", "-i", img_path,
-                           "-c:v", "libx264", "-t", str(duration), "-pix_fmt", "yuv420p", "-an",
-                           "-vf", "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2",
-                           out_path]
-            else:
+            if not (has_video or has_image):
                 continue
 
-            logger.info(f"FFmpeg scene {i+1}: {' '.join(cmd[:6])}...")
+            input_cmd = ["ffmpeg", "-y"]
+            if trim_start > 0 and has_video:
+                input_cmd += ["-ss", str(trim_start)]
+
+            if has_video:
+                input_cmd += ["-i", vid_path]
+            else:
+                input_cmd += ["-loop", "1", "-i", img_path]
+
+            if has_audio:
+                input_cmd += ["-i", aud_path]
+            else:
+                input_cmd += ["-f", "lavfi", "-t", str(duration), "-i", "anullsrc=channel_layout=stereo:sample_rate=44100"]
+
+            input_cmd += ["-t", str(duration)]
+
+            vfilter = "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,setsar=1"
+            afilter = "aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo"
+
+            if transition_type == "fade" and duration > TRANSITION_FADE_SECONDS * 2:
+                fade_out_start = max(0.1, duration - TRANSITION_FADE_SECONDS)
+                vfilter += f",fade=t=in:st=0:d={TRANSITION_FADE_SECONDS},fade=t=out:st={fade_out_start}:d={TRANSITION_FADE_SECONDS}"
+                afilter += f",afade=t=in:st=0:d={TRANSITION_FADE_SECONDS},afade=t=out:st={fade_out_start}:d={TRANSITION_FADE_SECONDS}"
+
+            cmd = input_cmd + [
+                "-filter_complex", f"[0:v]{vfilter}[v];[1:a]{afilter}[a]",
+                "-map", "[v]", "-map", "[a]",
+                "-c:v", "libx264", "-c:a", "aac", "-pix_fmt", "yuv420p", "-shortest",
+                out_path
+            ]
+
+            logger.info(f"FFmpeg scene {i+1}: {' '.join(cmd[:8])}...")
             result = await asyncio.to_thread(
-                subprocess.run, cmd, capture_output=True, text=True, timeout=120
+                subprocess.run, cmd, capture_output=True, text=True, timeout=180
             )
             if result.returncode != 0:
                 logger.error(f"FFmpeg scene {i+1} error: {result.stderr[:500]}")
@@ -1265,7 +1281,6 @@ async def run_ffmpeg_export(story_id: str, job_id: str):
         if not scene_videos:
             raise Exception("No scene videos produced")
 
-        # Concatenate all scenes
         await db.generation_jobs.update_one(
             {"id": job_id},
             {"$set": {"progress": 70, "updated_at": datetime.now(timezone.utc).isoformat()}}
@@ -1278,13 +1293,12 @@ async def run_ffmpeg_export(story_id: str, job_id: str):
 
         combined_path = os.path.join(tmpdir, "combined.mp4")
         concat_cmd = ["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", concat_list,
-                       "-c:v", "libx264", "-c:a", "aac", "-pix_fmt", "yuv420p", combined_path]
+                      "-c:v", "libx264", "-c:a", "aac", "-pix_fmt", "yuv420p", combined_path]
         result = await asyncio.to_thread(subprocess.run, concat_cmd, capture_output=True, text=True, timeout=300)
         if result.returncode != 0:
             logger.error(f"FFmpeg concat error: {result.stderr[:500]}")
             raise Exception("Video concatenation failed")
 
-        # Add background music if available
         final_path = combined_path
         music_asset = await db.media_assets.find_one({"story_id": story_id, "type": "music"}, {"_id": 0})
         if music_asset:
@@ -1320,7 +1334,6 @@ async def run_ffmpeg_export(story_id: str, job_id: str):
             {"$set": {"progress": 90, "updated_at": datetime.now(timezone.utc).isoformat()}}
         )
 
-        # Upload to S3
         with open(final_path, 'rb') as f:
             video_bytes = f.read()
 

@@ -116,6 +116,8 @@ class ImageRegenRequest(BaseModel):
 
 
 # ==================== AUTH HELPERS ====================
+
+def hash_password(password: str) -> str:
     return pwd_context.hash(password)
 
 def verify_password(plain: str, hashed: str) -> bool:

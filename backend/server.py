@@ -866,8 +866,10 @@ async def run_video_generation(story_id: str, job_id: str):
                     char_ref_images.append(fresh_url)
                 except Exception:
                     pass
-            elif c and c.get("reference_image"):
-                char_ref_images.append(c["reference_image"])
+            elif c and c.get("reference_image_asset_id"):
+                asset = await db.media_assets.find_one({"id": c["reference_image_asset_id"]}, {"_id": 0})
+                if asset and asset.get("s3_url"):
+                    char_ref_images.append(asset["s3_url"])
 
         for i, scene in enumerate(scenes):
             try:

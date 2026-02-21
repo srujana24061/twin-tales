@@ -69,6 +69,7 @@ export default function ParentDashboardPage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [capMinutes, setCapMinutes] = useState(25);
   const [capEnabled, setCapEnabled] = useState(true);
+  const [parentEmail, setParentEmail] = useState('');
   const [savingSettings, setSavingSettings] = useState(false);
 
   const parentToken = localStorage.getItem('storycraft_parent_token');

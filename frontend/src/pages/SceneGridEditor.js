@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   ArrowLeft, Edit2, Save, Image as ImageIcon, Video, Upload, 
-  Sparkles, Loader2, CheckCircle, Play, X, RefreshCw, Download
+  Sparkles, Loader2, CheckCircle, Play, X, RefreshCw, Download, Film
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -212,6 +212,17 @@ export const SceneGridEditor = () => {
               <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
                 {scenesWithVideos}/{scenes.length} videos
               </div>
+              
+              <Button
+                onClick={() => navigate(`/stories/${storyId}/video-editor`)}
+                variant="outline"
+                className="rounded-lg"
+                style={{ borderColor: 'var(--glass-border)', color: 'var(--text-primary)' }}
+                data-testid="edit-video-btn"
+              >
+                <Film className="w-4 h-4 mr-2" /> Edit Video
+              </Button>
+
               <Button
                 onClick={handleGenerateAllVideos}
                 disabled={batchGenerating || scenesWithImages === 0}

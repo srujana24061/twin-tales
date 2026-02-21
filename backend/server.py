@@ -817,6 +817,19 @@ async def run_video_generation(story_id: str, job_id: str):
         user_id = story.get("owner_id", "unknown")
         total = len(scenes)
 
+        # Collect character reference images for video
+        char_ref_images = []
+        for cid in story.get("character_ids", []):
+            c = await db.characters.find_one({"id": cid}, {"_id": 0})
+            if c and c.get("reference_image_s3_key"):
+                try:
+                    fresh_url = s3_service.get_signed_url(c["reference_image_s3_key"], expires=3600)
+                    char_ref_images.append(fresh_url)
+                except Exception:
+                    pass
+            elif c and c.get("reference_image"):
+                char_ref_images.append(c["reference_image"])
+
         for i, scene in enumerate(scenes):
             try:
                 vid_prompt = scene.get("video_prompt") or scene.get("image_prompt", "")
@@ -825,7 +838,7 @@ async def run_video_generation(story_id: str, job_id: str):
                     vid_prompt = vid_prompt[:2000]
 
                 logger.info(f"Generating video for scene {i+1}/{total}")
-                result = await minimax_service.generate_video(vid_prompt)
+                result = await minimax_service.generate_video(vid_prompt, subject_references=char_ref_images if char_ref_images else None)
 
                 if result.get("url"):
                     s3_key = f"users/{user_id}/stories/{story_id}/scenes/{scene['scene_number']}/video.mp4"

@@ -31,6 +31,7 @@ AI: GPT-5.2 (text), MiniMax Image-01/Hailuo/Speech/Music | Storage: AWS S3 | Aut
 ## Note: MiniMax TTS may show "insufficient balance" — user needs to top up MiniMax account
 
 ## Implementation Log
+- 2026-02-21: Added Gemini Nano Banana primary image generation with MiniMax fallback, image provider/aspect ratio controls in Story Setup + Scene Editor, and manual regen buttons.
 - 2026-02-21: Added Celery task wiring (preview runs in eager mode with per-task Mongo client), Video Editor scene settings (duration, trim, transitions, include), and FFmpeg export updates (5s default, trims, optional fade transition).
 
 ## Prioritized Backlog

@@ -362,6 +362,85 @@ async def get_fotor_task_status(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@api_router.post("/characters/{char_id}/save-cartoonized")
+async def save_cartoonized_image(
+    char_id: str,
+    request: Request,
+    user: dict = Depends(get_current_user)
+):
+    """Save cartoonized image URL and user preference to character"""
+    try:
+        body = await request.json()
+        cartoonized_url = body.get("cartoonized_url")
+        use_cartoonized = body.get("use_cartoonized", False)
+        
+        if not cartoonized_url:
+            raise HTTPException(status_code=400, detail="cartoonized_url required")
+        
+        char = await db.characters.find_one({"id": char_id, "owner_id": user["id"]})
+        if not char:
+            raise HTTPException(status_code=404, detail="Character not found")
+        
+        # Download and store the cartoonized image in S3
+        try:
+            # Download the cartoonized image
+            import requests as http_requests
+            resp = await asyncio.to_thread(http_requests.get, cartoonized_url, timeout=60)
+            if resp.status_code != 200:
+                raise Exception(f"Failed to download cartoonized image: {resp.status_code}")
+            
+            # Upload to S3
+            ext = "png"
+            s3_key = f"users/{user['id']}/characters/{char_id}/cartoon.{ext}"
+            s3_url = await s3_service.upload(s3_key, resp.content, 'image/png')
+            
+            # Create media asset
+            asset_id = str(uuid.uuid4())
+            await db.media_assets.insert_one({
+                "id": asset_id,
+                "type": "image",
+                "format": ext,
+                "s3_key": s3_key,
+                "s3_url": s3_url,
+                "character_id": char_id,
+                "owner_id": user["id"],
+                "is_cartoonized": True,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+            
+            # Update character with cartoonized image URL
+            await db.characters.update_one(
+                {"id": char_id},
+                {"$set": {
+                    "cartoonized_photo_url": f"/api/media/{asset_id}",
+                    "cartoonized_photo_asset_id": asset_id,
+                    "cartoonized_photo_s3_key": s3_key,
+                    "use_cartoonized": use_cartoonized
+                }}
+            )
+            
+            updated = await db.characters.find_one({"id": char_id}, {"_id": 0})
+            return updated
+        except Exception as e:
+            logger.error(f"Failed to save cartoonized image: {e}")
+            # Fallback: just store the external URL
+            await db.characters.update_one(
+                {"id": char_id},
+                {"$set": {
+                    "cartoonized_photo_url": cartoonized_url,
+                    "use_cartoonized": use_cartoonized
+                }}
+            )
+            updated = await db.characters.find_one({"id": char_id}, {"_id": 0})
+            return updated
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Save cartoonized error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ==================== STORY ROUTES ====================
 
 @api_router.post("/stories")

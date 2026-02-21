@@ -75,21 +75,39 @@ export const AuthPage = ({ mode: initialMode }) => {
         <div className="glass-panel rounded-3xl p-8 shadow-xl">
           <form onSubmit={handleSubmit} className="space-y-5">
             {mode === 'register' && (
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-sm font-medium text-[#1E293B]">Full Name</Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
-                  <Input
-                    id="name"
-                    data-testid="auth-name-input"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Your name"
-                    className="h-12 pl-10 rounded-xl border-2 border-slate-200 focus:border-[#6366F1] focus:ring-4 focus:ring-[#6366F1]/20 bg-white"
-                    required
-                  />
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="name" className="text-sm font-medium text-[#1E293B]">Full Name</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
+                    <Input
+                      id="name"
+                      data-testid="auth-name-input"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Your name"
+                      className="h-12 pl-10 rounded-xl border-2 border-slate-200 focus:border-[#6366F1] focus:ring-4 focus:ring-[#6366F1]/20 bg-white"
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="phone" className="text-sm font-medium text-[#1E293B]">Phone Number (Optional)</Label>
+                  <div className="relative">
+                    <Input
+                      id="phone"
+                      type="tel"
+                      data-testid="auth-phone-input"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="+1234567890"
+                      className="h-12 rounded-xl border-2 border-slate-200 focus:border-[#6366F1] focus:ring-4 focus:ring-[#6366F1]/20 bg-white"
+                    />
+                  </div>
+                  <p className="text-xs text-[#64748B]">For WhatsApp notifications (include country code)</p>
+                </div>
+              </>
             )}
 
             <div className="space-y-2">

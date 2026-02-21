@@ -1053,17 +1053,33 @@ async def get_media(asset_id: str):
     if not asset:
         raise HTTPException(status_code=404, detail="Media not found")
 
-    data = base64.b64decode(asset["data"])
-    media_type = asset.get("type", "image")
-    fmt = asset.get("format", "png")
+    # S3-stored media: redirect to presigned URL
+    if asset.get("s3_key"):
+        try:
+            url = s3_service.get_signed_url(asset["s3_key"])
+            return RedirectResponse(url)
+        except Exception as e:
+            logger.error(f"S3 signed URL error: {e}")
 
-    if media_type == "pdf":
-        return Response(
-            content=data,
-            media_type="application/pdf",
-            headers={"Content-Disposition": f"attachment; filename=story_{asset_id[:8]}.pdf"}
-        )
-    return Response(content=data, media_type=f"image/{fmt}")
+    # S3 URL fallback
+    if asset.get("s3_url"):
+        return RedirectResponse(asset["s3_url"])
+
+    # Legacy: serve from MongoDB base64
+    if asset.get("data"):
+        data = base64.b64decode(asset["data"])
+        media_type = asset.get("type", "image")
+        fmt = asset.get("format", "png")
+        if media_type == "pdf":
+            return Response(content=data, media_type="application/pdf",
+                          headers={"Content-Disposition": f"attachment; filename=story_{asset_id[:8]}.pdf"})
+        elif media_type == "video":
+            return Response(content=data, media_type=f"video/{fmt}")
+        elif media_type in ("audio", "music"):
+            return Response(content=data, media_type=f"audio/{fmt}")
+        return Response(content=data, media_type=f"image/{fmt}")
+
+    raise HTTPException(status_code=404, detail="Media data not found")
 
 
 # ==================== DASHBOARD STATS ====================

@@ -43,6 +43,18 @@ class WellbeingTester:
             response = self.session.post(f"{API_BASE}/auth/register", json=register_data)
             if response.status_code == 201:
                 self.log("✅ User registration successful")
+            elif response.status_code == 200:
+                # Some APIs return 200 with token on registration
+                data = response.json()
+                if "token" in data or "access_token" in data:
+                    self.log("✅ User registration successful (with token)")
+                    # Extract token immediately
+                    self.user_token = data.get("access_token") or data.get("token")
+                    self.user_id = data.get("user_id") or (data.get("user", {}).get("id"))
+                    if self.user_token:
+                        self.session.headers.update({"Authorization": f"Bearer {self.user_token}"})
+                        self.log(f"✅ Auto-login successful. User ID: {self.user_id}")
+                        return True
             elif response.status_code == 400:
                 self.log("ℹ️  User already exists, proceeding to login")
             else:
@@ -50,6 +62,10 @@ class WellbeingTester:
                 
         except Exception as e:
             self.log(f"❌ Registration error: {e}")
+            
+        # If we already have a token from registration, no need to login
+        if self.user_token:
+            return True
             
         # Now login
         try:

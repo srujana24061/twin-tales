@@ -2337,17 +2337,40 @@ async def generate_scene_video_v2(scene_id: str, user: dict = Depends(get_curren
 async def run_scene_video_generation(scene_id: str, job_id: str):
     try:
         scene = await db.scenes.find_one({"id": scene_id}, {"_id": 0})
-        video_prompt = f"{scene.get('title', '')}: {scene['text'][:500]}"
-        result = await minimax_service.generate_video(prompt=video_prompt, first_frame_image=scene.get("image_url"), generation_type="image-to-video")
-        video_url = result.get("file_url")
+        if not scene:
+            raise Exception("Scene not found")
+
+        image_url = scene.get("image_url")
+
+        # If no image exists, auto-generate one with Nano Banana first
+        if not image_url:
+            await db.generation_jobs.update_one({"id": job_id}, {"$set": {"progress": 15, "message": "Generating frame image with Nano Banana..."}})
+            prompt = scene.get("image_prompt") or scene.get("scene_text", "")
+            prompt_text = f"{prompt}. High quality children's illustration, vibrant colors, child-friendly."
+            results = await image_gen_service.generate_image(prompt_text, aspect_ratio="16:9")
+            if results:
+                result_type, result_data = results[0]
+                img_s3_key = f"scenes/{scene_id}/image_{uuid.uuid4().hex[:8]}.png"
+                if result_type == "base64":
+                    img_bytes = base64.b64decode(result_data)
+                    image_url = await s3_service.upload(img_s3_key, img_bytes, 'image/png')
+                else:
+                    image_url = await s3_service.upload_from_url(img_s3_key, result_data, 'image/png')
+                await db.scenes.update_one({"id": scene_id}, {"$set": {"image_url": image_url}})
+                await db.generation_jobs.update_one({"id": job_id}, {"$set": {"progress": 35}})
+
+        video_prompt = f"{scene.get('title', '')}: {scene.get('scene_text', '')[:500]}"
+        result = await minimax_service.generate_video(prompt=video_prompt, first_frame_image=image_url, generation_type="image-to-video")
+        video_url = result.get("url")
         if video_url:
-            video_response = requests.get(video_url, timeout=120)
+            video_response = await asyncio.to_thread(requests.get, video_url, timeout=120)
             if video_response.status_code == 200:
                 s3_key = f"videos/scenes/{scene_id}.mp4"
-                s3_url = await asyncio.to_thread(s3_service.upload_bytes, video_response.content, s3_key, "video/mp4")
-                await db.scenes.update_one({"id": scene_id}, {"$set": {"video_url": s3_url}})
+                video_s3_url = await s3_service.upload(s3_key, video_response.content, "video/mp4")
+                await db.scenes.update_one({"id": scene_id}, {"$set": {"video_url": video_s3_url}})
         await db.generation_jobs.update_one({"id": job_id}, {"$set": {"status": "completed", "progress": 100}})
     except Exception as e:
+        logger.error(f"Scene video generation failed: {e}")
         await db.generation_jobs.update_one({"id": job_id}, {"$set": {"status": "failed", "error_message": str(e)}})
 
 def scene_video_task(scene_id: str, job_id: str):

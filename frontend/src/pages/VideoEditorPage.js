@@ -31,7 +31,14 @@ export const VideoEditorPage = () => {
     try {
       const { data } = await api.get(`/stories/${storyId}`);
       setStory(data);
-      setScenes((data.scenes || []).map(s => ({ ...s, include: true })));
+      setScenes((data.scenes || []).map(s => ({
+        ...s,
+        include_in_video: s.include_in_video !== false,
+        duration_seconds: s.duration_seconds || 5,
+        trim_start_seconds: s.trim_start_seconds ?? 0,
+        trim_end_seconds: s.trim_end_seconds ?? '',
+        transition_type: s.transition_type || 'cut',
+      })));
     } catch (err) {
       toast.error('Failed to load story');
       navigate('/dashboard');

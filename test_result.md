@@ -309,6 +309,9 @@ frontend:
         - working: true
           agent: "testing"
           comment: "Regen Nano button (data-testid='regen-nano-{scene_id}') is visible on scene cards with images. Button is clickable and triggers image regeneration using Nano Banana provider without any console errors or network errors. Toast notification appears confirming job started. UI handles the regeneration request correctly."
+        - working: true
+          agent: "testing"
+          comment: "RE-VERIFIED (2026-02-21): Regen Nano button working flawlessly. Button found on scene cards with images using correct test-id format 'regen-nano-{scene_id}'. Button click successfully triggers regeneration job. Toast notification 'Image regeneration started...' appears immediately. No console errors, no network failures. Button correctly hidden on scenes without images. Integration with backend API confirmed working."
 
   - task: "Scene Editor - Regen MiniMax button"
     implemented: true

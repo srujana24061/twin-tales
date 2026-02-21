@@ -1043,7 +1043,7 @@ async def run_audio_generation(story_id: str, job_id: str, voice_style: str = "s
                         logger.info(f"Using Edge TTS for scene {i+1}/{total}")
                         audio_bytes = await edge_tts_service.generate_tts(narration, voice_style)
                         provider = "edge-tts"
-                    except Exception as edge_err:
+                    except Exception:
                         logger.error(f"All TTS providers failed for scene {scene['id']}")
                         continue
 

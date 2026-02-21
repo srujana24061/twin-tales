@@ -315,7 +315,7 @@ class MiniMaxService:
         )
         data = response.json()
         if not data or not isinstance(data, dict):
-            raise Exception(f"MiniMax music: invalid response")
+            raise Exception("MiniMax music: invalid response")
 
         # Check for errors
         base_resp = data.get("base_resp") or {}

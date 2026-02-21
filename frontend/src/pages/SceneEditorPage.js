@@ -362,10 +362,41 @@ export const SceneEditorPage = () => {
                 )}
 
                 {!scene.image_url && (
-                  <div className={`${aspectRatioClass} bg-gradient-to-br from-[#EEF2FF] to-[#FFFBEB] flex items-center justify-center`}>
+                  <div className={`relative ${aspectRatioClass} bg-gradient-to-br from-[#EEF2FF] to-[#FFFBEB] flex items-center justify-center`}>
                     <div className="text-center">
                       <Image className="w-12 h-12 text-[#6366F1]/30 mx-auto mb-2" />
-                      <p className="text-sm text-[#94A3B8]">Scene {scene.scene_number} — No image yet</p>
+                      <p className="text-sm text-[#94A3B8] mb-4">Scene {scene.scene_number} — No image yet</p>
+                      
+                      {/* Generate Image Buttons */}
+                      <div className="flex gap-2 justify-center">
+                        <Button size="sm" onClick={() => regenerateImage(scene.id, 'nano_banana')}
+                          disabled={regenScene === scene.id} data-testid={`generate-nano-${scene.id}`}
+                          className="rounded-full bg-[#6366F1] hover:bg-[#4F46E5] text-white shadow-md">
+                          {regenScene === scene.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                          ) : (
+                            <Sparkles className="w-4 h-4 mr-1" />
+                          )}
+                          <span className="text-xs">Generate with Nano</span>
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => regenerateImage(scene.id, 'minimax')}
+                          disabled={regenScene === scene.id} data-testid={`generate-minimax-${scene.id}`}
+                          className="rounded-full border-2 border-[#6366F1] text-[#6366F1] hover:bg-[#EEF2FF] shadow-md">
+                          {regenScene === scene.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                          ) : (
+                            <Sparkles className="w-4 h-4 mr-1" />
+                          )}
+                          <span className="text-xs">Generate with MiniMax</span>
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {/* Scene Number Badge */}
+                    <div className="absolute top-4 left-4">
+                      <Badge className="bg-black/50 text-white backdrop-blur-sm rounded-full px-3 py-1 text-xs">
+                        Scene {scene.scene_number}
+                      </Badge>
                     </div>
                   </div>
                 )}

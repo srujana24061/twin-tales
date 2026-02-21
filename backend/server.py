@@ -502,7 +502,7 @@ async def convert_doodle_to_character(request: Request, user: dict = Depends(get
         
         # Make request to Gemini API
         response = await asyncio.to_thread(
-            requests.post,
+            http_requests.post,
             gemini_url,
             json=payload,
             headers={"Content-Type": "application/json"},

@@ -2224,6 +2224,111 @@ async def generate_video_endpoint(story_id: str, user: dict = Depends(get_curren
 
     job_id = str(uuid.uuid4())
     job_doc = {
+
+
+@api_router.post("/frames/{frame_id}/generate-image")
+async def generate_frame_image(frame_id: str, user: dict = Depends(get_current_user)):
+    """Generate image for a specific frame"""
+    frame = await db.frames.find_one({"id": frame_id}, {"_id": 0})
+    if not frame:
+        raise HTTPException(status_code=404, detail="Frame not found")
+    
+    try:
+        # Generate image using Gemini
+        result = await image_gen_service.generate_image(frame["text"])
+        image_url = result.get("s3_url")
+        
+        if image_url:
+            await db.frames.update_one(
+                {"id": frame_id},
+                {"$set": {"image_url": image_url, "updated_at": datetime.now(timezone.utc).isoformat()}}
+            )
+            return {"success": True, "image_url": image_url}
+        else:
+            raise Exception("No image URL returned")
+    except Exception as e:
+        logger.error(f"Frame image generation failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/frames/{frame_id}/generate-video")
+async def generate_frame_video(frame_id: str, user: dict = Depends(get_current_user)):
+    """Generate video for a specific frame (queues Celery task)"""
+    frame = await db.frames.find_one({"id": frame_id}, {"_id": 0})
+    if not frame:
+        raise HTTPException(status_code=404, detail="Frame not found")
+    
+    if not frame.get("image_url"):
+        raise HTTPException(status_code=400, detail="Frame must have an image before generating video")
+    
+    # Create job
+    job_id = str(uuid.uuid4())
+    job_doc = {
+        "id": job_id,
+        "frame_id": frame_id,
+        "user_id": user["id"],
+        "job_type": "frame_video",
+        "status": "pending",
+        "progress": 0,
+        "error_message": None,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.generation_jobs.insert_one(job_doc)
+    
+    # Enqueue task
+    enqueue_task(frame_video_generation_task, frame_id, job_id, fallback_coro=run_frame_video_generation)
+    
+    return {"job_id": job_id, "status": "pending", "message": "Video generation queued"}
+
+async def run_frame_video_generation(frame_id: str, job_id: str):
+    """Generate video for a single frame"""
+    try:
+        frame = await db.frames.find_one({"id": frame_id}, {"_id": 0})
+        if not frame:
+            raise Exception("Frame not found")
+        
+        scene = await db.scenes.find_one({"id": frame["scene_id"]}, {"_id": 0})
+        video_prompt = f"{scene.get('title', '')}: {frame['text'][:500]}"
+        
+        # Generate video
+        result = await minimax_service.generate_video(
+            prompt=video_prompt,
+            first_frame_image=frame.get("image_url"),
+            generation_type="image-to-video"
+        )
+        
+        video_url = result.get("file_url")
+        if video_url:
+            # Download and upload to S3
+            video_response = requests.get(video_url, timeout=120)
+            if video_response.status_code == 200:
+                s3_key = f"videos/frames/{frame_id}.mp4"
+                s3_url = await asyncio.to_thread(
+                    s3_service.upload_bytes,
+                    video_response.content,
+                    s3_key,
+                    "video/mp4"
+                )
+                
+                await db.frames.update_one(
+                    {"id": frame_id},
+                    {"$set": {"video_url": s3_url, "updated_at": datetime.now(timezone.utc).isoformat()}}
+                )
+        
+        await db.generation_jobs.update_one(
+            {"id": job_id},
+            {"$set": {"status": "completed", "progress": 100, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+    except Exception as e:
+        logger.error(f"Frame video generation failed: {e}")
+        await db.generation_jobs.update_one(
+            {"id": job_id},
+            {"$set": {"status": "failed", "error_message": str(e), "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+
+def frame_video_generation_task(frame_id: str, job_id: str):
+    asyncio.run(run_frame_video_generation(frame_id, job_id))
+
         "id": job_id, "story_id": story_id, "user_id": user["id"],
         "job_type": "video", "status": "pending", "progress": 0,
         "error_message": None, "result_url": None,

@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import api from '@/lib/api';
-import { useCartoonization } from '@/hooks/useCartoonization';
+import { useImageStyleConversion } from '../hooks/useImageStyleConversion';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const roles = ['hero', 'friend', 'villain', 'animal', 'imaginary'];

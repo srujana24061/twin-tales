@@ -9,9 +9,10 @@ const fadeUp = {
   visible: (i) => ({ opacity: 1, y: 0, transition: { delay: i * 0.1, type: 'spring', stiffness: 200, damping: 25 } }),
 };
 
-const FloatingBlob = ({ className, delay = 0 }) => (
+const FloatingBlob = ({ className, style, delay = 0 }) => (
   <motion.div
-    className={`absolute rounded-full opacity-20 blur-3xl ${className}`}
+    className={`absolute rounded-full opacity-30 blur-3xl ${className}`}
+    style={style}
     animate={{ y: [0, -25, 0], scale: [1, 1.05, 1] }}
     transition={{ duration: 6 + delay, repeat: Infinity, ease: 'easeInOut' }}
   />

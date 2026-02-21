@@ -225,6 +225,36 @@ export const SceneGridEditor = () => {
                   <><Play className="w-4 h-4 mr-2" /> Generate All Videos</>
                 )}
               </Button>
+
+              {/* Export full story video */}
+              {exportedVideoUrl ? (
+                <a
+                  href={exportedVideoUrl}
+                  download={`${story?.title || 'story'}.mp4`}
+                  target="_blank"
+                  rel="noreferrer"
+                  data-testid="download-story-video-btn"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium"
+                  style={{ background: '#22c55e', color: 'white' }}
+                >
+                  <Download className="w-4 h-4" /> Download Video
+                </a>
+              ) : (
+                <Button
+                  onClick={handleExportStory}
+                  disabled={exportingStory || scenesWithVideos === 0}
+                  variant="outline"
+                  className="rounded-lg"
+                  style={{ borderColor: 'var(--glass-border)', color: 'var(--text-primary)' }}
+                  data-testid="export-story-btn"
+                >
+                  {exportingStory ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Compiling...</>
+                  ) : (
+                    <><Download className="w-4 h-4 mr-2" /> Export Story</>
+                  )}
+                </Button>
+              )}
             </div>
           </div>
         </div>

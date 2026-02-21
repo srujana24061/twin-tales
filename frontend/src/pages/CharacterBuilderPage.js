@@ -30,21 +30,21 @@ export const CharacterBuilderPage = () => {
   const [photoPreview, setPhotoPreview] = useState(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(null);
   const [uploadedCharacterUrl, setUploadedCharacterUrl] = useState(null);
-  const [selectedTemplate, setSelectedTemplate] = useState('cartoon_1');
-  const [showCartoonOptions, setShowCartoonOptions] = useState(false);
-  const [useCartoonizedVersion, setUseCartoonizedVersion] = useState(false);
+  const [selectedStyle, setSelectedStyle] = useState('cartoon');
+  const [showStyleOptions, setShowStyleOptions] = useState(false);
+  const [useStyledVersion, setUseStyledVersion] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Cartoonization hook
+  // Image style conversion hook
   const {
     templates,
     loadingTemplates,
-    generating,
-    cartoonResult,
+    converting,
+    styledResult,
     fetchTemplates,
-    startCartoonization,
-    resetCartoonization
-  } = useCartoonization();
+    convertImageStyle,
+    resetConversion
+  } = useImageStyleConversion();
 
   useEffect(() => { loadCharacters(); }, []);
 

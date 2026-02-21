@@ -353,9 +353,9 @@ export const CharacterBuilderPage = () => {
                           <div className="grid grid-cols-2 gap-3">
                             {/* Original */}
                             <div 
-                              onClick={() => setUseCartoonizedVersion(false)}
+                              onClick={() => setUseStyledVersion(false)}
                               className={`cursor-pointer rounded-lg border-2 overflow-hidden transition-all ${
-                                !useCartoonizedVersion 
+                                !useStyledVersion 
                                   ? 'border-[#6366F1] ring-2 ring-[#6366F1]/20' 
                                   : 'border-slate-200 hover:border-slate-300'
                               }`}
@@ -369,33 +369,33 @@ export const CharacterBuilderPage = () => {
                                 />
                               </div>
                               <div className={`p-2 text-center text-xs font-medium ${
-                                !useCartoonizedVersion ? 'bg-[#6366F1] text-white' : 'bg-white text-[#64748B]'
+                                !useStyledVersion ? 'bg-[#6366F1] text-white' : 'bg-white text-[#64748B]'
                               }`}>
                                 Original
                               </div>
                             </div>
 
-                            {/* Cartoonized */}
+                            {/* Styled */}
                             <div 
-                              onClick={() => setUseCartoonizedVersion(true)}
+                              onClick={() => setUseStyledVersion(true)}
                               className={`cursor-pointer rounded-lg border-2 overflow-hidden transition-all ${
-                                useCartoonizedVersion 
+                                useStyledVersion 
                                   ? 'border-[#6366F1] ring-2 ring-[#6366F1]/20' 
                                   : 'border-slate-200 hover:border-slate-300'
                               }`}
-                              data-testid="select-cartoon-btn"
+                              data-testid="select-styled-btn"
                             >
                               <div className="aspect-square bg-slate-100">
                                 <img 
-                                  src={cartoonResult} 
-                                  alt="Cartoonized" 
+                                  src={styledResult?.url} 
+                                  alt={`${selectedStyle} style`} 
                                   className="w-full h-full object-cover"
                                 />
                               </div>
                               <div className={`p-2 text-center text-xs font-medium ${
-                                useCartoonizedVersion ? 'bg-[#6366F1] text-white' : 'bg-white text-[#64748B]'
+                                useStyledVersion ? 'bg-[#6366F1] text-white' : 'bg-white text-[#64748B]'
                               }`}>
-                                Cartoonized
+                                {selectedStyle.charAt(0).toUpperCase() + selectedStyle.slice(1)}
                               </div>
                             </div>
                           </div>

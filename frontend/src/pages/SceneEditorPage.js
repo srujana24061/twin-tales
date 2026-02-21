@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { toast } from 'sonner';
 import api from '@/lib/api';
+import { ReflectionModal } from '@/components/wellbeing/ReflectionModal';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -51,8 +52,20 @@ export const SceneEditorPage = () => {
   const [mediaProgress, setMediaProgress] = useState({ video: 0, audio: 0, music: 0 });
   const [voiceStyle, setVoiceStyle] = useState('storyteller');
   const [imageProvider, setImageProvider] = useState('nano_banana');
+  const [showReflection, setShowReflection] = useState(false);
 
   useEffect(() => { loadStory(); }, [storyId]); // eslint-disable-line
+
+  useEffect(() => {
+    // Show reflection modal if story is newly generated
+    if (story?.status === 'generated' && scenes.length > 0) {
+      const hasReflectedKey = `storycraft_reflected_${storyId}`;
+      const hasReflected = sessionStorage.getItem(hasReflectedKey);
+      if (!hasReflected) {
+        setTimeout(() => setShowReflection(true), 2000);
+      }
+    }
+  }, [story, scenes, storyId]);
 
   const loadStory = async () => {
     try {
@@ -64,6 +77,13 @@ export const SceneEditorPage = () => {
       toast.error('Failed to load story');
       navigate('/dashboard');
     } finally { setLoading(false); }
+  };
+
+  const handleReflectionClose = (saved) => {
+    if (saved) {
+      sessionStorage.setItem(`storycraft_reflected_${storyId}`, 'true');
+    }
+    setShowReflection(false);
   };
 
   const startEdit = (scene) => {

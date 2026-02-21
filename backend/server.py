@@ -2416,32 +2416,6 @@ async def run_batch_scene_videos(story_id: str, job_id: str):
                     parent_email=settings.get("parent_email") if settings else None,
                     phone_number=user.get("phone"),
                     story_title=story.get("title", "Your Story"),
-
-
-@api_router.get("/notifications")
-async def get_notifications(user: dict = Depends(get_current_user)):
-    """Get user notifications"""
-    # Simple implementation - check for completed video jobs
-    jobs = await db.generation_jobs.find({
-        "user_id": user["id"],
-        "status": "completed",
-        "job_type": {"$in": ["scene_video", "batch_scene_videos"]}
-    }, {"_id": 0}).sort("created_at", -1).limit(10).to_list(10)
-    
-    notifications = []
-    for job in jobs:
-        if job.get("job_type") == "batch_scene_videos":
-            story = await db.stories.find_one({"id": job.get("story_id")}, {"_id": 0})
-            notifications.append({
-                "id": job["id"],
-                "title": "Videos Ready! 🎬",
-                "message": f"All videos for '{story.get('title', 'your story')}' are ready to view!",
-                "read": False,
-                "created_at": job.get("created_at")
-            })
-    
-    return notifications
-
                     video_url=video_url
                 )
         except Exception as e:

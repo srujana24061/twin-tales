@@ -89,27 +89,14 @@ def auth_headers(auth_token):
 
 @pytest.fixture(scope="module")
 def story_and_scene(auth_headers):
-    """Create a story to get valid scene IDs for testing"""
-    # Create character first
-    char_resp = requests.post(f"{BASE_URL}/api/characters", json={
-        "name": "TEST_TestHero",
-        "role": "hero",
-        "description": "A brave hero"
-    }, headers=auth_headers)
-    
-    if char_resp.status_code != 200:
-        pytest.skip(f"Could not create character: {char_resp.text}")
-    
-    char_id = char_resp.json().get("id")
-    
+    """Create a story, trigger generation, wait for scenes to be created."""
     # Create story
     story_resp = requests.post(f"{BASE_URL}/api/stories", json={
         "title": "TEST_Scene Grid Story",
         "story_type": "original",
         "tone": "funny",
         "visual_style": "cartoon",
-        "user_topic": "A short adventure",
-        "character_ids": [char_id] if char_id else [],
+        "user_topic": "A short adventure about a brave puppy",
         "story_length": "short"
     }, headers=auth_headers)
     
@@ -119,14 +106,25 @@ def story_and_scene(auth_headers):
     story = story_resp.json()
     story_id = story.get("id")
     
-    # Get scenes
-    scenes_resp = requests.get(f"{BASE_URL}/api/stories/{story_id}/scenes", headers=auth_headers)
-    if scenes_resp.status_code != 200:
-        pytest.skip(f"Could not get scenes: {scenes_resp.text}")
+    # Trigger story generation
+    gen_resp = requests.post(f"{BASE_URL}/api/stories/{story_id}/generate", headers=auth_headers)
+    if gen_resp.status_code not in [200, 201]:
+        pytest.skip(f"Could not trigger story generation: {gen_resp.text}")
     
-    scenes = scenes_resp.json()
+    job_id = gen_resp.json().get("job_id")
+    
+    # Poll until scenes are created (up to 90 seconds)
+    scenes = []
+    for _ in range(18):  # 18 * 5s = 90s timeout
+        time.sleep(5)
+        scenes_resp = requests.get(f"{BASE_URL}/api/stories/{story_id}/scenes", headers=auth_headers)
+        if scenes_resp.status_code == 200:
+            scenes = scenes_resp.json()
+            if len(scenes) > 0:
+                break
+    
     if not scenes:
-        pytest.skip("No scenes created with story")
+        pytest.skip("No scenes created within 90s timeout - story generation too slow")
     
     return {"story_id": story_id, "scenes": scenes, "first_scene_id": scenes[0]["id"]}
 

@@ -32,6 +32,12 @@ db = client[os.environ['DB_NAME']]
 
 EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
 JWT_SECRET = os.environ.get('JWT_SECRET')
+CELERY_BROKER_URL = os.environ["CELERY_BROKER_URL"]
+CELERY_RESULT_BACKEND = os.environ["CELERY_RESULT_BACKEND"]
+CELERY_TASK_ALWAYS_EAGER = os.environ["CELERY_TASK_ALWAYS_EAGER"].lower() == "true"
+
+celery_app = Celery("storycraft", broker=CELERY_BROKER_URL, backend=CELERY_RESULT_BACKEND)
+celery_app.conf.update(task_always_eager=CELERY_TASK_ALWAYS_EAGER, task_eager_propagates=True)
 
 # Initialize external services
 from services import S3Service, MiniMaxService, ElevenLabsService, EdgeTTSService

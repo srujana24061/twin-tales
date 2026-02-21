@@ -161,6 +161,97 @@ class GeminiImageService:
         return [("base64", img.get("data")) for img in images if img.get("data")]
 
 
+class FotorService:
+    """Fotor API service for image cartoonization"""
+    def __init__(self):
+        self.api_key = os.environ.get('FOTOR_API_KEY')
+        self.secret_key = os.environ.get('FOTOR_SECRET_KEY')
+        self.base_url = os.environ.get('FOTOR_BASE_URL', 'https://developer-api.fotor.com')
+    
+    @property
+    def headers(self):
+        return {
+            "api_key": self.api_key,
+            "api_secret": self.secret_key,
+            "Content-Type": "application/json"
+        }
+    
+    async def get_templates(self) -> list:
+        """Fetch available cartoon templates from Fotor"""
+        try:
+            response = await asyncio.to_thread(
+                requests.get,
+                f"{self.base_url}/api/v1/cartoonization/templates",
+                headers=self.headers,
+                timeout=30
+            )
+            data = response.json()
+            # Mock response for dummy credentials
+            if self.api_key.startswith('dummy'):
+                return [
+                    {"id": "cartoon_1", "name": "Classic Cartoon", "preview": ""},
+                    {"id": "anime_1", "name": "Anime Style", "preview": ""},
+                    {"id": "comic_1", "name": "Comic Book", "preview": ""},
+                    {"id": "watercolor_1", "name": "Watercolor Art", "preview": ""}
+                ]
+            return data.get("templates", [])
+        except Exception as e:
+            logger.warning(f"Fotor templates fetch failed: {e}")
+            # Return mock templates on error
+            return [
+                {"id": "cartoon_1", "name": "Classic Cartoon", "preview": ""},
+                {"id": "anime_1", "name": "Anime Style", "preview": ""}
+            ]
+    
+    async def generate_cartoonization(self, image_url: str, template_id: str = "cartoon_1") -> dict:
+        """Start cartoonization job"""
+        try:
+            payload = {
+                "image_url": image_url,
+                "template_id": template_id,
+                "strength": 0.8
+            }
+            response = await asyncio.to_thread(
+                requests.post,
+                f"{self.base_url}/api/v1/cartoonization/generate",
+                headers=self.headers,
+                json=payload,
+                timeout=30
+            )
+            data = response.json()
+            # Mock response for dummy credentials
+            if self.api_key.startswith('dummy'):
+                mock_task_id = f"mock_task_{uuid.uuid4().hex[:8]}"
+                return {"task_id": mock_task_id, "status": "processing"}
+            return data
+        except Exception as e:
+            logger.error(f"Fotor cartoonization failed: {e}")
+            raise Exception(f"Cartoonization request failed: {str(e)}")
+    
+    async def get_task_status(self, task_id: str) -> dict:
+        """Poll cartoonization task status"""
+        try:
+            response = await asyncio.to_thread(
+                requests.get,
+                f"{self.base_url}/api/v1/cartoonization/tasks/{task_id}",
+                headers=self.headers,
+                timeout=30
+            )
+            data = response.json()
+            # Mock response for dummy credentials
+            if self.api_key.startswith('dummy') or task_id.startswith('mock_task'):
+                # Simulate completed job with a placeholder image
+                return {
+                    "task_id": task_id,
+                    "status": "completed",
+                    "result_url": "https://via.placeholder.com/512x512/6366F1/FFFFFF?text=Cartoonized"
+                }
+            return data
+        except Exception as e:
+            logger.error(f"Fotor task status failed: {e}")
+            raise Exception(f"Task status check failed: {str(e)}")
+
+
 class MiniMaxService:
     def __init__(self):
         self.api_key = os.environ.get('MINIMAX_API_KEY')

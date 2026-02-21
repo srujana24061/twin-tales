@@ -44,13 +44,23 @@ const aspectRatios = [
 
 export const StorySetupPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [characters, setCharacters] = useState([]);
   const [loading, setLoading] = useState(false);
   const [inputMode, setInputMode] = useState('topic');
+  const suggestion = location.state?.suggestion;
   const [form, setForm] = useState({
-    title: '', tone: 'funny', visual_style: 'cartoon', video_style: 'narrated',
-    moral_theme: '', story_length: 'medium', image_provider: 'nano_banana', image_aspect_ratio: '16:9', character_ids: [],
-    user_topic: '', user_full_story: '',
+    title: suggestion?.theme ? `${suggestion.theme} Adventure` : '',
+    tone: suggestion?.tone || 'funny',
+    visual_style: 'cartoon',
+    video_style: 'narrated',
+    moral_theme: suggestion?.moral || '',
+    story_length: 'medium',
+    image_provider: 'nano_banana',
+    image_aspect_ratio: '16:9',
+    character_ids: [],
+    user_topic: suggestion?.theme ? `${suggestion.theme} - ${suggestion.reason || ''}`.trim() : '',
+    user_full_story: '',
   });
 
   useEffect(() => {

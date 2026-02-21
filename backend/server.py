@@ -422,8 +422,8 @@ Return ONLY valid JSON:
         scenes = await db.scenes.find({"story_id": story_id}, {"_id": 0}).sort("scene_number", 1).to_list(100)
         total = len(scenes)
 
-        from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
-        image_gen = OpenAIImageGeneration(api_key=EMERGENT_LLM_KEY)
+        story_fresh = await db.stories.find_one({"id": story_id}, {"_id": 0})
+        user_id = story_fresh.get("owner_id", "unknown")
 
         for i, scene in enumerate(scenes):
             if scene.get("safety_flagged"):
@@ -431,33 +431,35 @@ Return ONLY valid JSON:
                 continue
             try:
                 img_prompt = f"{scene['image_prompt']}. Style: {story['visual_style']} illustration, child-friendly, vibrant colors, safe for children."
-                if len(img_prompt) > 4000:
-                    img_prompt = img_prompt[:4000]
+                if len(img_prompt) > 1500:
+                    img_prompt = img_prompt[:1500]
 
-                logger.info(f"Generating image for scene {i+1}/{total}")
-                images = await image_gen.generate_images(
-                    prompt=img_prompt,
-                    model="gpt-image-1",
-                    number_of_images=1
-                )
+                logger.info(f"Generating image for scene {i+1}/{total} via MiniMax")
+                results = await minimax_service.generate_image(img_prompt, aspect_ratio="16:9")
 
-                if images and len(images) > 0:
+                if results:
+                    result_type, result_data = results[0]
+                    s3_key = f"users/{user_id}/stories/{story_id}/scenes/{scene['scene_number']}/image.png"
+
+                    if result_type == "url":
+                        s3_url = await s3_service.upload_from_url(s3_key, result_data, 'image/png')
+                    else:
+                        img_bytes = base64.b64decode(result_data)
+                        s3_url = await s3_service.upload(s3_key, img_bytes, 'image/png')
+
                     asset_id = str(uuid.uuid4())
-                    image_b64 = base64.b64encode(images[0]).decode('utf-8')
                     await db.media_assets.insert_one({
-                        "id": asset_id,
-                        "type": "image",
-                        "format": "png",
-                        "data": image_b64,
-                        "scene_id": scene["id"],
-                        "story_id": story_id,
+                        "id": asset_id, "type": "image", "format": "png",
+                        "s3_key": s3_key, "s3_url": s3_url,
+                        "scene_id": scene["id"], "story_id": story_id,
+                        "provider": "minimax",
                         "created_at": datetime.now(timezone.utc).isoformat()
                     })
                     await db.scenes.update_one(
                         {"id": scene["id"]},
                         {"$set": {"image_url": f"/api/media/{asset_id}"}}
                     )
-                    logger.info(f"Image generated for scene {i+1}")
+                    logger.info(f"Image uploaded to S3 for scene {i+1}")
             except Exception as e:
                 logger.error(f"Image generation failed for scene {scene['id']}: {e}")
 

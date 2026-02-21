@@ -40,9 +40,10 @@ celery_app = Celery("storycraft", broker=CELERY_BROKER_URL, backend=CELERY_RESUL
 celery_app.conf.update(task_always_eager=CELERY_TASK_ALWAYS_EAGER, task_eager_propagates=True)
 
 # Initialize external services
-from services import S3Service, MiniMaxService, ElevenLabsService, EdgeTTSService
+from services import S3Service, MiniMaxService, ElevenLabsService, EdgeTTSService, GeminiImageService
 s3_service = S3Service()
 minimax_service = MiniMaxService()
+image_gen_service = GeminiImageService()
 elevenlabs_service = ElevenLabsService()
 edge_tts_service = EdgeTTSService()
 

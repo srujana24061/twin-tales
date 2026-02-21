@@ -188,6 +188,13 @@ export const SceneEditorPage = () => {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-20" data-testid="scene-editor-page">
+      {showReflection && (
+        <ReflectionModal 
+          storyId={storyId} 
+          storyTitle={story?.title} 
+          onClose={handleReflectionClose} 
+        />
+      )}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">

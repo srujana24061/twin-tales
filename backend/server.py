@@ -546,22 +546,29 @@ async def run_image_regeneration(story: dict, scene: dict, job_id: str):
             {"$set": {"status": "running", "progress": 10, "updated_at": datetime.now(timezone.utc).isoformat()}}
         )
 
-        from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
-        image_gen = OpenAIImageGeneration(api_key=EMERGENT_LLM_KEY)
-
         img_prompt = f"{scene['image_prompt']}. Style: {story['visual_style']} illustration, child-friendly, vibrant colors."
-        if len(img_prompt) > 4000:
-            img_prompt = img_prompt[:4000]
+        if len(img_prompt) > 1500:
+            img_prompt = img_prompt[:1500]
 
-        images = await image_gen.generate_images(prompt=img_prompt, model="gpt-image-1", number_of_images=1)
+        results = await minimax_service.generate_image(img_prompt, aspect_ratio="16:9")
 
-        if images and len(images) > 0:
+        if results:
+            result_type, result_data = results[0]
+            user_id = story.get("owner_id", "unknown")
+            s3_key = f"users/{user_id}/stories/{story['id']}/scenes/{scene['scene_number']}/image_{uuid.uuid4().hex[:8]}.png"
+
+            if result_type == "url":
+                s3_url = await s3_service.upload_from_url(s3_key, result_data, 'image/png')
+            else:
+                img_bytes = base64.b64decode(result_data)
+                s3_url = await s3_service.upload(s3_key, img_bytes, 'image/png')
+
             asset_id = str(uuid.uuid4())
-            image_b64 = base64.b64encode(images[0]).decode('utf-8')
             await db.media_assets.insert_one({
                 "id": asset_id, "type": "image", "format": "png",
-                "data": image_b64, "scene_id": scene["id"],
-                "story_id": story["id"],
+                "s3_key": s3_key, "s3_url": s3_url,
+                "scene_id": scene["id"], "story_id": story["id"],
+                "provider": "minimax",
                 "created_at": datetime.now(timezone.utc).isoformat()
             })
             await db.scenes.update_one(

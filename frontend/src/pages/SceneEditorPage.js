@@ -262,7 +262,7 @@ export const SceneEditorPage = () => {
               <div className="flex items-center gap-2">
                 <span className="text-sm text-[#64748B] font-medium">Image Model:</span>
                 <Select value={imageProvider} onValueChange={setImageProvider}>
-                  <SelectTrigger className="w-44 h-9 rounded-xl border-2 border-slate-200 text-sm" data-testid="image-provider-select">
+                  <SelectTrigger className="w-44 h-9 rounded-xl border-2 border-slate-200 text-sm" data-testid="scene-image-provider-select">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

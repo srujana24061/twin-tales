@@ -7,8 +7,8 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import api from '@/lib/api';
 
-const typeIcons = { story: Sparkles, pdf: FileText, image_regen: Image };
-const typeLabels = { story: 'Story Generation', pdf: 'PDF Export', image_regen: 'Image Regeneration' };
+const typeIcons = { story: Sparkles, pdf: FileText, image_regen: Image, video: Film, audio: Volume2, music: Music2 };
+const typeLabels = { story: 'Story Generation', pdf: 'PDF Export', image_regen: 'Image Regeneration', video: 'Video Generation', audio: 'Audio Narration', music: 'Background Music' };
 
 const statusConfig = {
   pending: { icon: Clock, color: '#94A3B8', bg: 'bg-slate-100', label: 'Pending' },

@@ -733,6 +733,197 @@ async def run_pdf_generation(story_id: str, job_id: str):
         )
 
 
+# ==================== VIDEO / AUDIO / MUSIC GENERATION ====================
+
+VOICE_MAP = {
+    "child": "male-qn-qingse",
+    "female": "female-shaonv",
+    "male": "male-qn-jingying",
+    "storyteller": "presenter_male",
+}
+
+TONE_MUSIC_PROMPTS = {
+    "funny": "Playful upbeat children's music with ukulele piano and light percussion, cheerful and bouncy",
+    "adventure": "Epic orchestral children's adventure music with strings timpani and brass, exciting and heroic",
+    "bedtime": "Gentle soothing lullaby music with soft piano music box and harp, calm and dreamy",
+    "educational": "Cheerful learning music with xylophone glockenspiel and light drums, curious and engaging",
+}
+
+
+async def run_video_generation(story_id: str, job_id: str):
+    try:
+        await db.generation_jobs.update_one(
+            {"id": job_id},
+            {"$set": {"status": "running", "progress": 5, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+
+        story = await db.stories.find_one({"id": story_id}, {"_id": 0})
+        scenes = await db.scenes.find({"story_id": story_id}, {"_id": 0}).sort("scene_number", 1).to_list(100)
+        user_id = story.get("owner_id", "unknown")
+        total = len(scenes)
+
+        for i, scene in enumerate(scenes):
+            try:
+                vid_prompt = scene.get("video_prompt") or scene.get("image_prompt", "")
+                vid_prompt = f"{vid_prompt}. Child-friendly animated scene, {story.get('visual_style', 'cartoon')} style, vibrant colors, safe for children."
+                if len(vid_prompt) > 2000:
+                    vid_prompt = vid_prompt[:2000]
+
+                logger.info(f"Generating video for scene {i+1}/{total}")
+                result = await minimax_service.generate_video(vid_prompt)
+
+                if result.get("url"):
+                    s3_key = f"users/{user_id}/stories/{story_id}/scenes/{scene['scene_number']}/video.mp4"
+                    s3_url = await s3_service.upload_from_url(s3_key, result["url"], 'video/mp4')
+
+                    asset_id = str(uuid.uuid4())
+                    await db.media_assets.insert_one({
+                        "id": asset_id, "type": "video", "format": "mp4",
+                        "s3_key": s3_key, "s3_url": s3_url,
+                        "scene_id": scene["id"], "story_id": story_id,
+                        "provider": "minimax",
+                        "created_at": datetime.now(timezone.utc).isoformat()
+                    })
+                    await db.scenes.update_one(
+                        {"id": scene["id"]},
+                        {"$set": {"video_url": f"/api/media/{asset_id}"}}
+                    )
+                    logger.info(f"Video uploaded to S3 for scene {i+1}")
+            except Exception as e:
+                logger.error(f"Video gen failed for scene {scene['id']}: {e}")
+
+            progress = 5 + int((i + 1) / total * 90)
+            await db.generation_jobs.update_one(
+                {"id": job_id},
+                {"$set": {"progress": progress, "updated_at": datetime.now(timezone.utc).isoformat()}}
+            )
+
+        await db.generation_jobs.update_one(
+            {"id": job_id},
+            {"$set": {"status": "completed", "progress": 100, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        logger.info(f"Video generation completed for story {story_id}")
+
+    except Exception as e:
+        logger.error(f"Video generation failed: {e}")
+        await db.generation_jobs.update_one(
+            {"id": job_id},
+            {"$set": {"status": "failed", "error_message": str(e), "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+
+
+async def run_audio_generation(story_id: str, job_id: str, voice_style: str = "storyteller"):
+    try:
+        await db.generation_jobs.update_one(
+            {"id": job_id},
+            {"$set": {"status": "running", "progress": 5, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+
+        story = await db.stories.find_one({"id": story_id}, {"_id": 0})
+        scenes = await db.scenes.find({"story_id": story_id}, {"_id": 0}).sort("scene_number", 1).to_list(100)
+        user_id = story.get("owner_id", "unknown")
+        voice_id = VOICE_MAP.get(voice_style, "male-qn-qingse")
+        total = len(scenes)
+
+        for i, scene in enumerate(scenes):
+            try:
+                narration = scene.get("narration_text") or scene.get("scene_text", "")
+                if not narration.strip():
+                    continue
+
+                logger.info(f"Generating audio for scene {i+1}/{total}")
+                audio_bytes = await minimax_service.generate_tts(narration, voice_id)
+
+                s3_key = f"users/{user_id}/stories/{story_id}/scenes/{scene['scene_number']}/narration.mp3"
+                s3_url = await s3_service.upload(s3_key, audio_bytes, 'audio/mpeg')
+
+                asset_id = str(uuid.uuid4())
+                await db.media_assets.insert_one({
+                    "id": asset_id, "type": "audio", "format": "mp3",
+                    "s3_key": s3_key, "s3_url": s3_url,
+                    "scene_id": scene["id"], "story_id": story_id,
+                    "provider": "minimax",
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                })
+                await db.scenes.update_one(
+                    {"id": scene["id"]},
+                    {"$set": {"audio_url": f"/api/media/{asset_id}"}}
+                )
+                logger.info(f"Audio uploaded to S3 for scene {i+1}")
+            except Exception as e:
+                logger.error(f"Audio gen failed for scene {scene['id']}: {e}")
+
+            progress = 5 + int((i + 1) / total * 90)
+            await db.generation_jobs.update_one(
+                {"id": job_id},
+                {"$set": {"progress": progress, "updated_at": datetime.now(timezone.utc).isoformat()}}
+            )
+
+        await db.generation_jobs.update_one(
+            {"id": job_id},
+            {"$set": {"status": "completed", "progress": 100, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        logger.info(f"Audio generation completed for story {story_id}")
+
+    except Exception as e:
+        logger.error(f"Audio generation failed: {e}")
+        await db.generation_jobs.update_one(
+            {"id": job_id},
+            {"$set": {"status": "failed", "error_message": str(e), "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+
+
+async def run_music_generation(story_id: str, job_id: str):
+    try:
+        await db.generation_jobs.update_one(
+            {"id": job_id},
+            {"$set": {"status": "running", "progress": 10, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+
+        story = await db.stories.find_one({"id": story_id}, {"_id": 0})
+        user_id = story.get("owner_id", "unknown")
+        tone = story.get("tone", "funny")
+        music_prompt = TONE_MUSIC_PROMPTS.get(tone, TONE_MUSIC_PROMPTS["funny"])
+        music_prompt += f", background music for a children's {tone} story"
+
+        logger.info(f"Generating music for story {story_id}")
+        result = await minimax_service.generate_music(music_prompt)
+
+        if result.get("type") == "url" and result.get("data"):
+            s3_key = f"users/{user_id}/stories/{story_id}/music/bg_music.mp3"
+            s3_url = await s3_service.upload_from_url(s3_key, result["data"], 'audio/mpeg')
+        elif result.get("type") == "bytes" and result.get("data"):
+            s3_key = f"users/{user_id}/stories/{story_id}/music/bg_music.mp3"
+            s3_url = await s3_service.upload(s3_key, result["data"], 'audio/mpeg')
+        else:
+            raise Exception("No music data returned")
+
+        asset_id = str(uuid.uuid4())
+        await db.media_assets.insert_one({
+            "id": asset_id, "type": "music", "format": "mp3",
+            "s3_key": s3_key, "s3_url": s3_url, "story_id": story_id,
+            "provider": "minimax",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        await db.stories.update_one(
+            {"id": story_id},
+            {"$set": {"music_url": f"/api/media/{asset_id}"}}
+        )
+
+        await db.generation_jobs.update_one(
+            {"id": job_id},
+            {"$set": {"status": "completed", "progress": 100, "result_url": f"/api/media/{asset_id}", "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        logger.info(f"Music generated for story {story_id}")
+
+    except Exception as e:
+        logger.error(f"Music generation failed: {e}")
+        await db.generation_jobs.update_one(
+            {"id": job_id},
+            {"$set": {"status": "failed", "error_message": str(e), "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+
+
 # ==================== GENERATION ROUTES ====================
 
 @api_router.post("/stories/{story_id}/generate")

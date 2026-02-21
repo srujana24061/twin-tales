@@ -237,16 +237,59 @@ export const VideoEditorPage = () => {
                   </div>
                 </div>
 
-                {/* Duration slider */}
-                <div className="w-32 hidden sm:block">
-                  <p className="text-xs text-[#94A3B8] mb-1">{scene.duration_seconds || 8}s</p>
-                  <Slider
-                    value={[scene.duration_seconds || 8]}
-                    min={3} max={20} step={1}
-                    onValueChange={([v]) => updateDuration(scene.id, v)}
-                    data-testid={`duration-slider-${scene.id}`}
-                    className="w-full"
-                  />
+                {/* Duration + Trim + Transition */}
+                <div className="w-full sm:w-auto flex flex-col sm:flex-row sm:items-center gap-3">
+                  <div className="w-full sm:w-36">
+                    <p className="text-xs text-[#94A3B8] mb-1">{scene.duration_seconds || 5}s</p>
+                    <Slider
+                      value={[scene.duration_seconds || 5]}
+                      min={3} max={20} step={1}
+                      onValueChange={([v]) => updateDuration(scene.id, v)}
+                      onValueCommit={([v]) => commitDuration(scene.id, v)}
+                      data-testid={`duration-slider-${scene.id}`}
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 w-full sm:w-44">
+                    <div>
+                      <p className="text-[10px] text-[#94A3B8] mb-1">Trim Start</p>
+                      <Input
+                        type="number"
+                        min={0}
+                        step={0.1}
+                        value={scene.trim_start_seconds}
+                        onChange={(e) => handleTrimChange(scene.id, 'trim_start_seconds', e.target.value)}
+                        onBlur={(e) => commitTrim(scene.id, 'trim_start_seconds', e.target.value)}
+                        data-testid={`trim-start-${scene.id}`}
+                        className="h-8 rounded-lg border-slate-200"
+                      />
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-[#94A3B8] mb-1">Trim End</p>
+                      <Input
+                        type="number"
+                        min={0}
+                        step={0.1}
+                        value={scene.trim_end_seconds}
+                        onChange={(e) => handleTrimChange(scene.id, 'trim_end_seconds', e.target.value)}
+                        onBlur={(e) => commitTrim(scene.id, 'trim_end_seconds', e.target.value)}
+                        data-testid={`trim-end-${scene.id}`}
+                        className="h-8 rounded-lg border-slate-200"
+                      />
+                    </div>
+                  </div>
+                  <div className="w-full sm:w-32">
+                    <p className="text-[10px] text-[#94A3B8] mb-1">Transition</p>
+                    <Select value={scene.transition_type || 'cut'} onValueChange={(value) => updateTransition(scene.id, value)}>
+                      <SelectTrigger className="h-8 rounded-lg border-slate-200" data-testid={`transition-select-${scene.id}`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="cut">Hard Cut</SelectItem>
+                        <SelectItem value="fade">Fade</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 {/* Include toggle */}

@@ -142,6 +142,13 @@ def parse_json_response(text):
     return json.loads(text)
 
 
+def enqueue_task(task, *args):
+    if CELERY_TASK_ALWAYS_EAGER:
+        asyncio.create_task(asyncio.to_thread(task.delay, *args))
+    else:
+        task.delay(*args)
+
+
 # ==================== AUTH ROUTES ====================
 
 @api_router.post("/auth/register")

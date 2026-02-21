@@ -201,9 +201,18 @@ class MiniMaxService:
             timeout=120
         )
         data = response.json()
+        if not data or not isinstance(data, dict):
+            raise Exception(f"MiniMax music: invalid response")
 
-        if data.get("data", {}).get("audio"):
-            audio_hex = data["data"]["audio"]
+        # Check for errors
+        base_resp = data.get("base_resp") or {}
+        if base_resp.get("status_code") and base_resp.get("status_code") != 0:
+            raise Exception(f"MiniMax music failed: {base_resp.get('status_msg', 'unknown error')}")
+
+        # Direct audio response
+        inner_data = data.get("data") or {}
+        if isinstance(inner_data, dict) and inner_data.get("audio"):
+            audio_hex = inner_data["audio"]
             return {"type": "bytes", "data": bytes.fromhex(audio_hex)}
 
         task_id = data.get("task_id")

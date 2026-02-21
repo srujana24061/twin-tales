@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { BookOpen, Users, PlusCircle, Clock, LayoutDashboard, LogOut, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
+import { SessionTimer } from '@/components/wellbeing/SessionTimer';
 
 export const Navbar = () => {
   const navigate = useNavigate();
@@ -74,6 +75,9 @@ export const Navbar = () => {
           </div>
 
           <div className="hidden md:flex items-center gap-3">
+            {/* Session Timer */}
+            <SessionTimer />
+            
             {/* Theme Switcher */}
             <ThemeSwitcher />
 

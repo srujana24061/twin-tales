@@ -1036,6 +1036,337 @@ async def run_music_generation(story_id: str, job_id: str):
         )
 
 
+# ==================== FFMPEG VIDEO EXPORT ====================
+
+async def download_media_file(asset_url: str, dest_path: str):
+    """Download media from S3/MongoDB asset URL to local file."""
+    if not asset_url:
+        return False
+    asset_id = asset_url.split("/")[-1] if "/api/media/" in asset_url else asset_url
+    asset = await db.media_assets.find_one({"id": asset_id}, {"_id": 0})
+    if not asset:
+        return False
+    if asset.get("s3_key"):
+        try:
+            url = s3_service.get_signed_url(asset["s3_key"])
+            resp = await asyncio.to_thread(http_requests.get, url, timeout=120)
+            if resp.status_code == 200:
+                with open(dest_path, 'wb') as f:
+                    f.write(resp.content)
+                return True
+        except Exception as e:
+            logger.error(f"S3 download failed: {e}")
+    if asset.get("s3_url"):
+        try:
+            resp = await asyncio.to_thread(http_requests.get, asset["s3_url"], timeout=120)
+            if resp.status_code == 200:
+                with open(dest_path, 'wb') as f:
+                    f.write(resp.content)
+                return True
+        except Exception:
+            pass
+    if asset.get("data"):
+        with open(dest_path, 'wb') as f:
+            f.write(base64.b64decode(asset["data"]))
+        return True
+    return False
+
+
+async def run_ffmpeg_export(story_id: str, job_id: str):
+    tmpdir = tempfile.mkdtemp(prefix="storycraft_export_")
+    try:
+        await db.generation_jobs.update_one(
+            {"id": job_id},
+            {"$set": {"status": "running", "progress": 5, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+
+        story = await db.stories.find_one({"id": story_id}, {"_id": 0})
+        scenes = await db.scenes.find({"story_id": story_id}, {"_id": 0}).sort("scene_number", 1).to_list(100)
+        user_id = story.get("owner_id", "unknown")
+
+        if not scenes:
+            raise Exception("No scenes to export")
+
+        scene_videos = []
+
+        for i, scene in enumerate(scenes):
+            scene_dir = os.path.join(tmpdir, f"scene_{i}")
+            os.makedirs(scene_dir, exist_ok=True)
+
+            duration = scene.get("duration_seconds", 8)
+            has_video = False
+            has_image = False
+            has_audio = False
+
+            # Download scene video
+            if scene.get("video_url"):
+                vid_path = os.path.join(scene_dir, "video.mp4")
+                has_video = await download_media_file(scene["video_url"], vid_path)
+
+            # Download scene image
+            if scene.get("image_url"):
+                img_path = os.path.join(scene_dir, "image.png")
+                has_image = await download_media_file(scene["image_url"], img_path)
+
+            # Download narration audio
+            if scene.get("audio_url"):
+                aud_path = os.path.join(scene_dir, "narration.mp3")
+                has_audio = await download_media_file(scene["audio_url"], aud_path)
+
+            out_path = os.path.join(scene_dir, "output.mp4")
+
+            if has_video:
+                if has_audio:
+                    cmd = ["ffmpeg", "-y", "-i", vid_path, "-i", aud_path,
+                           "-c:v", "libx264", "-c:a", "aac", "-shortest",
+                           "-pix_fmt", "yuv420p", out_path]
+                else:
+                    cmd = ["ffmpeg", "-y", "-i", vid_path,
+                           "-c:v", "libx264", "-c:a", "aac",
+                           "-pix_fmt", "yuv420p", out_path]
+            elif has_image:
+                if has_audio:
+                    cmd = ["ffmpeg", "-y", "-loop", "1", "-i", img_path, "-i", aud_path,
+                           "-c:v", "libx264", "-t", str(duration), "-pix_fmt", "yuv420p",
+                           "-c:a", "aac", "-shortest",
+                           "-vf", "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2",
+                           out_path]
+                else:
+                    cmd = ["ffmpeg", "-y", "-loop", "1", "-i", img_path,
+                           "-c:v", "libx264", "-t", str(duration), "-pix_fmt", "yuv420p", "-an",
+                           "-vf", "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2",
+                           out_path]
+            else:
+                continue
+
+            logger.info(f"FFmpeg scene {i+1}: {' '.join(cmd[:6])}...")
+            result = await asyncio.to_thread(
+                subprocess.run, cmd, capture_output=True, text=True, timeout=120
+            )
+            if result.returncode != 0:
+                logger.error(f"FFmpeg scene {i+1} error: {result.stderr[:500]}")
+                continue
+
+            if os.path.exists(out_path) and os.path.getsize(out_path) > 0:
+                scene_videos.append(out_path)
+
+            progress = 5 + int((i + 1) / len(scenes) * 60)
+            await db.generation_jobs.update_one(
+                {"id": job_id},
+                {"$set": {"progress": progress, "updated_at": datetime.now(timezone.utc).isoformat()}}
+            )
+
+        if not scene_videos:
+            raise Exception("No scene videos produced")
+
+        # Concatenate all scenes
+        await db.generation_jobs.update_one(
+            {"id": job_id},
+            {"$set": {"progress": 70, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+
+        concat_list = os.path.join(tmpdir, "concat.txt")
+        with open(concat_list, 'w') as f:
+            for vp in scene_videos:
+                f.write(f"file '{vp}'\n")
+
+        combined_path = os.path.join(tmpdir, "combined.mp4")
+        concat_cmd = ["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", concat_list,
+                       "-c:v", "libx264", "-c:a", "aac", "-pix_fmt", "yuv420p", combined_path]
+        result = await asyncio.to_thread(subprocess.run, concat_cmd, capture_output=True, text=True, timeout=300)
+        if result.returncode != 0:
+            logger.error(f"FFmpeg concat error: {result.stderr[:500]}")
+            raise Exception("Video concatenation failed")
+
+        # Add background music if available
+        final_path = combined_path
+        music_asset = await db.media_assets.find_one({"story_id": story_id, "type": "music"}, {"_id": 0})
+        if music_asset:
+            music_path = os.path.join(tmpdir, "bg_music.mp3")
+            has_music = False
+            if music_asset.get("s3_key"):
+                try:
+                    url = s3_service.get_signed_url(music_asset["s3_key"])
+                    resp = await asyncio.to_thread(http_requests.get, url, timeout=60)
+                    if resp.status_code == 200:
+                        with open(music_path, 'wb') as f:
+                            f.write(resp.content)
+                        has_music = True
+                except Exception:
+                    pass
+            elif music_asset.get("data"):
+                with open(music_path, 'wb') as f:
+                    f.write(base64.b64decode(music_asset["data"]))
+                has_music = True
+
+            if has_music:
+                final_with_music = os.path.join(tmpdir, "final.mp4")
+                music_cmd = ["ffmpeg", "-y", "-i", combined_path, "-i", music_path,
+                             "-filter_complex", "[1:a]volume=0.15[music];[0:a][music]amix=inputs=2:duration=first:dropout_transition=3[aout]",
+                             "-map", "0:v", "-map", "[aout]", "-c:v", "copy", "-c:a", "aac",
+                             final_with_music]
+                result = await asyncio.to_thread(subprocess.run, music_cmd, capture_output=True, text=True, timeout=300)
+                if result.returncode == 0 and os.path.exists(final_with_music):
+                    final_path = final_with_music
+
+        await db.generation_jobs.update_one(
+            {"id": job_id},
+            {"$set": {"progress": 90, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+
+        # Upload to S3
+        with open(final_path, 'rb') as f:
+            video_bytes = f.read()
+
+        asset_id = str(uuid.uuid4())
+        s3_key = f"users/{user_id}/stories/{story_id}/exports/final_{asset_id[:8]}.mp4"
+        try:
+            s3_url = await s3_service.upload(s3_key, video_bytes, 'video/mp4')
+            await db.media_assets.insert_one({
+                "id": asset_id, "type": "video", "format": "mp4",
+                "s3_key": s3_key, "s3_url": s3_url, "story_id": story_id,
+                "is_export": True, "created_at": datetime.now(timezone.utc).isoformat()
+            })
+        except Exception:
+            image_b64 = base64.b64encode(video_bytes).decode('utf-8')
+            await db.media_assets.insert_one({
+                "id": asset_id, "type": "video", "format": "mp4",
+                "data": image_b64, "story_id": story_id,
+                "is_export": True, "created_at": datetime.now(timezone.utc).isoformat()
+            })
+
+        await db.generation_jobs.update_one(
+            {"id": job_id},
+            {"$set": {
+                "status": "completed", "progress": 100,
+                "result_url": f"/api/media/{asset_id}",
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        logger.info(f"FFmpeg export completed for story {story_id}")
+
+    except Exception as e:
+        logger.error(f"FFmpeg export failed: {e}")
+        await db.generation_jobs.update_one(
+            {"id": job_id},
+            {"$set": {"status": "failed", "error_message": str(e), "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+# ==================== AD GENERATION ====================
+
+PLATFORM_CONFIGS = {
+    "instagram": {"aspect": "9:16", "max_duration": 30, "label": "Instagram Reel"},
+    "youtube": {"aspect": "9:16", "max_duration": 60, "label": "YouTube Short"},
+    "whatsapp": {"aspect": "9:16", "max_duration": 30, "label": "WhatsApp Status"},
+    "facebook": {"aspect": "4:5", "max_duration": 30, "label": "Facebook Feed"},
+    "linkedin": {"aspect": "1:1", "max_duration": 30, "label": "LinkedIn Post"},
+}
+
+async def run_ad_generation(story_id: str, job_id: str, platform: str, style: str, cta_text: str):
+    try:
+        await db.generation_jobs.update_one(
+            {"id": job_id},
+            {"$set": {"status": "running", "progress": 10, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+
+        story = await db.stories.find_one({"id": story_id}, {"_id": 0})
+        scenes = await db.scenes.find({"story_id": story_id}, {"_id": 0}).sort("scene_number", 1).to_list(100)
+
+        if not scenes:
+            raise Exception("No scenes available for ad creation")
+
+        scene_summaries = "\n".join([f"Scene {s['scene_number']}: {s.get('scene_title','')} - {s.get('scene_text','')[:100]}" for s in scenes])
+        platform_config = PLATFORM_CONFIGS.get(platform, PLATFORM_CONFIGS["instagram"])
+
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        chat = LlmChat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=f"ad-{story_id}-{uuid.uuid4().hex[:8]}",
+            system_message="You are an expert social media marketing copywriter for children's content. Return ONLY valid JSON."
+        ).with_model("openai", "gpt-5.2")
+
+        prompt = f"""Create a {platform_config['label']} promotional post for this children's story.
+
+Story Title: {story.get('title','')}
+Tone: {story.get('tone','')}
+Style: {style}
+CTA: {cta_text}
+
+Scenes:
+{scene_summaries}
+
+Select the 2-3 best scenes for a {platform_config['max_duration']}s promo video.
+
+Return JSON:
+{{"hook_text": "Attention-grabbing opening line", "caption": "Full social media caption (2-3 sentences)", "hashtags": "#tag1 #tag2 #tag3 #tag4 #tag5", "selected_scenes": [1, 3, 5], "overlay_texts": ["Text overlay for scene 1", "Text overlay for scene 2", "Text overlay for scene 3"], "cta_text": "{cta_text}"}}"""
+
+        await db.generation_jobs.update_one(
+            {"id": job_id},
+            {"$set": {"progress": 30, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+
+        response = await chat.send_message(UserMessage(text=prompt))
+        ad_data = parse_json_response(response)
+
+        await db.generation_jobs.update_one(
+            {"id": job_id},
+            {"$set": {"progress": 60, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+
+        # Build selected scenes data
+        selected = ad_data.get("selected_scenes", [1, 2, 3])
+        selected_scenes_data = []
+        for snum in selected:
+            for s in scenes:
+                if s.get("scene_number") == snum:
+                    selected_scenes_data.append({
+                        "scene_number": snum,
+                        "scene_title": s.get("scene_title", ""),
+                        "image_url": s.get("image_url"),
+                        "video_url": s.get("video_url"),
+                    })
+                    break
+
+        ad_id = str(uuid.uuid4())
+        ad_doc = {
+            "id": ad_id,
+            "story_id": story_id,
+            "user_id": story.get("owner_id"),
+            "platform": platform,
+            "aspect_ratio": platform_config["aspect"],
+            "style": style,
+            "hook_text": ad_data.get("hook_text", ""),
+            "caption": ad_data.get("caption", ""),
+            "hashtags": ad_data.get("hashtags", ""),
+            "cta_text": ad_data.get("cta_text", cta_text),
+            "overlay_texts": ad_data.get("overlay_texts", []),
+            "selected_scenes": selected_scenes_data,
+            "status": "ready",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.ad_projects.insert_one(ad_doc)
+
+        await db.generation_jobs.update_one(
+            {"id": job_id},
+            {"$set": {
+                "status": "completed", "progress": 100,
+                "result_data": {"ad_id": ad_id},
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        logger.info(f"Ad generated for story {story_id}, platform {platform}")
+
+    except Exception as e:
+        logger.error(f"Ad generation failed: {e}")
+        await db.generation_jobs.update_one(
+            {"id": job_id},
+            {"$set": {"status": "failed", "error_message": str(e), "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+
+
 # ==================== GENERATION ROUTES ====================
 
 @api_router.post("/stories/{story_id}/generate")

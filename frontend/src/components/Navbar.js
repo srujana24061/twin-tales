@@ -107,6 +107,7 @@ export const Navbar = () => {
             <div className="relative">
               <button
                 onClick={() => setShowNotifications(!showNotifications)}
+                data-testid="notification-bell"
                 className="relative p-2 rounded-lg transition-colors"
                 style={{ 
                   background: showNotifications ? 'var(--primary-light)' : 'transparent',

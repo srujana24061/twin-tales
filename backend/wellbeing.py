@@ -118,7 +118,8 @@ async def get_settings(user: dict = Depends(get_current_user_wb)):
             "session_cap_minutes": 25,
             "session_cap_enabled": True,
             "parent_pin_set": False,
-            "child_name": user.get("name", "")
+            "child_name": user.get("name", ""),
+            "parent_email": None
         }
     settings.pop("parent_pin_hash", None)
     return settings

@@ -29,10 +29,10 @@ export const LandingPage = () => {
   const token = localStorage.getItem('storycraft_token');
 
   return (
-    <div className="min-h-screen bg-paper relative overflow-hidden">
-      <FloatingBlob className="w-96 h-96 bg-[#6366F1] top-10 -left-48" delay={0} />
-      <FloatingBlob className="w-80 h-80 bg-[#F59E0B] top-60 right-0" delay={2} />
-      <FloatingBlob className="w-72 h-72 bg-[#EC4899] bottom-20 left-1/3" delay={4} />
+    <div className="min-h-screen theme-page-bg relative overflow-hidden">
+      <FloatingBlob className="w-96 h-96 top-10 -left-48" style={{ background: 'hsl(var(--primary) / 0.15)' }} delay={0} />
+      <FloatingBlob className="w-80 h-80 top-60 right-0" style={{ background: 'hsl(var(--secondary) / 0.15)' }} delay={2} />
+      <FloatingBlob className="w-72 h-72 bottom-20 left-1/3" style={{ background: 'hsl(var(--accent) / 0.12)' }} delay={4} />
 
       {/* Navbar */}
       <motion.header

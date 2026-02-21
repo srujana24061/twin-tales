@@ -329,12 +329,18 @@ export const SceneEditorPage = () => {
                         Scene {scene.scene_number}
                       </Badge>
                     </div>
-                    <div className="absolute top-4 right-4">
-                      <Button size="sm" variant="secondary" onClick={() => regenerateImage(scene.id)}
-                        disabled={regenScene === scene.id} data-testid={`regen-image-${scene.id}`}
+                    [0m<div className="absolute top-4 right-4 flex gap-2">
+                      <Button size="sm" variant="secondary" onClick={() => regenerateImage(scene.id, 'nano_banana')}
+                        disabled={regenScene === scene.id} data-testid={`regen-nano-${scene.id}`}
+                        className="rounded-full bg-white/90 backdrop-blur-sm hover:bg-white text-[#1E293B] shadow-md">
+                        {regenScene === scene.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                        <span className="ml-1 text-xs">Nano</span>
+                      </Button>
+                      <Button size="sm" variant="secondary" onClick={() => regenerateImage(scene.id, 'minimax')}
+                        disabled={regenScene === scene.id} data-testid={`regen-minimax-${scene.id}`}
                         className="rounded-full bg-white/80 backdrop-blur-sm hover:bg-white text-[#1E293B] shadow-md">
                         {regenScene === scene.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                        <span className="ml-1 text-xs">Regen</span>
+                        <span className="ml-1 text-xs">MiniMax</span>
                       </Button>
                     </div>
                     {scene.safety_checked && (

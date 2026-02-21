@@ -1637,7 +1637,7 @@ async def generate_music_endpoint(story_id: str, user: dict = Depends(get_curren
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
     await db.generation_jobs.insert_one(job_doc)
-    asyncio.create_task(run_music_generation(story_id, job_id))
+    enqueue_task(music_generation_task, story_id, job_id)
     return {"job_id": job_id, "status": "pending"}
 
 

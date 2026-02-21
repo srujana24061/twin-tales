@@ -87,14 +87,33 @@ class MiniMaxService:
             return [("base64", b) for b in b64_list]
         return [("url", u) for u in urls]
 
-    async def generate_video(self, prompt: str, subject_references: list = None) -> dict:
+    async def generate_video(self, prompt: str, subject_references: list = None,
+                            first_frame_image: str = None,
+                            generation_type: str = "text-to-video") -> dict:
+        """Generate video using MiniMax Hailuo.
+        
+        Args:
+            prompt: Video description
+            subject_references: List of character image URLs for consistency
+            first_frame_image: Scene image URL for image-to-video mode
+            generation_type: 'text-to-video' or 'image-to-video'
+        """
         payload = {
             "model": "video-01",
             "prompt": prompt[:2000],
         }
+
+        # Image-to-video: use scene image as first frame for visual consistency
+        if generation_type == "image-to-video" and first_frame_image:
+            payload["first_frame_image"] = first_frame_image
+            logger.info("Using image-to-video mode with first_frame_image")
+
+        # Character subject references for consistency
         if subject_references:
             payload["subject_reference"] = [{"image": url} for url in subject_references[:2]]
-        logger.info(f"MiniMax video gen: creating task")
+            logger.info(f"Using {len(subject_references[:2])} character subject references")
+
+        logger.info(f"MiniMax video gen: creating task ({generation_type})")
         response = await asyncio.to_thread(
             requests.post,
             f"{self.base_url}/video_generation",

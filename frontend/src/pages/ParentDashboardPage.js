@@ -106,6 +106,7 @@ export default function ParentDashboardPage() {
       await axios.put(`${API_URL}/api/wellbeing/settings`, {
         session_cap_minutes: capMinutes,
         session_cap_enabled: capEnabled,
+        parent_email: parentEmail || undefined,
       }, { headers: { Authorization: `Bearer ${token}` } });
       toast.success('Settings saved');
       setSettingsOpen(false);

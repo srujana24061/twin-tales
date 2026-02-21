@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import api from '@/lib/api';
+import { useCartoonization } from '@/hooks/useCartoonization';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const roles = ['hero', 'friend', 'villain', 'animal', 'imaginary'];
@@ -28,7 +29,22 @@ export const CharacterBuilderPage = () => {
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(null);
+  const [uploadedCharacterUrl, setUploadedCharacterUrl] = useState(null);
+  const [selectedTemplate, setSelectedTemplate] = useState('cartoon_1');
+  const [showCartoonOptions, setShowCartoonOptions] = useState(false);
+  const [useCartoonizedVersion, setUseCartoonizedVersion] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Cartoonization hook
+  const {
+    templates,
+    loadingTemplates,
+    generating,
+    cartoonResult,
+    fetchTemplates,
+    startCartoonization,
+    resetCartoonization
+  } = useCartoonization();
 
   useEffect(() => { loadCharacters(); }, []);
 

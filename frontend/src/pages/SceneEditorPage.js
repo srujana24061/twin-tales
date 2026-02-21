@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   BookOpen, Image, Pencil, RefreshCw, Shield, ShieldAlert, FileText,
   ChevronDown, Download, ArrowLeft, Sparkles, Check, Loader2,
-  Film, Volume2, Music, Play, Pause
+  Film, Volume2, Music, Play, Pause, Scissors, Megaphone
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';

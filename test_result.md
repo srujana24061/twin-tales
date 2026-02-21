@@ -253,16 +253,88 @@ frontend:
           agent: "testing"
           comment: "Export Video button works correctly. Properly disables when no renderable content (scenes without video_url or image_url). When enabled, clicking starts export job and shows progress bar. Progress updates display properly. Note: Full export flow requires scenes to have generated videos/images first."
 
+  - task: "Story Setup - Image Model selector"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/StorySetupPage.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "Image Model select (data-testid='story-image-provider-select') is visible in Story Setup page. Defaults to 'Gemini Nano Banana (Default)' as expected. Dropdown works correctly with options for 'nano_banana' and 'minimax'. User can select between image providers before story generation."
+
+  - task: "Story Setup - Aspect Ratio selector"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/StorySetupPage.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "Aspect Ratio select (data-testid='story-aspect-ratio-select') is visible in Story Setup page. Defaults to '16:9 Widescreen' as expected. Dropdown offers multiple aspect ratios (16:9, 4:3, 1:1, 3:4, 9:16). Tested changing to 9:16 and 1:1 - both changes work correctly. Aspect ratio setting is properly passed to story generation."
+
+  - task: "Scene Editor - Image Model selector"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/SceneEditorPage.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "Image Model select (data-testid='scene-image-provider-select') is visible in Scene Editor Media Studio section. Defaults to 'Nano Banana' as expected. Allows users to change the default image provider for image regeneration operations. Control is properly positioned and accessible."
+
+  - task: "Scene Editor - Regen Nano button"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/SceneEditorPage.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "Regen Nano button (data-testid='regen-nano-{scene_id}') is visible on scene cards with images. Button is clickable and triggers image regeneration using Nano Banana provider without any console errors or network errors. Toast notification appears confirming job started. UI handles the regeneration request correctly."
+
+  - task: "Scene Editor - Regen MiniMax button"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/SceneEditorPage.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "Regen MiniMax button (data-testid='regen-minimax-{scene_id}') is visible on scene cards with images. Button is clickable and triggers image regeneration using MiniMax provider without any console errors or network errors. Toast notification 'Image regeneration started (MiniMax)!' appears confirming job started. UI properly handles the regeneration request. Note: External API may have balance limitations but UI handles this gracefully."
+
+  - task: "Scene Editor - Aspect ratio CSS container adjustment"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/SceneEditorPage.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "Aspect ratio container dynamically adjusts based on story's image_aspect_ratio setting. Verified CSS classes are correctly applied: 'aspect-[16/9]' for 16:9, 'aspect-[9/16]' for 9:16, 'aspect-square' for 1:1. Created stories with different aspect ratios and confirmed the image containers use the correct CSS classes. Scene images display with proper aspect ratios matching the story configuration."
+
 metadata:
   created_by: "testing_agent"
   version: "1.0"
-  test_sequence: 1
+  test_sequence: 2
   run_ui: true
-  last_tested: "2024-02-21T12:10:00Z"
+  last_tested: "2026-02-21T13:00:00Z"
 
 test_plan:
   current_focus:
-    - "All Video Editor features tested and verified"
+    - "Image generation controls tested and verified"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -272,3 +344,5 @@ agent_communication:
       message: "Completed comprehensive UI testing of Video Editor features. All features are working correctly. Found and fixed critical backend issue with Celery async event loops. Story generation, scene editing, and all Video Editor interactions (reorder, duration, trim, transition, toggle, export) are fully functional."
     - agent: "testing"
       message: "CRITICAL FIX APPLIED: Modified /app/backend/server.py line 1487-1510 to fix asyncio event loop conflict in Celery eager mode. The story_generation_task now creates a new Motor client within the asyncio.run() context to avoid 'Future attached to a different loop' errors."
+    - agent: "testing"
+      message: "Completed comprehensive testing of new image generation controls. All features working correctly: (1) Story Setup has Image Model select (defaults to Nano Banana) and Aspect Ratio select (defaults to 16:9), (2) Both selects are functional and accept changes (tested 9:16 and 1:1 aspect ratios), (3) Scene Editor has Image Model select (defaults to Nano Banana), (4) Regen Nano and Regen MiniMax buttons are visible and clickable on scenes with images, (5) Both regen buttons trigger regeneration jobs without UI errors, (6) Aspect ratio containers dynamically adjust via CSS classes (aspect-[16/9], aspect-[9/16], aspect-square) based on story settings. External image generation API limitations (MiniMax balance) are handled gracefully by the UI."

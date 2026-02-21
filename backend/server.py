@@ -2416,15 +2416,7 @@ async def run_batch_scene_videos(story_id: str, job_id: str):
                     parent_email=settings.get("parent_email") if settings else None,
                     phone_number=user.get("phone"),
                     story_title=story.get("title", "Your Story"),
-                    video_url=video_url
-                )
-        except Exception as e:
-            logger.error(f"Notification failed: {e}")
-    except Exception as e:
-        await db.generation_jobs.update_one({"id": job_id}, {"$set": {"status": "failed", "error_message": str(e)}})
 
-def batch_scene_videos_task(story_id: str, job_id: str):
-    asyncio.run(run_batch_scene_videos(story_id, job_id))
 
 @api_router.get("/notifications")
 async def get_notifications(user: dict = Depends(get_current_user)):

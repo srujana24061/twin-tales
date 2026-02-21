@@ -339,6 +339,9 @@ frontend:
         - working: true
           agent: "testing"
           comment: "Aspect ratio container dynamically adjusts based on story's image_aspect_ratio setting. Verified CSS classes are correctly applied: 'aspect-[16/9]' for 16:9, 'aspect-[9/16]' for 9:16, 'aspect-square' for 1:1. Created stories with different aspect ratios and confirmed the image containers use the correct CSS classes. Scene images display with proper aspect ratios matching the story configuration."
+        - working: true
+          agent: "testing"
+          comment: "RE-VERIFIED (2026-02-21): Aspect ratio CSS container adjustment working correctly. Confirmed CSS class 'aspect-[16/9]' applied to scene image container for 16:9 story. Image container properly maintains aspect ratio. Scene images display with correct proportions matching story configuration. Dynamic class application based on story.image_aspect_ratio functioning as designed."
 
 metadata:
   created_by: "testing_agent"

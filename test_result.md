@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Test StoryCraft AI Video Editor enhancements: user registration, story creation, scene generation, and Video Editor features including scene reordering, duration adjustment, trim settings, transition selection, include toggle, and video export functionality."
+user_problem_statement: "Test the newly implemented 'Healthy Engagement & Parent Dashboard' feature in StoryCraft AI, including wellbeing check-in flow, session settings, parent PIN authentication, parent dashboard analytics, and reflections functionality."
 
 backend:
   - task: "Story generation with Celery eager mode"

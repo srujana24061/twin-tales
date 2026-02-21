@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { BookOpen, Users, PlusCircle, Clock, LayoutDashboard, LogOut, Menu, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { BookOpen, Users, PlusCircle, Clock, LayoutDashboard, LogOut, Menu, X, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { SessionTimer } from '@/components/wellbeing/SessionTimer';
@@ -10,7 +10,32 @@ export const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
   const user = JSON.parse(localStorage.getItem('storycraft_user') || '{}');
+
+  useEffect(() => {
+    const loadNotifications = async () => {
+      try {
+        const token = localStorage.getItem('storycraft_token');
+        if (!token) return;
+        
+        const response = await fetch(process.env.REACT_APP_BACKEND_URL + '/api/notifications', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setNotifications(data || []);
+        }
+      } catch (err) {
+        // Ignore errors
+      }
+    };
+    
+    loadNotifications();
+    const interval = setInterval(loadNotifications, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('storycraft_token');

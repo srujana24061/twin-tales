@@ -718,7 +718,9 @@ async def run_image_regeneration(story: dict, scene: dict, job_id: str, provider
         if len(img_prompt) > 1500:
             img_prompt = img_prompt[:1500]
 
-        results = await minimax_service.generate_image(img_prompt, aspect_ratio="16:9", reference_images=char_ref_images if char_ref_images else None)
+        aspect_ratio = story.get("image_aspect_ratio", "16:9")
+        preferred_provider = provider or story.get("image_provider", "nano_banana")
+        provider_used, results = await generate_scene_image(img_prompt, aspect_ratio, char_ref_images if char_ref_images else None, preferred_provider)
 
         if results:
             result_type, result_data = results[0]
@@ -736,7 +738,7 @@ async def run_image_regeneration(story: dict, scene: dict, job_id: str, provider
                 "id": asset_id, "type": "image", "format": "png",
                 "s3_key": s3_key, "s3_url": s3_url,
                 "scene_id": scene["id"], "story_id": story["id"],
-                "provider": "minimax",
+                "provider": provider_used,
                 "created_at": datetime.now(timezone.utc).isoformat()
             })
             await db.scenes.update_one(

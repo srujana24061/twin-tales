@@ -386,7 +386,7 @@ async def update_scene(story_id: str, scene_id: str, data: SceneUpdate, user: di
     return await db.scenes.find_one({"id": scene_id}, {"_id": 0})
 
 @api_router.post("/stories/{story_id}/scenes/{scene_id}/regenerate-image")
-async def regenerate_scene_image(story_id: str, scene_id: str, user: dict = Depends(get_current_user)):
+async def regenerate_scene_image(story_id: str, scene_id: str, body: ImageRegenRequest = ImageRegenRequest(), user: dict = Depends(get_current_user)):
     story = await db.stories.find_one({"id": story_id, "owner_id": user["id"]}, {"_id": 0})
     if not story:
         raise HTTPException(status_code=404, detail="Story not found")
@@ -402,7 +402,8 @@ async def regenerate_scene_image(story_id: str, scene_id: str, user: dict = Depe
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
     await db.generation_jobs.insert_one(job_doc)
-    enqueue_task(image_regeneration_task, story, scene, job_id, fallback_coro=run_image_regeneration)
+    provider = body.provider or story.get("image_provider", "nano_banana")
+    enqueue_task(image_regeneration_task, story, scene, job_id, provider, fallback_coro=run_image_regeneration)
     return {"job_id": job_id, "status": "pending"}
 
 

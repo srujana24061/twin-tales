@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime
 
 class StoryCraftAPITester:
-    def __init__(self, base_url="https://craft-stories-3.preview.emergentagent.com"):
+    def __init__(self, base_url="https://craft-timeline-2.preview.emergentagent.com"):
         self.base_url = base_url
         self.token = None
         self.test_user_id = None

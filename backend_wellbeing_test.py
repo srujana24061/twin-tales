@@ -8,7 +8,7 @@ import json
 from datetime import datetime, timezone, timedelta
 
 # Configuration
-BASE_URL = "https://craft-stories-3.preview.emergentagent.com"
+BASE_URL = "https://craft-timeline-2.preview.emergentagent.com"
 API_BASE = f"{BASE_URL}/api"
 
 # Test user credentials as specified in review request

@@ -279,6 +279,9 @@ frontend:
         - working: true
           agent: "testing"
           comment: "Aspect Ratio select (data-testid='story-aspect-ratio-select') is visible in Story Setup page. Defaults to '16:9 Widescreen' as expected. Dropdown offers multiple aspect ratios (16:9, 4:3, 1:1, 3:4, 9:16). Tested changing to 9:16 and 1:1 - both changes work correctly. Aspect ratio setting is properly passed to story generation."
+        - working: true
+          agent: "testing"
+          comment: "RE-VERIFIED (2026-02-21): All features working perfectly. Aspect Ratio selector found with correct test-id. Default '16:9 Widescreen' confirmed. All 5 aspect ratio options available and functional: 16:9 Widescreen, 4:3 Classic, 1:1 Square, 3:4 Portrait, 9:16 Vertical. Successfully tested changing between different ratios. Dropdown interactions smooth and responsive."
 
   - task: "Scene Editor - Image Model selector"
     implemented: true

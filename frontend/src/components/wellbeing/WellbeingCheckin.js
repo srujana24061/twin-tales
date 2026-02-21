@@ -53,7 +53,7 @@ export const WellbeingCheckin = ({ onComplete, onSkip }) => {
         setMessages(prev => [...prev, { role: 'luna', content: 'Thank you for sharing with me today! I found some stories just for you.' }]);
         setTimeout(() => onComplete(data), 1500);
       } else {
-        setMessages(data.messages || prev => [...prev, { role: 'luna', content: data.luna_message }]);
+        setMessages(prev => data.messages || [...prev, { role: 'luna', content: data.luna_message }]);
         setExchangeCount(data.exchange_count || exchangeCount + 1);
       }
     } catch (err) {

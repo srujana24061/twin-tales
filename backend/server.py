@@ -477,7 +477,7 @@ Return ONLY valid JSON:
                     img_prompt = img_prompt[:1500]
 
                 logger.info(f"Generating image for scene {i+1}/{total} via MiniMax")
-                results = await minimax_service.generate_image(img_prompt, aspect_ratio="16:9")
+                results = await minimax_service.generate_image(img_prompt, aspect_ratio="16:9", reference_images=char_ref_images if char_ref_images else None)
 
                 if results:
                     result_type, result_data = results[0]

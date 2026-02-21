@@ -58,10 +58,17 @@ class WellbeingTester:
             
             if response.status_code == 200:
                 data = response.json()
-                self.user_token = data.get("access_token")
-                self.user_id = data.get("user_id")
+                # Try both possible token fields
+                self.user_token = data.get("access_token") or data.get("token")
+                self.user_id = data.get("user_id") or (data.get("user", {}).get("id"))
+                
+                if not self.user_token:
+                    self.log(f"❌ No token in response: {data}")
+                    return False
+                    
                 self.session.headers.update({"Authorization": f"Bearer {self.user_token}"})
                 self.log(f"✅ Login successful. User ID: {self.user_id}")
+                self.log(f"✅ Token: {self.user_token[:20]}...")
                 return True
             else:
                 self.log(f"❌ Login failed: {response.status_code} - {response.text}")

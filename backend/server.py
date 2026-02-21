@@ -1482,6 +1482,71 @@ async def generate_music_endpoint(story_id: str, user: dict = Depends(get_curren
     return {"job_id": job_id, "status": "pending"}
 
 
+@api_router.post("/stories/{story_id}/export-video")
+async def export_video_endpoint(story_id: str, user: dict = Depends(get_current_user)):
+    story = await db.stories.find_one({"id": story_id, "owner_id": user["id"]})
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+    scenes = await db.scenes.count_documents({"story_id": story_id})
+    if scenes == 0:
+        raise HTTPException(status_code=400, detail="No scenes to export")
+    job_id = str(uuid.uuid4())
+    job_doc = {
+        "id": job_id, "story_id": story_id, "user_id": user["id"],
+        "job_type": "export", "status": "pending", "progress": 0,
+        "error_message": None, "result_url": None,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.generation_jobs.insert_one(job_doc)
+    asyncio.create_task(run_ffmpeg_export(story_id, job_id))
+    return {"job_id": job_id, "status": "pending"}
+
+
+@api_router.put("/stories/{story_id}/reorder-scenes")
+async def reorder_scenes(story_id: str, body: ReorderScenesRequest, user: dict = Depends(get_current_user)):
+    story = await db.stories.find_one({"id": story_id, "owner_id": user["id"]})
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+    for idx, scene_id in enumerate(body.scene_ids):
+        await db.scenes.update_one(
+            {"id": scene_id, "story_id": story_id},
+            {"$set": {"scene_number": idx + 1}}
+        )
+    scenes = await db.scenes.find({"story_id": story_id}, {"_id": 0}).sort("scene_number", 1).to_list(100)
+    return scenes
+
+
+@api_router.post("/stories/{story_id}/generate-ad")
+async def generate_ad_endpoint(story_id: str, body: AdGenerateRequest, user: dict = Depends(get_current_user)):
+    story = await db.stories.find_one({"id": story_id, "owner_id": user["id"]})
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+    scenes = await db.scenes.count_documents({"story_id": story_id})
+    if scenes == 0:
+        raise HTTPException(status_code=400, detail="Generate story first")
+    job_id = str(uuid.uuid4())
+    job_doc = {
+        "id": job_id, "story_id": story_id, "user_id": user["id"],
+        "job_type": "ad", "status": "pending", "progress": 0,
+        "error_message": None, "result_url": None, "result_data": None,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.generation_jobs.insert_one(job_doc)
+    asyncio.create_task(run_ad_generation(story_id, job_id, body.platform, body.style, body.cta_text))
+    return {"job_id": job_id, "status": "pending"}
+
+
+@api_router.get("/stories/{story_id}/ads")
+async def list_ads(story_id: str, user: dict = Depends(get_current_user)):
+    story = await db.stories.find_one({"id": story_id, "owner_id": user["id"]})
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+    ads = await db.ad_projects.find({"story_id": story_id}, {"_id": 0}).sort("created_at", -1).to_list(50)
+    return ads
+
+
 # ==================== JOB ROUTES ====================
 
 @api_router.get("/jobs/{job_id}")

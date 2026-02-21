@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { BookOpen, Sparkles, Shield, Palette, FileText, ArrowRight, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },

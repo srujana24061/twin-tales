@@ -922,6 +922,11 @@ class StoryCraftAPITester:
         self.test_updated_video_generation_features()
 
         print("\n" + "="*50)
+        print("🍌 GEMINI NANO BANANA INTEGRATION TESTS")
+        print("="*50)
+        self.test_gemini_nano_banana_integration()
+
+        print("\n" + "="*50)
         print("🧹 CLEANUP")
         print("="*50)
         self.cleanup_test_character()

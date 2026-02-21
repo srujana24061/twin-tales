@@ -124,6 +124,7 @@ class GeminiImageService:
     def __init__(self):
         self.api_key = os.environ.get('EMERGENT_LLM_KEY')
         self.model_id = "gemini-3-pro-image-preview"
+        self.style_model_id = "gemini-2.5-flash-image"
 
     async def _encode_reference(self, image_ref: str) -> str:
         if image_ref.startswith("data:image/"):
@@ -159,6 +160,61 @@ class GeminiImageService:
         if not images:
             raise Exception("Gemini image generation returned no images")
         return [("base64", img.get("data")) for img in images if img.get("data")]
+
+    async def convert_image_style(self, image_url: str, style: str = "cartoon") -> dict:
+        """
+        Convert an image to different artistic styles using Gemini
+        Styles: anime, toy, realistic, cartoon, watercolor, sketch
+        """
+        if not self.api_key:
+            raise Exception("EMERGENT_LLM_KEY missing")
+
+        # Define style prompts
+        STYLE_PROMPTS = {
+            "anime": "Convert this image into a Studio Ghibli anime style with vibrant colors and expressive features.",
+            "toy": "Transform this into a 3D plastic toy figurine with smooth surfaces and bright colors.",
+            "realistic": "Render this as a hyper-realistic 8k photograph with natural lighting and textures.",
+            "cartoon": "Turn this into a colorful 3D Disney-style cartoon animation with exaggerated features.",
+            "watercolor": "Convert this into a soft watercolor painting with gentle brush strokes and pastel colors.",
+            "sketch": "Transform this into a professional pencil sketch with detailed shading and line work.",
+            "comic": "Convert this into a comic book illustration with bold outlines and halftone shading.",
+            "pixar": "Transform this into a Pixar-style 3D character with glossy textures and expressive eyes."
+        }
+
+        prompt = STYLE_PROMPTS.get(style, STYLE_PROMPTS["cartoon"])
+        
+        # Download the source image
+        img_b64 = await self._encode_reference(image_url)
+        
+        # Use Gemini for style conversion
+        chat = LlmChat(
+            api_key=self.api_key,
+            session_id=f"gemini-style-{uuid.uuid4().hex[:8]}",
+            system_message="You are an expert image style conversion AI."
+        )
+        chat.with_model("gemini", self.style_model_id).with_params(modalities=["image", "text"])
+
+        msg = UserMessage(
+            text=prompt,
+            file_contents=[ImageContent(img_b64)]
+        )
+        
+        text, images = await chat.send_message_multimodal_response(msg)
+        
+        if not images or len(images) == 0:
+            raise Exception("Gemini style conversion returned no images")
+        
+        # Return the converted image as base64
+        converted_image = images[0].get("data")
+        if not converted_image:
+            raise Exception("No image data in Gemini response")
+        
+        return {
+            "status": "completed",
+            "style": style,
+            "image_base64": converted_image,
+            "format": "png"
+        }
 
 
 class FotorService:

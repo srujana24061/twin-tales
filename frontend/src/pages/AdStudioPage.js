@@ -191,8 +191,92 @@ export const AdStudioPage = () => {
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-0">
+                    {/* Scene Images - Large Preview */}
+                    <div className="p-6 bg-gradient-to-br from-slate-50 to-slate-100">
+                      <div className="flex items-center justify-between mb-4">
+                        <p className="text-xs font-bold text-[#94A3B8] uppercase tracking-wide">Visual Preview</p>
+                        <Badge className="bg-white text-[#64748B] rounded-full text-[10px] px-3 py-1">
+                          {ad.selected_scenes?.length || 0} Scenes
+                        </Badge>
+                      </div>
+                      
+                      {/* Image Gallery */}
+                      <div className="space-y-3">
+                        {(ad.selected_scenes || []).map((ss, j) => (
+                          <motion.div 
+                            key={j}
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: j * 0.1 }}
+                            className="bg-white rounded-2xl overflow-hidden shadow-lg"
+                          >
+                            {/* Scene Image */}
+                            <div 
+                              className={`relative w-full bg-slate-200 ${
+                                ad.aspect_ratio === '1:1' ? 'aspect-square' :
+                                ad.aspect_ratio === '16:9' ? 'aspect-[16/9]' :
+                                ad.aspect_ratio === '9:16' ? 'aspect-[9/16]' :
+                                ad.aspect_ratio === '4:3' ? 'aspect-[4/3]' :
+                                ad.aspect_ratio === '4:5' ? 'aspect-[4/5]' :
+                                'aspect-video'
+                              }`}
+                            >
+                              {ss.image_url ? (
+                                <>
+                                  <img 
+                                    src={`${BACKEND_URL}${ss.image_url}`} 
+                                    alt={ss.scene_title || `Scene ${ss.scene_number}`}
+                                    className="w-full h-full object-cover"
+                                  />
+                                  {/* Overlay Text */}
+                                  {ad.overlay_texts?.[j] && (
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end">
+                                      <p className="text-white font-bold text-lg sm:text-xl p-4 leading-tight drop-shadow-lg">
+                                        {ad.overlay_texts[j]}
+                                      </p>
+                                    </div>
+                                  )}
+                                </>
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <div className="text-center">
+                                    <Image className="w-12 h-12 text-slate-300 mx-auto mb-2" />
+                                    <p className="text-sm text-slate-400">No image</p>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Scene Info */}
+                            <div className="p-3 border-t border-slate-100">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-sm font-semibold text-[#1E293B]">
+                                    {ss.scene_title || `Scene ${ss.scene_number}`}
+                                  </p>
+                                  <p className="text-xs text-[#94A3B8]">Scene {ss.scene_number}</p>
+                                </div>
+                                <div className="flex gap-1.5">
+                                  {ss.image_url && (
+                                    <Badge className="bg-[#FFFBEB] text-[#D97706] rounded-full text-[10px] px-2 py-0.5">
+                                      <Image className="w-2.5 h-2.5 mr-0.5 inline" /> Image
+                                    </Badge>
+                                  )}
+                                  {ss.video_url && (
+                                    <Badge className="bg-[#EEF2FF] text-[#6366F1] rounded-full text-[10px] px-2 py-0.5">
+                                      <Film className="w-2.5 h-2.5 mr-0.5 inline" /> Video
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+
                     {/* Content */}
-                    <div className="p-6 space-y-5">
+                    <div className="p-6 space-y-5 bg-white">
                       {/* Hook */}
                       <div>
                         <div className="flex items-center gap-2 mb-2">

@@ -1486,6 +1486,158 @@ async def run_audio_generation(story_id: str, job_id: str, voice_style: str = "s
         await db.generation_jobs.update_one(
             {"id": job_id},
             {"$set": {"status": "running", "progress": 5, "updated_at": datetime.now(timezone.utc).isoformat()}}
+
+
+async def run_batch_video_generation(story_id: str, job_id: str):
+    """Generate videos for all frames in a story (batch operation)"""
+    try:
+        job = await db.generation_jobs.find_one({"id": job_id})
+        story = await db.stories.find_one({"id": story_id}, {"_id": 0})
+        if not story:
+            raise Exception("Story not found")
+        
+        user_id = story.get("owner_id")
+        
+        # Get all scenes and frames
+        scenes = await db.scenes.find({"story_id": story_id}, {"_id": 0}).to_list(100)
+        all_frames = []
+        for scene in scenes:
+            frames = await db.frames.find({"scene_id": scene["id"]}, {"_id": 0}).to_list(100)
+            all_frames.extend([(scene, frame) for frame in frames])
+        
+        total_frames = len(all_frames)
+        completed = 0
+        
+        logger.info(f"Batch video generation: {total_frames} frames for story {story_id}")
+        
+        # Get character images for subject references
+        character_ids = story.get("character_ids", [])
+        characters = []
+        if character_ids:
+            for cid in character_ids[:2]:
+                c = await db.characters.find_one({"id": cid}, {"_id": 0})
+                if c:
+                    characters.append(c)
+        
+        subject_refs = [c.get("image_url") for c in characters if c.get("image_url")]
+        
+        # Generate videos for each frame
+        for scene, frame in all_frames:
+            try:
+                frame_id = frame["id"]
+                frame_text = frame.get("text", "")
+                image_url = frame.get("image_url")
+                
+                # Skip if frame already has video
+                if frame.get("video_url"):
+                    logger.info(f"Frame {frame_id} already has video, skipping")
+                    completed += 1
+                    progress = int((completed / total_frames) * 100)
+                    await db.generation_jobs.update_one(
+                        {"id": job_id},
+                        {"$set": {"progress": progress, "completed_frames": completed}}
+                    )
+                    continue
+                
+                # Build video prompt
+                video_prompt = f"Scene: {scene.get('title', 'Untitled')}. {frame_text[:500]}"
+                
+                # Generate video using MiniMax
+                generation_type = "image-to-video" if image_url else "text-to-video"
+                logger.info(f"Generating video for frame {frame_id} ({generation_type})")
+                
+                result = await minimax_service.generate_video(
+                    prompt=video_prompt,
+                    subject_references=subject_refs,
+                    first_frame_image=image_url,
+                    generation_type=generation_type
+                )
+                
+                video_url = result.get("file_url")
+                if video_url:
+                    # Upload to S3
+                    video_response = requests.get(video_url, timeout=120)
+                    if video_response.status_code == 200:
+                        s3_key = f"videos/{story_id}/{frame_id}.mp4"
+                        s3_url = await asyncio.to_thread(
+                            s3_service.upload_bytes,
+                            video_response.content,
+                            s3_key,
+                            "video/mp4"
+                        )
+                        
+                        # Update frame with video URL
+                        await db.frames.update_one(
+                            {"id": frame_id},
+                            {"$set": {"video_url": s3_url, "updated_at": datetime.now(timezone.utc).isoformat()}}
+                        )
+                        logger.info(f"Frame {frame_id} video saved: {s3_url}")
+                
+                completed += 1
+                progress = int((completed / total_frames) * 100)
+                await db.generation_jobs.update_one(
+                    {"id": job_id},
+                    {"$set": {
+                        "progress": progress,
+                        "completed_frames": completed,
+                        "updated_at": datetime.now(timezone.utc).isoformat()
+                    }}
+                )
+                
+            except Exception as frame_error:
+                logger.error(f"Failed to generate video for frame {frame.get('id')}: {frame_error}")
+                # Continue with next frame even if one fails
+                completed += 1
+                continue
+        
+        # Mark job as completed
+        await db.generation_jobs.update_one(
+            {"id": job_id},
+            {"$set": {
+                "status": "completed",
+                "progress": 100,
+                "completed_frames": completed,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        
+        logger.info(f"Batch video generation completed: {completed}/{total_frames} frames")
+        
+        # Send notification
+        try:
+            user = await db.users.find_one({"id": user_id}, {"_id": 0})
+            if user:
+                frontend_url = os.environ.get('REACT_APP_BACKEND_URL', '').replace('/api', '')
+                video_url = f"{frontend_url}/stories/{story_id}/edit"
+                
+                settings = await db.user_settings.find_one({"user_id": user_id}, {"_id": 0})
+                parent_email = settings.get("parent_email") if settings else None
+                
+                await notify_video_complete(
+                    user_email=user.get("email"),
+                    parent_email=parent_email,
+                    phone_number=user.get("phone"),
+                    story_title=story.get("title", "Your Story"),
+                    video_url=video_url
+                )
+        except Exception as notif_err:
+            logger.error(f"Failed to send batch completion notification: {notif_err}")
+        
+    except Exception as e:
+        logger.error(f"Batch video generation failed: {e}")
+        await db.generation_jobs.update_one(
+            {"id": job_id},
+            {"$set": {
+                "status": "failed",
+                "error_message": str(e),
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+
+def batch_video_generation_task(story_id: str, job_id: str):
+    """Celery task wrapper for batch video generation"""
+    asyncio.run(run_batch_video_generation(story_id, job_id))
+
         )
 
         story = await db.stories.find_one({"id": story_id}, {"_id": 0})

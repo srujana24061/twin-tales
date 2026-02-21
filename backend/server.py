@@ -546,7 +546,7 @@ async def convert_doodle_to_character(request: Request, user: dict = Depends(get
                     
                     return {
                         "success": True,
-                        "converted_image_url": f"/api/media/{asset_id}",
+                        "converted_image_url": s3_url,
                         "s3_url": s3_url,
                         "asset_id": asset_id
                     }

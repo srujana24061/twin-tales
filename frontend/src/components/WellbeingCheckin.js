@@ -282,15 +282,17 @@ export const WellbeingCheckin = ({ onComplete, onSkip }) => {
                 </p>
                 <div className="space-y-2">
                   {(result.story_suggestions || []).map((s, i) => (
-                    <motion.div key={i}
+                    <motion.button key={i}
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: i * 0.1 }}
-                      className={`rounded-2xl p-3.5 bg-gradient-to-r ${TONE_COLORS[s.tone] || 'from-indigo-500 to-purple-500'} text-white`}
+                      onClick={() => { handleDone(); navigate('/stories/new', { state: { suggestion: s } }); }}
+                      data-testid={`checkin-suggestion-${i}`}
+                      className={`w-full text-left rounded-2xl p-3.5 bg-gradient-to-r ${TONE_COLORS[s.tone] || 'from-indigo-500 to-purple-500'} text-white cursor-pointer hover:opacity-90 transition-opacity`}
                     >
                       <p className="font-semibold text-sm mb-0.5">{s.theme}</p>
                       <p className="text-xs opacity-80">{s.reason}</p>
-                    </motion.div>
+                    </motion.button>
                   ))}
                 </div>
               </div>

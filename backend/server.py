@@ -10,6 +10,9 @@ import asyncio
 import base64
 import re
 import requests as http_requests
+import tempfile
+import shutil
+import subprocess
 from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import List, Optional

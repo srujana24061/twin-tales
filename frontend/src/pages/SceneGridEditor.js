@@ -396,15 +396,16 @@ const SceneCard = ({
               <Button
                 size="sm"
                 onClick={onGenerateVideo}
+                disabled={isGeneratingVideo}
                 className="flex-1 rounded-lg"
-                style={{ 
-                  background: '#f97316', 
-                  color: 'white',
-                }}
+                style={{ background: '#f97316', color: 'white' }}
                 data-testid={`generate-video-btn-${scene.id}`}
               >
-                <Video className="w-3 h-3 mr-2" />
-                Generate Video
+                {isGeneratingVideo ? (
+                  <><Loader2 className="w-3 h-3 mr-2 animate-spin" /> Generating...</>
+                ) : (
+                  <><Video className="w-3 h-3 mr-2" />Generate Video</>
+                )}
               </Button>
               <Button
                 size="sm"

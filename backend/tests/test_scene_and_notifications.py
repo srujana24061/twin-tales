@@ -210,43 +210,53 @@ class TestGenerateImage:
 # ===== Generate Video Tests =====
 
 class TestGenerateVideo:
-    """Tests for POST /scenes/{scene_id}/generate-video"""
+    """Tests for POST /scenes/{scene_id}/generate-video
+    
+    NOTE: New behavior (as of current version): generate-video NO LONGER requires 
+    an existing image_url. It now uses Nano Banana to generate frames and creates MP4.
+    """
 
-    def test_generate_video_no_image_returns_400(self, auth_headers, story_and_scene):
-        """POST generate-video on scene without image should return 400"""
-        # Create a new scene-less story to get a scene without image
-        # Use second scene if available, else skip
-        scenes = story_and_scene["scenes"]
-        scene_without_image = next((s for s in scenes if not s.get("image_url")), None)
-        if not scene_without_image:
-            pytest.skip("All scenes have images - cannot test 400 case")
-        
-        resp = requests.post(f"{BASE_URL}/api/scenes/{scene_without_image['id']}/generate-video",
+    def test_generate_video_nonexistent_scene_returns_404(self, auth_headers):
+        """POST generate-video on nonexistent scene should return 404"""
+        resp = requests.post(f"{BASE_URL}/api/scenes/nonexistent_scene_id_xyz/generate-video",
                              headers=auth_headers)
-        assert resp.status_code == 400, f"Expected 400, got {resp.status_code}: {resp.text}"
-        print("PASS: generate-video without image returns 400")
+        assert resp.status_code == 404, f"Expected 404, got {resp.status_code}: {resp.text}"
+        print("PASS: generate-video nonexistent scene returns 404")
 
-    def test_generate_video_valid_scene_starts_job(self, auth_headers, story_and_scene):
-        """POST generate-video on scene with image should start job (requires image from prev test)"""
-        # Get the scene (should have image from generate_image test)
+    def test_generate_video_valid_scene_no_image_starts_job(self, auth_headers, story_and_scene):
+        """POST generate-video on valid scene WITHOUT image should start job (new behavior: no image needed)"""
         scene_id = story_and_scene["first_scene_id"]
-        
-        # Check if scene has image
-        scene_resp = requests.get(f"{BASE_URL}/api/stories/{story_and_scene['story_id']}/scenes", 
-                                  headers=auth_headers)
-        scenes = scene_resp.json()
+        scenes = story_and_scene["scenes"]
         scene = next((s for s in scenes if s["id"] == scene_id), None)
         
-        if not scene or not scene.get("image_url"):
-            pytest.skip("Scene doesn't have image yet - depends on generate-image test passing first")
-        
+        # New behavior: video generation works even without an image
         resp = requests.post(f"{BASE_URL}/api/scenes/{scene_id}/generate-video",
                              headers=auth_headers)
         assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
         data = resp.json()
         assert "job_id" in data, f"No job_id in response: {data}"
         assert data.get("status") == "pending"
-        print(f"PASS: generate-video started job: {data['job_id']}")
+        has_image = bool(scene.get("image_url")) if scene else False
+        print(f"PASS: generate-video started job (scene has_image={has_image}): {data['job_id']}")
+
+    def test_generate_video_job_can_be_checked(self, auth_headers, story_and_scene):
+        """After starting generate-video, the job should be checkable via GET /jobs/{job_id}"""
+        scene_id = story_and_scene["first_scene_id"]
+        
+        start_resp = requests.post(f"{BASE_URL}/api/scenes/{scene_id}/generate-video",
+                                   headers=auth_headers)
+        if start_resp.status_code != 200:
+            pytest.skip(f"Could not start video generation: {start_resp.status_code}")
+        
+        job_id = start_resp.json()["job_id"]
+        
+        # Check job status
+        job_resp = requests.get(f"{BASE_URL}/api/jobs/{job_id}", headers=auth_headers)
+        assert job_resp.status_code == 200, f"Expected 200 for job check, got {job_resp.status_code}"
+        job_data = job_resp.json()
+        assert job_data.get("id") == job_id
+        assert job_data.get("status") in ["pending", "running", "completed", "failed"]
+        print(f"PASS: Job {job_id} status: {job_data.get('status')}")
 
 
 # ===== Batch Generate Videos Tests =====

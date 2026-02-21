@@ -316,25 +316,27 @@ const SceneCard = ({
               <Button
                 size="sm"
                 variant="outline"
-                onClick={onGenerateImage}
-                className="flex-1 rounded-lg"
-                style={{ borderColor: 'var(--glass-border)', color: 'var(--text-primary)' }}
+                onClick={() => onGenerateImage(() => generateSceneImage(scene.id, scene.scene_text))}
+              className="flex-1 rounded-lg"
+              style={{ borderColor: 'var(--glass-border)', color: 'var(--text-primary)' }}
+              data-testid={`generate-image-btn-${scene.id}`}
+            >
+              <Sparkles className="w-3 h-3 mr-2" />
+              {scene.image_url ? 'Regenerate Image' : 'Generate Image'}
+            </Button>
+            {scene.image_url && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onGenerateImage(() => generateSceneImage(scene.id, scene.scene_text))}
+                className="rounded-lg"
+                style={{ borderColor: 'var(--glass-border)', color: 'var(--primary)' }}
+                title="Regenerate image"
+                data-testid={`regen-image-btn-${scene.id}`}
               >
-                <Sparkles className="w-3 h-3 mr-2" />
-                {scene.image_url ? 'Regenerate Image' : 'Generate Image'}
+                <RefreshCw className="w-3 h-3" />
               </Button>
-              {scene.image_url && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={onGenerateImage}
-                  className="rounded-lg"
-                  style={{ borderColor: 'var(--glass-border)', color: 'var(--primary)' }}
-                  title="Regenerate image"
-                >
-                  <RefreshCw className="w-3 h-3" />
-                </Button>
-              )}
+            )}
               <Button
                 size="sm"
                 variant="outline"

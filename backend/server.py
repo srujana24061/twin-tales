@@ -673,7 +673,24 @@ Return JSON: {{"safe": true, "issues": [], "severity": "none"}}"""
         logger.error(f"Safety checks failed: {e}")
 
 
-async def run_image_regeneration(story: dict, scene: dict, job_id: str):
+async def generate_scene_image(img_prompt: str, aspect_ratio: str, reference_images: list, preferred_provider: str = "nano_banana"):
+    provider_order = ["nano_banana", "minimax"] if preferred_provider != "minimax" else ["minimax", "nano_banana"]
+    last_error = None
+    for provider in provider_order:
+        try:
+            if provider == "nano_banana":
+                results = await image_gen_service.generate_image(img_prompt, aspect_ratio=aspect_ratio, reference_images=reference_images)
+            else:
+                results = await minimax_service.generate_image(img_prompt, aspect_ratio=aspect_ratio, reference_images=reference_images)
+            if results:
+                return provider, results
+        except Exception as e:
+            last_error = e
+            logger.warning(f"Image generation failed using {provider}: {e}")
+    raise Exception(f"Image generation failed: {last_error}")
+
+
+async def run_image_regeneration(story: dict, scene: dict, job_id: str, provider: str = "nano_banana"):
     try:
         await db.generation_jobs.update_one(
             {"id": job_id},

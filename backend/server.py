@@ -147,9 +147,9 @@ def parse_json_response(text):
     return json.loads(text)
 
 
-def enqueue_task(task, *args):
-    if CELERY_TASK_ALWAYS_EAGER:
-        asyncio.create_task(asyncio.to_thread(task.delay, *args))
+def enqueue_task(task, *args, fallback_coro=None):
+    if CELERY_TASK_ALWAYS_EAGER and fallback_coro:
+        asyncio.create_task(fallback_coro(*args))
     else:
         task.delay(*args)
 

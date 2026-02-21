@@ -222,7 +222,7 @@ const SceneCard = ({
   onUploadImage,
   onUploadVideo
 }) => {
-  const [editText, setEditText] = useState(scene.text);
+  const [editText, setEditText] = useState(scene.scene_text || '');
   const imageInputRef = useRef(null);
   const videoInputRef = useRef(null);
 

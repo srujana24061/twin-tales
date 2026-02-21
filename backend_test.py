@@ -490,6 +490,16 @@ class StoryCraftAPITester:
         self.test_character_crud()
 
         print("\n" + "="*50)
+        print("📷 CHARACTER PHOTO UPLOAD TESTS")
+        print("="*50)
+        self.test_character_photo_upload()
+
+        print("\n" + "="*50)
+        print("🖼️  MEDIA ENDPOINT TESTS")
+        print("="*50)
+        self.test_media_endpoint()
+
+        print("\n" + "="*50)
         print("📚 STORY TESTS")
         print("="*50)
         self.test_story_crud()
@@ -508,6 +518,11 @@ class StoryCraftAPITester:
         print("🎬 MEDIA GENERATION TESTS (Phase 2)")
         print("="*50)
         self.test_media_generation_endpoints()
+
+        print("\n" + "="*50)
+        print("🧹 CLEANUP")
+        print("="*50)
+        self.cleanup_test_character()
 
         # Print summary
         print("\n" + "="*50)

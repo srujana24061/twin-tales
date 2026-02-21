@@ -2264,6 +2264,123 @@ wellbeing_inject(db, EMERGENT_LLM_KEY, JWT_SECRET, pwd_context, logger)
 api_router.include_router(wellbeing_router)
 
 
+
+# ==================== SCENE GRID EDITOR ENDPOINTS ====================
+
+@api_router.post("/media/presigned-url")
+async def get_presigned_upload_url(filename: str, content_type: str, user: dict = Depends(get_current_user)):
+    try:
+        file_ext = filename.split('.')[-1] if '.' in filename else 'bin'
+        unique_filename = f"{uuid.uuid4()}.{file_ext}"
+        s3_key = f"user-uploads/{user['id']}/{unique_filename}"
+        presigned_url = s3_service.s3_client.generate_presigned_url(
+            'put_object', Params={'Bucket': s3_service.bucket_name, 'Key': s3_key, 'ContentType': content_type}, ExpiresIn=3600
+        )
+        s3_url = f"https://{s3_service.bucket_name}.s3.{s3_service.region}.amazonaws.com/{s3_key}"
+        return {"presigned_url": presigned_url, "s3_url": s3_url}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/scenes/{scene_id}/generate-image")
+async def generate_scene_image_v2(scene_id: str, user: dict = Depends(get_current_user)):
+    scene = await db.scenes.find_one({"id": scene_id}, {"_id": 0})
+    if not scene:
+        raise HTTPException(status_code=404, detail="Scene not found")
+    try:
+        result = await image_gen_service.generate_image(scene["text"])
+        image_url = result.get("s3_url")
+        if image_url:
+            await db.scenes.update_one({"id": scene_id}, {"$set": {"image_url": image_url}})
+        return {"success": True, "image_url": image_url}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/scenes/{scene_id}/generate-video")
+async def generate_scene_video_v2(scene_id: str, user: dict = Depends(get_current_user)):
+    scene = await db.scenes.find_one({"id": scene_id}, {"_id": 0})
+    if not scene or not scene.get("image_url"):
+        raise HTTPException(status_code=400, detail="Scene must have an image first")
+    job_id = str(uuid.uuid4())
+    job_doc = {"id": job_id, "scene_id": scene_id, "user_id": user["id"], "job_type": "scene_video", "status": "pending", "progress": 0, "created_at": datetime.now(timezone.utc).isoformat()}
+    await db.generation_jobs.insert_one(job_doc)
+    enqueue_task(scene_video_task, scene_id, job_id, fallback_coro=run_scene_video_generation)
+    return {"job_id": job_id, "status": "pending"}
+
+async def run_scene_video_generation(scene_id: str, job_id: str):
+    try:
+        scene = await db.scenes.find_one({"id": scene_id}, {"_id": 0})
+        video_prompt = f"{scene.get('title', '')}: {scene['text'][:500]}"
+        result = await minimax_service.generate_video(prompt=video_prompt, first_frame_image=scene.get("image_url"), generation_type="image-to-video")
+        video_url = result.get("file_url")
+        if video_url:
+            video_response = requests.get(video_url, timeout=120)
+            if video_response.status_code == 200:
+                s3_key = f"videos/scenes/{scene_id}.mp4"
+                s3_url = await asyncio.to_thread(s3_service.upload_bytes, video_response.content, s3_key, "video/mp4")
+                await db.scenes.update_one({"id": scene_id}, {"$set": {"video_url": s3_url}})
+        await db.generation_jobs.update_one({"id": job_id}, {"$set": {"status": "completed", "progress": 100}})
+    except Exception as e:
+        await db.generation_jobs.update_one({"id": job_id}, {"$set": {"status": "failed", "error_message": str(e)}})
+
+def scene_video_task(scene_id: str, job_id: str):
+    asyncio.run(run_scene_video_generation(scene_id, job_id))
+
+@api_router.post("/stories/{story_id}/batch-generate-videos")
+async def batch_generate_videos_v2(story_id: str, user: dict = Depends(get_current_user)):
+    story = await db.stories.find_one({"id": story_id, "owner_id": user["id"]})
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+    scenes = await db.scenes.find({"story_id": story_id}, {"_id": 0}).to_list(100)
+    scenes_with_images = [s for s in scenes if s.get("image_url")]
+    if not scenes_with_images:
+        raise HTTPException(status_code=400, detail="No scenes with images")
+    job_id = str(uuid.uuid4())
+    job_doc = {"id": job_id, "story_id": story_id, "user_id": user["id"], "job_type": "batch_scene_videos", "status": "pending", "progress": 0, "total_scenes": len(scenes_with_images), "completed_scenes": 0, "created_at": datetime.now(timezone.utc).isoformat()}
+    await db.generation_jobs.insert_one(job_doc)
+    enqueue_task(batch_scene_videos_task, story_id, job_id, fallback_coro=run_batch_scene_videos)
+    return {"job_id": job_id, "message": f"Queued {len(scenes_with_images)} scenes"}
+
+async def run_batch_scene_videos(story_id: str, job_id: str):
+    try:
+        story = await db.stories.find_one({"id": story_id}, {"_id": 0})
+        scenes = await db.scenes.find({"story_id": story_id}, {"_id": 0}).to_list(100)
+        scenes_with_images = [s for s in scenes if s.get("image_url") and not s.get("video_url")]
+        total = len(scenes_with_images)
+        completed = 0
+        for scene in scenes_with_images:
+            try:
+                await run_scene_video_generation(scene["id"], job_id)
+                completed += 1
+                await db.generation_jobs.update_one({"id": job_id}, {"$set": {"progress": int((completed/total)*100), "completed_scenes": completed}})
+            except Exception as e:
+                logger.error(f"Failed: {e}")
+        await db.generation_jobs.update_one({"id": job_id}, {"$set": {"status": "completed", "progress": 100}})
+        try:
+            user = await db.users.find_one({"id": story.get("owner_id")}, {"_id": 0})
+            if user:
+                frontend_url = os.environ.get('REACT_APP_BACKEND_URL', '').replace('/api', '')
+                video_url = f"{frontend_url}/stories/{story_id}/edit"
+                settings = await db.user_settings.find_one({"user_id": user["id"]}, {"_id": 0})
+                await notify_video_complete(user_email=user.get("email"), parent_email=settings.get("parent_email") if settings else None, phone_number=user.get("phone"), story_title=story.get("title", "Your Story"), video_url=video_url)
+        except Exception as e:
+            logger.error(f"Notification failed: {e}")
+    except Exception as e:
+        await db.generation_jobs.update_one({"id": job_id}, {"$set": {"status": "failed", "error_message": str(e)}})
+
+def batch_scene_videos_task(story_id: str, job_id: str):
+    asyncio.run(run_batch_scene_videos(story_id, job_id))
+
+@api_router.get("/notifications")
+async def get_notifications_v2(user: dict = Depends(get_current_user)):
+    jobs = await db.generation_jobs.find({"user_id": user["id"], "status": "completed", "job_type": {"$in": ["scene_video", "batch_scene_videos"]}}, {"_id": 0}).sort("created_at", -1).limit(10).to_list(10)
+    notifications = []
+    for job in jobs:
+        if job.get("job_type") == "batch_scene_videos":
+            story = await db.stories.find_one({"id": job.get("story_id")}, {"_id": 0})
+            notifications.append({"id": job["id"], "title": "Videos Ready! 🎬", "message": f"All videos for '{story.get('title', 'your story')}' are ready!", "read": False, "created_at": job.get("created_at")})
+    return notifications
+
+
 # ==================== APP SETUP ====================
 
 app.include_router(api_router)
@@ -2280,307 +2397,3 @@ app.add_middleware(
 async def shutdown_db_client():
     client.close()
 
-
-
-# ==================== SCENE GRID EDITOR ENDPOINTS ====================
-
-@api_router.post("/media/presigned-url")
-async def get_presigned_upload_url(filename: str, content_type: str, user: dict = Depends(get_current_user)):
-    """Generate presigned URL for direct S3 upload"""
-    try:
-        file_ext = filename.split('.')[-1] if '.' in filename else 'bin'
-        unique_filename = f"{uuid.uuid4()}.{file_ext}"
-        s3_key = f"user-uploads/{user['id']}/{unique_filename}"
-        presigned_url = s3_service.s3_client.generate_presigned_url(
-            'put_object',
-            Params={'Bucket': s3_service.bucket_name, 'Key': s3_key, 'ContentType': content_type},
-            ExpiresIn=3600
-        )
-        s3_url = f"https://{s3_service.bucket_name}.s3.{s3_service.region}.amazonaws.com/{s3_key}"
-        return {"presigned_url": presigned_url, "s3_url": s3_url}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@api_router.post("/scenes/{scene_id}/generate-image")
-async def generate_scene_image(scene_id: str, user: dict = Depends(get_current_user)):
-    """Generate image for a scene"""
-    scene = await db.scenes.find_one({"id": scene_id}, {"_id": 0})
-    if not scene:
-        raise HTTPException(status_code=404, detail="Scene not found")
-    try:
-        result = await image_gen_service.generate_image(scene["text"])
-        image_url = result.get("s3_url")
-        if image_url:
-            await db.scenes.update_one({"id": scene_id}, {"$set": {"image_url": image_url}})
-        return {"success": True, "image_url": image_url}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@api_router.post("/scenes/{scene_id}/generate-video")
-async def generate_scene_video(scene_id: str, user: dict = Depends(get_current_user)):
-    """Generate video for a scene"""
-    scene = await db.scenes.find_one({"id": scene_id}, {"_id": 0})
-    if not scene or not scene.get("image_url"):
-        raise HTTPException(status_code=400, detail="Scene must have an image first")
-    
-    job_id = str(uuid.uuid4())
-    job_doc = {
-        "id": job_id, "scene_id": scene_id, "user_id": user["id"],
-        "job_type": "scene_video", "status": "pending", "progress": 0,
-        "created_at": datetime.now(timezone.utc).isoformat()
-    }
-    await db.generation_jobs.insert_one(job_doc)
-    enqueue_task(scene_video_task, scene_id, job_id, fallback_coro=run_scene_video_generation)
-    return {"job_id": job_id, "status": "pending"}
-
-async def run_scene_video_generation(scene_id: str, job_id: str):
-    """Generate video for a single scene"""
-    try:
-        scene = await db.scenes.find_one({"id": scene_id}, {"_id": 0})
-        video_prompt = f"{scene.get('title', '')}: {scene['text'][:500]}"
-        result = await minimax_service.generate_video(
-            prompt=video_prompt, first_frame_image=scene.get("image_url"), generation_type="image-to-video"
-        )
-        video_url = result.get("file_url")
-        if video_url:
-            video_response = requests.get(video_url, timeout=120)
-            if video_response.status_code == 200:
-                s3_key = f"videos/scenes/{scene_id}.mp4"
-                s3_url = await asyncio.to_thread(s3_service.upload_bytes, video_response.content, s3_key, "video/mp4")
-                await db.scenes.update_one({"id": scene_id}, {"$set": {"video_url": s3_url}})
-        await db.generation_jobs.update_one({"id": job_id}, {"$set": {"status": "completed", "progress": 100}})
-    except Exception as e:
-        await db.generation_jobs.update_one({"id": job_id}, {"$set": {"status": "failed", "error_message": str(e)}})
-
-def scene_video_task(scene_id: str, job_id: str):
-    asyncio.run(run_scene_video_generation(scene_id, job_id))
-
-@api_router.post("/stories/{story_id}/batch-generate-videos")
-async def batch_generate_scene_videos(story_id: str, user: dict = Depends(get_current_user)):
-    """Generate videos for all scenes in a story"""
-    story = await db.stories.find_one({"id": story_id, "owner_id": user["id"]})
-    if not story:
-        raise HTTPException(status_code=404, detail="Story not found")
-    scenes = await db.scenes.find({"story_id": story_id}, {"_id": 0}).to_list(100)
-    scenes_with_images = [s for s in scenes if s.get("image_url")]
-    if not scenes_with_images:
-        raise HTTPException(status_code=400, detail="No scenes with images found")
-    job_id = str(uuid.uuid4())
-    job_doc = {
-        "id": job_id, "story_id": story_id, "user_id": user["id"],
-        "job_type": "batch_scene_videos", "status": "pending", "progress": 0,
-        "total_scenes": len(scenes_with_images), "completed_scenes": 0,
-        "created_at": datetime.now(timezone.utc).isoformat()
-    }
-    await db.generation_jobs.insert_one(job_doc)
-    enqueue_task(batch_scene_videos_task, story_id, job_id, fallback_coro=run_batch_scene_videos)
-    return {"job_id": job_id, "message": f"Queued {len(scenes_with_images)} scenes for video generation"}
-
-async def run_batch_scene_videos(story_id: str, job_id: str):
-    """Generate videos for all scenes with images"""
-    try:
-        story = await db.stories.find_one({"id": story_id}, {"_id": 0})
-        scenes = await db.scenes.find({"story_id": story_id}, {"_id": 0}).to_list(100)
-        scenes_with_images = [s for s in scenes if s.get("image_url") and not s.get("video_url")]
-        total = len(scenes_with_images)
-        completed = 0
-        for scene in scenes_with_images:
-            try:
-                await run_scene_video_generation(scene["id"], job_id)
-                completed += 1
-                await db.generation_jobs.update_one(
-                    {"id": job_id}, {"$set": {"progress": int((completed/total)*100), "completed_scenes": completed}}
-                )
-            except Exception as e:
-                logger.error(f"Failed to generate video for scene {scene['id']}: {e}")
-        await db.generation_jobs.update_one({"id": job_id}, {"$set": {"status": "completed", "progress": 100}})
-        # Send notification
-        try:
-            user = await db.users.find_one({"id": story.get("owner_id")}, {"_id": 0})
-            if user:
-                frontend_url = os.environ.get('REACT_APP_BACKEND_URL', '').replace('/api', '')
-                video_url = f"{frontend_url}/stories/{story_id}/edit"
-                settings = await db.user_settings.find_one({"user_id": user["id"]}, {"_id": 0})
-                await notify_video_complete(
-                    user_email=user.get("email"),
-                    parent_email=settings.get("parent_email") if settings else None,
-                    phone_number=user.get("phone"),
-                    story_title=story.get("title", "Your Story"),
-                    video_url=video_url
-                )
-        except Exception as e:
-            logger.error(f"Notification failed: {e}")
-    except Exception as e:
-        await db.generation_jobs.update_one({"id": job_id}, {"$set": {"status": "failed", "error_message": str(e)}})
-
-def batch_scene_videos_task(story_id: str, job_id: str):
-    asyncio.run(run_batch_scene_videos(story_id, job_id))
-
-@api_router.get("/notifications")
-async def get_notifications(user: dict = Depends(get_current_user)):
-    """Get user notifications"""
-    jobs = await db.generation_jobs.find({
-        "user_id": user["id"], "status": "completed", "job_type": {"$in": ["scene_video", "batch_scene_videos"]}
-    }, {"_id": 0}).sort("created_at", -1).limit(10).to_list(10)
-    notifications = []
-    for job in jobs:
-        if job.get("job_type") == "batch_scene_videos":
-            story = await db.stories.find_one({"id": job.get("story_id")}, {"_id": 0})
-            notifications.append({
-                "id": job["id"], "title": "Videos Ready! 🎬",
-                "message": f"All videos for '{story.get('title', 'your story')}' are ready to view!",
-                "read": False, "created_at": job.get("created_at")
-            })
-    return notifications
-
-
-
-# ==================== NEW ENDPOINTS FOR SCENE GRID EDITOR ====================
-
-@api_router.post("/media/presigned-url")
-async def get_presigned_upload_url(filename: str, content_type: str, user: dict = Depends(get_current_user)):
-    """Generate presigned URL for direct S3 upload"""
-    try:
-        file_ext = filename.split('.')[-1] if '.' in filename else 'bin'
-        unique_filename = f"{uuid.uuid4()}.{file_ext}"
-        s3_key = f"user-uploads/{user['id']}/{unique_filename}"
-        presigned_url = s3_service.s3_client.generate_presigned_url(
-            'put_object',
-            Params={'Bucket': s3_service.bucket_name, 'Key': s3_key, 'ContentType': content_type},
-            ExpiresIn=3600
-        )
-        s3_url = f"https://{s3_service.bucket_name}.s3.{s3_service.region}.amazonaws.com/{s3_key}"
-        return {"presigned_url": presigned_url, "s3_url": s3_url}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@api_router.post("/scenes/{scene_id}/generate-image")
-async def generate_scene_image(scene_id: str, user: dict = Depends(get_current_user)):
-    """Generate image for a scene"""
-    scene = await db.scenes.find_one({"id": scene_id}, {"_id": 0})
-    if not scene:
-        raise HTTPException(status_code=404, detail="Scene not found")
-    try:
-        result = await image_gen_service.generate_image(scene["text"])
-        image_url = result.get("s3_url")
-        if image_url:
-            await db.scenes.update_one({"id": scene_id}, {"$set": {"image_url": image_url}})
-        return {"success": True, "image_url": image_url}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@api_router.post("/scenes/{scene_id}/generate-video")
-async def generate_scene_video(scene_id: str, user: dict = Depends(get_current_user)):
-    """Generate video for a scene"""
-    scene = await db.scenes.find_one({"id": scene_id}, {"_id": 0})
-    if not scene or not scene.get("image_url"):
-        raise HTTPException(status_code=400, detail="Scene must have an image first")
-    
-    job_id = str(uuid.uuid4())
-    job_doc = {
-        "id": job_id, "scene_id": scene_id, "user_id": user["id"],
-        "job_type": "scene_video", "status": "pending", "progress": 0,
-        "created_at": datetime.now(timezone.utc).isoformat()
-    }
-    await db.generation_jobs.insert_one(job_doc)
-    enqueue_task(scene_video_task, scene_id, job_id, fallback_coro=run_scene_video_generation)
-    return {"job_id": job_id, "status": "pending"}
-
-async def run_scene_video_generation(scene_id: str, job_id: str):
-    """Generate video for a single scene"""
-    try:
-        scene = await db.scenes.find_one({"id": scene_id}, {"_id": 0})
-        video_prompt = f"{scene.get('title', '')}: {scene['text'][:500]}"
-        result = await minimax_service.generate_video(
-            prompt=video_prompt,
-            first_frame_image=scene.get("image_url"),
-            generation_type="image-to-video"
-        )
-        video_url = result.get("file_url")
-        if video_url:
-            video_response = requests.get(video_url, timeout=120)
-            if video_response.status_code == 200:
-                s3_key = f"videos/scenes/{scene_id}.mp4"
-                s3_url = await asyncio.to_thread(s3_service.upload_bytes, video_response.content, s3_key, "video/mp4")
-                await db.scenes.update_one({"id": scene_id}, {"$set": {"video_url": s3_url}})
-        await db.generation_jobs.update_one({"id": job_id}, {"$set": {"status": "completed", "progress": 100}})
-    except Exception as e:
-        await db.generation_jobs.update_one({"id": job_id}, {"$set": {"status": "failed", "error_message": str(e)}})
-
-def scene_video_task(scene_id: str, job_id: str):
-    asyncio.run(run_scene_video_generation(scene_id, job_id))
-
-@api_router.post("/stories/{story_id}/batch-generate-videos")
-async def batch_generate_scene_videos(story_id: str, user: dict = Depends(get_current_user)):
-    """Generate videos for all scenes in a story"""
-    story = await db.stories.find_one({"id": story_id, "owner_id": user["id"]})
-    if not story:
-        raise HTTPException(status_code=404, detail="Story not found")
-    
-    scenes = await db.scenes.find({"story_id": story_id}, {"_id": 0}).to_list(100)
-    scenes_with_images = [s for s in scenes if s.get("image_url")]
-    
-    if not scenes_with_images:
-        raise HTTPException(status_code=400, detail="No scenes with images found")
-    
-    job_id = str(uuid.uuid4())
-    job_doc = {
-        "id": job_id, "story_id": story_id, "user_id": user["id"],
-        "job_type": "batch_scene_videos", "status": "pending", "progress": 0,
-        "total_scenes": len(scenes_with_images), "completed_scenes": 0,
-        "created_at": datetime.now(timezone.utc).isoformat()
-    }
-    await db.generation_jobs.insert_one(job_doc)
-    enqueue_task(batch_scene_videos_task, story_id, job_id, fallback_coro=run_batch_scene_videos)
-    return {"job_id": job_id, "message": f"Queued {len(scenes_with_images)} scenes for video generation"}
-
-async def run_batch_scene_videos(story_id: str, job_id: str):
-    """Generate videos for all scenes with images"""
-    try:
-        story = await db.stories.find_one({"id": story_id}, {"_id": 0})
-        scenes = await db.scenes.find({"story_id": story_id}, {"_id": 0}).to_list(100)
-        scenes_with_images = [s for s in scenes if s.get("image_url") and not s.get("video_url")]
-        
-        total = len(scenes_with_images)
-        completed = 0
-        
-        for scene in scenes_with_images:
-            try:
-                await run_scene_video_generation(scene["id"], job_id)
-                completed += 1
-                await db.generation_jobs.update_one(
-                    {"id": job_id},
-                    {"$set": {"progress": int((completed/total)*100), "completed_scenes": completed}}
-                )
-            except Exception as e:
-                logger.error(f"Failed to generate video for scene {scene['id']}: {e}")
-        
-        await db.generation_jobs.update_one({"id": job_id}, {"$set": {"status": "completed", "progress": 100}})
-        
-        # Send notification
-        try:
-            user = await db.users.find_one({"id": story.get("owner_id")}, {"_id": 0})
-            if user:
-                frontend_url = os.environ.get('REACT_APP_BACKEND_URL', '').replace('/api', '')
-                video_url = f"{frontend_url}/stories/{story_id}/edit"
-                settings = await db.user_settings.find_one({"user_id": user["id"]}, {"_id": 0})
-                await notify_video_complete(
-                    user_email=user.get("email"),
-                    parent_email=settings.get("parent_email") if settings else None,
-                    phone_number=user.get("phone"),
-                    story_title=story.get("title", "Your Story"),
-                    video_url=video_url
-                )
-        except Exception as e:
-            logger.error(f"Notification failed: {e}")
-    except Exception as e:
-        await db.generation_jobs.update_one({"id": job_id}, {"$set": {"status": "failed", "error_message": str(e)}})
-
-def batch_scene_videos_task(story_id: str, job_id: str):
-    asyncio.run(run_batch_scene_videos(story_id, job_id))
-
-@api_router.get("/stories/{story_id}/scenes")
-async def get_story_scenes(story_id: str, user: dict = Depends(get_current_user)):
-    """Get all scenes for a story"""
-    scenes = await db.scenes.find({"story_id": story_id}, {"_id": 0}).sort("order", 1).to_list(100)
-    return scenes

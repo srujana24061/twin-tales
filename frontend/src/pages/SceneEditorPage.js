@@ -251,6 +251,18 @@ export const SceneEditorPage = () => {
                   <SelectItem value="storyteller">Storyteller</SelectItem>
                 </SelectContent>
               </Select>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-[#64748B] font-medium">Image Model:</span>
+                <Select value={imageProvider} onValueChange={setImageProvider}>
+                  <SelectTrigger className="w-44 h-9 rounded-xl border-2 border-slate-200 text-sm" data-testid="image-provider-select">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="nano_banana">Nano Banana</SelectItem>
+                    <SelectItem value="minimax">MiniMax</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="flex-1" />
               <Button variant="outline" onClick={() => navigate(`/stories/${storyId}/video-editor`)}
                 data-testid="open-video-editor-btn"

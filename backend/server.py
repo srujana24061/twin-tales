@@ -1487,6 +1487,13 @@ async def run_audio_generation(story_id: str, job_id: str, voice_style: str = "s
             {"id": job_id},
             {"$set": {"status": "running", "progress": 5, "updated_at": datetime.now(timezone.utc).isoformat()}}
         )
+        # Audio generation logic continues below (at line ~1643)
+    except Exception as e:
+        logger.error(f"Audio generation setup failed: {e}")
+        await db.generation_jobs.update_one(
+            {"id": job_id},
+            {"$set": {"status": "failed", "error_message": str(e)}}
+        )
 
 
 async def run_batch_video_generation(story_id: str, job_id: str):

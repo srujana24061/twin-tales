@@ -8,7 +8,7 @@ import json
 import uuid
 from datetime import datetime
 
-BASE_URL = "https://creative-tales-11.preview.emergentagent.com"
+BASE_URL = "https://storycraft-ai-86.preview.emergentagent.com"
 
 def register_and_login():
     """Register a test user and get token"""

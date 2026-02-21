@@ -1,68 +1,73 @@
 <analysis>**original_problem_statement:**
-The user wants to build a full-stack application named **StoryCraft AI**. This platform allows parents, teachers, and content creators to generate personalized, illustrated story PDFs and animated video stories for children.
+The user wants to build a full-stack application named **StoryCraft AI**. This platform allows parents, teachers, and content creators to generate personalized, illustrated story PDFs and animated video stories for children using a variety of AI models.
 
 **PRODUCT REQUIREMENTS:**
--   **Core Flow:** Users create characters (with optional photo uploads for face mapping), define story parameters (tone, style, theme), and the system generates a story.
--   **Generation Engine:** Use LLMs (like GPT/Gemini) to create scene-by-scene text, image prompts, and video prompts.
+-   **Core Flow:** Users create characters (with photo uploads), define story parameters, and the system generates a story with scene-by-scene text, images, and video.
+-   **Generation Engine:** Use LLMs (GPT/Gemini) for text and various models for media.
 -   **Media Generation:**
-    -   **Images:** Generate images for each scene using models like MiniMax (Hailuo/Nano Banana), Runway, or GPT Image.
-    -   **PDF:** Compile scenes into a comic-style PDF.
-    -   **Video:** Create narrated or dialogue-based videos. This involves generating audio (TTS), video clips (Runway, Kling, MiniMax), and composing them.
-    -   **Audio:** Use TTS services like ElevenLabs or others for narration.
--   **Editing:** Provide a scene editor for text/prompts and a web-based video timeline editor.
--   **Social Media Ads:** Automatically generate short promotional video ads (Reels, Shorts) from the story content.
--   **Architecture:** The initial request specified a React frontend, Django backend, Celery for async tasks, and S3 for storage.
--   **Responsible AI:** Must implement fairness, transparency, privacy, safety, and human oversight.
--   **Build Order:** The user provided a critical build order: Character Builder → Story Text → Scene Editor → Image/PDF Gen → Task System → Video.
+    -   **Images:** Generate images for each scene using models like MiniMax or Gemini Nano Banana. A new request is to allow cartoonization of character photos using the Fotor API.
+    -   **Video:** Create narrated videos from scenes.
+    -   **Audio:** Use TTS services for narration.
+-   **Editing:** Provide a scene editor and a video timeline editor.
+-   **Architecture:** The initial request specified Django + Celery. The project was built with FastAPI, and has now been migrated from  to **Celery** for background tasks as requested by the user.
+-   **Build Order:** Character Builder → Story Text → Scene Editor → Image/PDF Gen → Task System (now migrated to Celery) → Video.
 
 **User's preferred language**: English
 
 **what currently exists?**
-A functional full-stack application with a React frontend and a FastAPI backend.
+A full-stack application with a React frontend and a FastAPI backend.
 -   **Authentication:** JWT-based user registration and login.
--   **Core Features:** Users can create characters (with S3 photo upload), define stories, and generate scenes with text (OpenAI), images (MiniMax), video clips (MiniMax), narration (TTS), and background music (MiniMax).
--   **Storage:** All media (character photos, images, videos, audio, music, PDFs) is stored in **AWS S3**. The database (MongoDB) stores metadata and S3 URLs.
--   **Async Tasks:** The FastAPI backend uses  for non-blocking background generation tasks.
--   **Text-to-Speech (TTS):** A robust 3-tier fallback system is in place for audio narration: it first tries MiniMax, then ElevenLabs, and finally falls back to the free, key-less , which is currently operational.
--   **UI:** The frontend includes pages for landing, auth, a dashboard, character creation, story setup, and a scene editor. Placeholder UIs for a **Video Editor** and **Ad Studio** also exist.
+-   **Async Tasks:** The backend has been successfully migrated from a simple  background task system to a robust **Celery + Redis** architecture to handle long-running generation jobs.
+-   **Core Features:** Users can create characters (with S3 photo upload), define stories, and generate scenes.
+-   **Generation Pipeline:** The system can generate story text (OpenAI), scene images (MiniMax, with Gemini Nano Banana integration in progress), and audio narration (using a 3-tier fallback ending with ).
+-   **Storage:** All media is stored in AWS S3.
+-   **Fotor API Integration (In Progress):** The backend has been set up with proxy endpoints () to communicate with the Fotor API for image cartoonization. The frontend work to integrate this feature into the character creation flow has begun.
 
 **Last working item**:
--   **Last item agent was working:** Implementing a reliable Text-to-Speech (TTS) solution. The user reported that MiniMax TTS failed due to insufficient balance and requested a fallback.
--   **Status:** USER VERIFICATION PENDING
--   **Agent Testing Done:** Y
--   **Which testing method agent to use?** Manual testing by curl
+-   **Last item agent was working:** Implementing a new feature to cartoonize a character's uploaded photo using the Fotor API. The user provided a complete React hook () and the agent was in the process of integrating it. This involves creating the frontend UI in  and implementing the backend proxy endpoints in  to handle requests to the Fotor API.
+-   **Status:** IN PROGRESS
+-   **Agent Testing Done:** N
+-   **Which testing method agent to use?** both
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-There are no pending bugs. The last issue with TTS was resolved by implementing a working fallback. The remaining work involves implementing new features.
+-   **Issue 1:** The infinite loading screen during story generation was fixed. The root cause was an event loop conflict with Celery's eager mode, which the agent resolved.
+    -   **Status:** RESOLVED
 
 **In progress Task List**:
-No tasks are currently in progress.
+-   **Task 1: Implement Fotor API Cartoonization (P0)**
+    -   **Where to resume:** The user provided a React hook . The agent has created this file. The next steps are:
+        1.  Integrate this hook into  to add UI elements for selecting a cartoon style and displaying the results.
+        2.  Finish implementing the backend proxy endpoints in  (, , ) that securely call the external Fotor API.
+        3.  Ensure the cartoonized image can be selected and saved as the character's primary photo.
+    -   **What will be achieved with this?** Users will be able to apply various cartoon effects to their uploaded character photos, enhancing personalization.
+    -   **Status:** IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?** both
+    -   **Blocked on something:** Requires Fotor API keys to be added to the  file.
+
+-   **Task 2: Complete Gemini Nano Banana Image Generation (P1)**
+    -   **Where to resume:** The agent started this task before the user prioritized Fotor. The  library is installed, and a service function in  was being created. The work needs to be integrated into the  in  and the UI toggle in  needs to be finalized.
+    -   **What will be achieved with this?** Provides a powerful, high-quality image generation option using the Emergent LLM Key, with MiniMax as a fallback.
+    -   **Status:** IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?** both
+    -   **Blocked on something:** Blocked by the higher-priority Fotor task.
 
 **Upcoming and Future Tasks**
--   **P0: Implement FFmpeg Video Export:** The backend function  and its API endpoint  are placeholders. This task involves writing the FFmpeg logic to download all scene media (images/videos), narration, and music from S3, compose them into a final MP4 video, and upload the result back to S3.
--   **P0: Implement Video Editor Functionality:** The  is a static UI. This task requires implementing the scene reordering logic on the backend () and wiring up the frontend to allow users to drag-and-drop scenes, adjust timings, and manage the video timeline.
--   **P1: Implement Ad Generator Logic:** The  and backend endpoint () are placeholders. This task involves using an LLM to analyze the story, select highlight scenes, generate marketing copy (hook, caption), and trigger a new FFmpeg process to render short-form vertical videos for social media.
--   **P2: Notification System:** Implement the notification system (e.g., email, web notifications) to inform users when their generation tasks are complete, as specified in the PRD.
+-   **P1: Implement FFmpeg Video Export:** The backend function  and its API endpoint  are placeholders. This involves writing the Celery task to download all scene media from S3, compose them into a final MP4 (5s per scene, hard cuts), and upload the result back to S3.
+-   **P1: Implement Video Editor Functionality:** The  is a static UI. This requires implementing the scene reordering logic on the backend () and wiring up the frontend to allow users to drag-and-drop scenes and edit durations.
+-   **P2: Implement Ad Generator Logic:** The  and backend endpoint () are placeholders. This task involves using an LLM to generate marketing copy and triggering an FFmpeg process to render short-form vertical videos for all major platforms (Reels, Shorts, etc.).
+-   **P2: Notification System:** Implement a notification system (e.g., email) to inform users when their generation tasks are complete.
 -   **P2: Dialogue-based Video:** Implement the advanced video generation feature with character dialogues and lip-syncing.
 
 **Completed work in this session**
--   **Foundation:** Full-stack application with FastAPI backend and React frontend.
--   **Authentication:** JWT user registration and login system.
--   **Character Creation:**  component with functionality to upload character photos to AWS S3.
--   **Storage Migration:** Successfully migrated all media storage from MongoDB (base64) to AWS S3.
--   **Async Generation Pipeline:**
-    -   Story Text Generation (using OpenAI).
-    -   Image Generation (using MiniMax, with character photo referencing).
-    -   Video Snippet Generation (using MiniMax's image-to-video).
-    -   PDF Generation (pulling generated images from S3).
--   **Audio Generation with Fallback:** Implemented a 3-tier TTS fallback (MiniMax → ElevenLabs → Edge TTS) to ensure audio narration is always generated.
--   **Placeholder UIs:** Created UI pages for the Video Editor and Ad Studio.
+-   **Major Refactor: Migrated Async Tasks to Celery:** Replaced the  background task system with a production-grade **Celery + Redis** architecture for improved scalability and reliability. This involved creating , , and refactoring all generation logic from  into Celery tasks.
+-   **Bug Fix: Resolved Infinite Story Generation:** Fixed a critical bug where story generation would hang indefinitely. The issue was an event-loop conflict in Celery's eager mode, which was patched in .
+-   **Started Fotor API Integration:** Created backend proxy endpoints and started frontend work to allow users to cartoonize character images.
 
 **Earlier issues found/mentioned but not fixed**
 -   **Issue 1: S3 Delete Permission Missing**
-    -   **Debug checklist:** The  IAM user credentials provided by the user work for  but may lack .
-    -   **Why to solve this issue and what will be achieved with this?** This is currently not a blocker, but it will be necessary if features for deleting or replacing media assets (e.g., regenerating an image and deleting the old one) are implemented.
+    -   **Debug checklist:** The IAM user credentials may lack  permission.
+    -   **Why to solve this issue and what will be achieved with this?** Will be necessary for features that replace media assets (e.g., regenerating an image, deleting a character). Not a current blocker.
     -   **Should Test frontend/backend/both after fix:** Backend
     -   **Is recurring issue?** N
 
@@ -73,90 +78,83 @@ No tasks are currently in progress.
 
 
 **Key Technical Concepts**
--   **Backend:** FastAPI,  for background tasks, MongoDB (for metadata).
--   **Frontend:** React, TailwindCSS, Framer Motion, Axios.
--   **Storage:** AWS S3 is the single source of truth for all media files.
--   **AI Integrations:** The application is a multi-API orchestration platform, using MiniMax (Image, Video, Music), OpenAI (Text), and Edge TTS (Audio).
+-   **Backend:** FastAPI, **Celery** (for async tasks), **Redis** (as Celery broker), MongoDB (for metadata).
+-   **Frontend:** React, TailwindCSS, Axios.
+-   **Storage:** AWS S3 for all media.
+-   **AI Integrations:** OpenAI, MiniMax, Edge TTS, **Gemini Nano Banana (in progress)**, **Fotor API (in progress)**.
 
 **key DB schema**
 -   **Database:** MongoDB
--   **Collections:**
-    -   : Stores user credentials and profile info.
-    -   : Stores character details, including a  pointing to S3.
-    -   : Contains story configuration, an array of scenes, and URLs to final media outputs.
-    -   : Tracks the status of background generation tasks.
-    -   : A catalog of all generated media with their S3 URLs.
+-   **Collections:** , , , , . (No changes this session).
 
 **changes in tech stack**
--   **Backend Framework:** The agent implemented the backend with **FastAPI** instead of Django, as specified in the PRD.
--   **Async Task Queue:** The agent used  background tasks instead of the specified Celery + Redis architecture. This is a simpler but less scalable approach.
+-   **Async Task Queue:** Major migration from  background tasks to a full **Celery + Redis** architecture.
 
 **All files of reference**
--   : The heart of the application, containing all API routes and the orchestration logic for media generation.
--   : Encapsulates all third-party API interactions (S3, MiniMax, TTS fallbacks).
--   : The main user interface for editing story scenes and triggering media generation.
--   : The UI for creating characters and handling photo uploads to S3.
--   : Stores all critical API keys and credentials.
+-   : New file for Celery app initialization.
+-   : New file containing the definitions for all background generation tasks.
+-   : Heavily modified to delegate all long-running tasks to Celery via . Now also includes proxy endpoints for the Fotor API.
+-   : Modified to add service logic for Gemini and Fotor.
+-   : New file provided by the user to manage Fotor API interaction.
+-   : To be modified to integrate the  hook.
+-   : To be modified for the Gemini/MiniMax image generation toggle.
 
-**Areas that need refactoring**
--   The  file has grown very large. The complex generation logic (e.g., , ) should be moved into dedicated modules to improve maintainability.
--   The current  task system is not suitable for a production application as described in the PRD. Migrating to a robust task queue like Celery would provide better scalability, retries, and monitoring.
+**Areas that need refactoring**:
+-   The  hook provided by the user is large and contains both API logic and state management. It could be split into a service file for API calls and a leaner hook for component state.
+-   The original concern that  is too large has been partially addressed by moving business logic to , but the file still manages all API routing and could be split into smaller routers.
 
 **key api endpoints**
--   , 
--   , 
--   , 
--   , , 
--    (Placeholder)
--    (Placeholder)
--    (Serves media from S3 via a presigned URL)
+-   (Existing auth, character, story endpoints)
+-    (New)
+-    (New)
+-    (New)
 
 **Critical Info for New Agent**
--   **Tech Stack Deviation:** Be aware that the project uses **FastAPI + asyncio**, not Django + Celery. All future work should follow this existing pattern or include a migration plan.
--   **S3 is the Source of Truth:** All media is stored on S3. The application logic should always interact with S3 for media operations. The initial  permission issue is resolved.
--   **TTS Fallback Logic:** Audio generation uses a 3-tier fallback (MiniMax → ElevenLabs → Edge TTS). The first two are expected to fail due to external factors (balance/cloud block), with  being the working solution. Do not try to fix the MiniMax or ElevenLabs integrations without user instruction.
--   **Testing Agent False Positive:** The testing agent consistently reports an auth session lost during navigation error. This is a known Playwright artifact. Manual testing has confirmed that authentication state persists correctly in a real browser. Do not waste time debugging this test failure.
+-   **PRIORITY SHIFT:** The user has pivoted to implementing the **Fotor cartoonization feature**. This is the new P0 task, superseding the video editor and ad generator for now.
+-   **CELERY IS LIVE:** The entire backend now runs on Celery for background tasks. Do not use . All heavy processing must be a Celery task defined in .
+-   **FOTOR API PROXY:** The backend must act as a proxy for the Fotor API. Do not call Fotor from the frontend directly. The backend endpoints () will handle authentication and polling.
+-   **EMERGENT LLM KEY:** The Gemini Nano Banana integration should use the  via the  library. No user key is needed for this.
 
 **documents and test reports created in this job**
--   
--   
--   Test reports located in .
+-   None.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Use provided code and environment to create videos. (Uploaded ).
-    -   **Status:** DONE. The agent analyzed the code and integrated key patterns like image-to-video generation.
-2.  **User:** MiniMax TTS is failing due to insufficient balance; use ElevenLabs as a fallback with the provided API key.
-    -   **Status:** DONE. The agent attempted this, found ElevenLabs was also blocked, and implemented a final working solution with .
-3.  **User:** Provided updated AWS credentials with  permission.
-    -   **Status:** DONE. Agent confirmed S3 uploads are now working.
-4.  **User:** Add character photo uploads and use them as references in image/video generation.
-    -   **Status:** DONE. Photo upload to S3 and its use in the MiniMax generation pipeline is fully implemented.
-5.  **User:** Provided various API keys (MiniMax, OpenAI, AWS, Google) and requested integration.
-    -   **Status:** DONE. Agent successfully integrated MiniMax for media, AWS S3 for storage, and used the OpenAI key for text.
-6.  **User:** Requested the creation of Video Editor, Ad Generator, and FFmpeg export features.
-    -   **Status:** IN PROGRESS. The agent has created the placeholder UIs and backend routes for these features. The core logic is the next major task.
+1.  **User:** Story generation is stuck on Finalizing forever.
+    -   **Status:** RESOLVED. Agent identified an event-loop conflict with Celery and patched it.
+2.  **User:** Images are not generating. Use Gemini Nano Banana (via Emergent credits) as the default and MiniMax as a fallback.
+    -   **Status:** IN PROGRESS. Agent started the integration.
+3.  **User (Confirmation):** Confirmed Gemini as default, MiniMax as toggleable fallback, keep 16:9 aspect ratio but add options, and add a Regenerate button.
+    -   **Status:** ACKNOWLEDGED.
+4.  **User (NEW PRIORITY):** choose an option to cartoonize your image using fotor apis... followed by a large code snippet for a  React hook.
+    -   **Status:** IN PROGRESS. This is the current highest-priority task. The agent has started implementing it.
 
 **Project Health Check:**
--   **Broken:** The **Video Editor** and **Ad Generator** features are non-functional placeholders. The final **Video Export** functionality is not implemented.
+-   **Broken:**
+    -   **Fotor Cartoonization:** Feature is partially implemented and non-functional.
+    -   **Gemini Image Generation:** Partially implemented and non-functional.
+    -   **Video Editor / Ad Generator:** These are still non-functional UI placeholders.
+    -   **Video Export:** The backend FFmpeg logic is not implemented.
 -   **Mocked:** N/A.
 
 **3rd Party Integrations**
--   **OpenAI:** Used for text generation. Requires a user-provided API key ().
--   **MiniMax:** Used for image, video, and music generation. Requires a user-provided API key ().
--   **AWS S3:** Used for all media storage. Requires user-provided AWS credentials.
--   **ElevenLabs:** Integrated as a TTS fallback, but non-functional due to cloud platform restrictions on its free tier. Requires a user-provided API key.
--   **Edge TTS:** Integrated as the final, functional TTS fallback. Does not require an API key.
+-   **OpenAI:** For text generation (User Key).
+-   **MiniMax:** For image/video/music (User Key).
+-   **AWS S3:** For media storage (User Credentials).
+-   **ElevenLabs:** TTS fallback (User Key, non-functional).
+-   **Edge TTS:** Final TTS fallback (No Key, functional).
+-   **Fotor API:** For image cartoonization (User Key required, in progress).
+-   **Gemini Nano Banana:** For image generation (via **Emergent LLM Key**, in progress).
+-   **Celery/Redis:** New backend task queue infrastructure.
 
 **Testing status**
--   **Testing agent used after significant changes:** YES
--   **Troubleshoot agent used after agent stuck in loop:** N/A
+-   **Testing agent used after significant changes:** NO (Not used after the Celery migration).
+-   **Troubleshoot agent used after agent stuck in loop:** YES (For debugging the infinite loading issue).
 -   **Test files created:** None.
--   **Known regressions:** The auth session lost error in Playwright tests is a known testing artifact, not a functional regression.
+-   **Known regressions:** None functional. The Playwright auth session lost error from the previous fork is a known testing artifact.
 
 **Credentials to test flow:**
-New users can be created via the registration page. All required third-party API keys (OpenAI, MiniMax, AWS) must be present in the  file.
+-   Register a new user on the frontend.
+-   Backend  requires keys for , , , and now  and .
 
 **What agent forgot to execute**
--   The core logic for the **Video Editor**, **Ad Generator**, and **FFmpeg Video Export** features has not been implemented, despite the creation of placeholder UIs and API endpoints. These are the highest-priority upcoming tasks.
--   The **Notification System** (email/WhatsApp) requested in the PRD has not been started.
--   The detailed **Responsible AI** checks (e.g., bias detection on generated text) are not yet implemented beyond basic placeholders.</analysis>
+-   The agent correctly followed user priorities. The user's frequent priority shifts meant that the originally planned P0 tasks (Video Editor, FFmpeg Export, Ad Generator) were deferred. They are captured in the Upcoming and Future Tasks section and have not been forgotten, but rather deprioritized by the user.</analysis>

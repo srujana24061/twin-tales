@@ -108,8 +108,10 @@ export const SceneEditorPage = () => {
     setVideoLoading(true);
     setMediaProgress(p => ({ ...p, video: 0 }));
     try {
+      const hasImages = scenes.some(s => s.image_url);
+      const mode = hasImages ? 'image-to-video (using scene images as first frames)' : 'text-to-video';
       const { data } = await api.post(`/stories/${storyId}/generate-video`);
-      toast.success('Video generation started! This may take several minutes...');
+      toast.success(`Video generation started in ${mode} mode! This may take several minutes per scene...`);
       pollJob(data.job_id,
         (prog) => setMediaProgress(p => ({ ...p, video: prog })),
         () => { setVideoLoading(false); loadStory(); toast.success('Videos ready!'); },

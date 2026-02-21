@@ -84,11 +84,16 @@ export const VideoEditorPage = () => {
   };
 
   const commitTrim = async (sceneId, field, value) => {
-    const normalized = value === '' ? null : Number(value);
-    const payload = field === 'trim_start_seconds'
-      ? { trim_start_seconds: normalized ?? 0 }
-      : { trim_end_seconds: normalized };
-    await saveSceneSettings(sceneId, payload);
+    const parsed = value === '' ? null : Number(value);
+    const normalized = Number.isNaN(parsed) ? null : parsed;
+    if (field === 'trim_start_seconds') {
+      const safeValue = normalized ?? 0;
+      setScenes(prev => prev.map(s => s.id === sceneId ? { ...s, trim_start_seconds: safeValue } : s));
+      await saveSceneSettings(sceneId, { trim_start_seconds: safeValue });
+      return;
+    }
+    setScenes(prev => prev.map(s => s.id === sceneId ? { ...s, trim_end_seconds: normalized ?? '' } : s));
+    await saveSceneSettings(sceneId, { trim_end_seconds: normalized });
   };
 
   const updateTransition = async (sceneId, value) => {

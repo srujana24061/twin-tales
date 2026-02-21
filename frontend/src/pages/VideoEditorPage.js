@@ -133,7 +133,7 @@ export const VideoEditorPage = () => {
     } catch (err) { setExporting(false); toast.error('Export failed'); }
   };
 
-  const totalDuration = scenes.filter(s => s.include_in_video).reduce((a, s) => a + (s.duration_seconds || 5), 0);
+  const totalDuration = scenes.filter(s => s.include_in_video).reduce((a, s) => a + Number(s.duration_seconds || 5), 0);
   const hasVideo = scenes.some(s => s.video_url);
   const hasAudio = scenes.some(s => s.audio_url);
   const hasImages = scenes.some(s => s.image_url);

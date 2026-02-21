@@ -114,6 +114,11 @@ class SceneUpdate(BaseModel):
     transition_type: Optional[str] = None
     include_in_video: Optional[bool] = None
 
+class SceneGridUpdate(BaseModel):
+    scene_text: Optional[str] = None
+    image_url: Optional[str] = None
+    video_url: Optional[str] = None
+
 class ImageRegenRequest(BaseModel):
     provider: str = "nano_banana"
 

@@ -421,7 +421,6 @@ async def run_story_generation(story_id: str, job_id: str):
 
         char_descriptions = ""
         char_ref_images = []
-        backend_url = os.environ.get('BACKEND_PUBLIC_URL', '')
         for c in characters:
             traits = ", ".join(c.get("personality_traits", []))
             char_descriptions += f"- {c['name']}: Role={c['role']}, Traits={traits}, Speaking style={c.get('speaking_style', 'normal')}\n"

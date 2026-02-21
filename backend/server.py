@@ -2233,20 +2233,22 @@ async def generate_video_endpoint(story_id: str, user: dict = Depends(get_curren
     if scenes == 0:
         raise HTTPException(status_code=400, detail="Generate story first")
 
+    job_id = str(uuid.uuid4())
+    job_doc = {
+        "id": job_id,
+        "story_id": story_id,
+        "user_id": user["id"],
+        "job_type": "video",
+        "status": "pending",
+        "progress": 0,
+        "error_message": None,
+        "result_url": None,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
     await db.generation_jobs.insert_one(job_doc)
-    
-    # Enqueue the batch task
-    enqueue_task(batch_video_generation_task, story_id, job_id, fallback_coro=run_batch_video_generation)
-    
-    return {
-        "job_id": job_id,
-        "status": "pending",
-        "total_frames": len(all_frames),
-        "message": f"Queued {len(all_frames)} frames for video generation"
-    }
+    enqueue_task(video_generation_task, story_id, job_id, fallback_coro=run_video_generation)
+    return {"job_id": job_id, "status": "pending"}
 
 
 @api_router.post("/frames/{frame_id}/generate-image")

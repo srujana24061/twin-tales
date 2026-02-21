@@ -192,6 +192,28 @@ export default function ParentDashboardPage() {
                   <span>10 min</span><span>35 min</span><span>60 min</span>
                 </div>
               </div>
+              <div>
+                <label className="text-sm mb-2 block" style={{ color: 'hsl(var(--foreground))' }}>
+                  Parent email for notifications
+                </label>
+                <input
+                  type="email"
+                  value={parentEmail}
+                  onChange={e => setParentEmail(e.target.value)}
+                  placeholder="parent@example.com"
+                  data-testid="parent-email-input"
+                  className="w-full px-3 py-2 rounded-xl text-sm border"
+                  style={{
+                    background: 'hsl(var(--background))',
+                    borderColor: 'var(--glass-border)',
+                    color: 'hsl(var(--foreground))',
+                    outline: 'none'
+                  }}
+                />
+                <p className="text-xs mt-1" style={{ color: 'hsl(var(--muted-foreground))' }}>
+                  You'll receive an email here when videos finish generating
+                </p>
+              </div>
               <Button onClick={saveSettings} disabled={savingSettings} data-testid="save-settings-btn"
                 className="rounded-xl flex items-center gap-2 h-9"
                 style={{ background: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' }}>

@@ -361,6 +361,19 @@ async def update_scene(story_id: str, scene_id: str, data: SceneUpdate, user: di
     update_data = {k: v for k, v in data.model_dump().items() if v is not None}
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields to update")
+
+    if "duration_seconds" in update_data:
+        update_data["duration_seconds"] = max(1, int(update_data["duration_seconds"]))
+    if "trim_start_seconds" in update_data:
+        update_data["trim_start_seconds"] = max(0, float(update_data["trim_start_seconds"]))
+    if "trim_end_seconds" in update_data:
+        update_data["trim_end_seconds"] = float(update_data["trim_end_seconds"]) if update_data["trim_end_seconds"] is not None else None
+        if update_data["trim_end_seconds"] is not None:
+            update_data["trim_end_seconds"] = max(update_data.get("trim_start_seconds", 0), update_data["trim_end_seconds"])
+    if "transition_type" in update_data:
+        if update_data["transition_type"] not in {"cut", "fade"}:
+            raise HTTPException(status_code=400, detail="Invalid transition type")
+
     result = await db.scenes.update_one({"id": scene_id, "story_id": story_id}, {"$set": update_data})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Scene not found")

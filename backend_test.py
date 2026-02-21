@@ -1,6 +1,7 @@
 import requests
 import json
 import sys
+import uuid
 from datetime import datetime
 
 class StoryCraftAPITester:
@@ -8,6 +9,8 @@ class StoryCraftAPITester:
         self.base_url = base_url
         self.token = None
         self.test_user_id = None
+        self.story_id = None
+        self.character_id = None
         self.tests_run = 0
         self.tests_passed = 0
         self.test_results = []

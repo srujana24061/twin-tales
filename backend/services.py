@@ -310,7 +310,10 @@ class FotorService:
 
 class MiniMaxService:
     def __init__(self):
-        self.api_key = os.environ.get('MINIMAX_API_KEY')
+        self.api_key = os.environ.get('MINIMAX_API_KEY', '')
+        # Remove 'Bearer ' prefix if present (we'll add it in headers)
+        if self.api_key.startswith('Bearer '):
+            self.api_key = self.api_key[7:]
         self.base_url = "https://api.minimax.io/v1"
 
     @property

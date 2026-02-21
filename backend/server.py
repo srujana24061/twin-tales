@@ -64,7 +64,6 @@ class UserRegister(BaseModel):
     email: str
     password: str
     name: str
-    phone: Optional[str] = None
     phone: Optional[str] = None  # Added phone number field
 
 class UserLogin(BaseModel):
@@ -2253,85 +2252,6 @@ async def get_dashboard_stats(user: dict = Depends(get_current_user)):
     return {
         "stories": story_count,
         "characters": char_count,
-
-
-# ==================== S3 PRESIGNED URL & FRAME ENDPOINTS ====================
-
-@api_router.post("/media/presigned-url")
-async def get_presigned_upload_url(
-    filename: str,
-    content_type: str,
-    user: dict = Depends(get_current_user)
-):
-    """Generate presigned URL for direct upload to S3"""
-    try:
-        file_ext = filename.split('.')[-1] if '.' in filename else 'bin'
-        unique_filename = f"{uuid.uuid4()}.{file_ext}"
-        s3_key = f"user-uploads/{user['id']}/{unique_filename}"
-        
-        presigned_url = s3_service.s3_client.generate_presigned_url(
-            'put_object',
-            Params={'Bucket': s3_service.bucket_name, 'Key': s3_key, 'ContentType': content_type},
-            ExpiresIn=3600
-        )
-        
-        s3_url = f"https://{s3_service.bucket_name}.s3.{s3_service.region}.amazonaws.com/{s3_key}"
-        return {"presigned_url": presigned_url, "s3_url": s3_url, "s3_key": s3_key}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-class FrameCreate(BaseModel):
-    scene_id: str
-    text: str
-    order: int = 0
-
-class FrameUpdate(BaseModel):
-    text: Optional[str] = None
-    image_url: Optional[str] = None
-    video_url: Optional[str] = None
-
-@api_router.post("/frames")
-async def create_frame(data: FrameCreate, user: dict = Depends(get_current_user)):
-    frame_id = str(uuid.uuid4())
-    frame_doc = {
-        "id": frame_id, "scene_id": data.scene_id, "text": data.text, "order": data.order,
-        "image_url": None, "video_url": None, "audio_url": None,
-        "created_at": datetime.now(timezone.utc).isoformat()
-    }
-    await db.frames.insert_one(frame_doc)
-    frame_doc.pop("_id")
-    return frame_doc
-
-@api_router.get("/scenes/{scene_id}/frames")
-async def get_scene_frames(scene_id: str, user: dict = Depends(get_current_user)):
-    frames = await db.frames.find({"scene_id": scene_id}, {"_id": 0}).sort("order", 1).to_list(100)
-    return frames
-
-@api_router.put("/frames/{frame_id}")
-async def update_frame(frame_id: str, data: FrameUpdate, user: dict = Depends(get_current_user)):
-    update_data = {k: v for k, v in data.dict().items() if v is not None}
-    if update_data:
-        update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
-        await db.frames.update_one({"id": frame_id}, {"$set": update_data})
-    frame = await db.frames.find_one({"id": frame_id}, {"_id": 0})
-    return frame
-
-@api_router.post("/frames/{frame_id}/generate-image")
-async def generate_frame_image(frame_id: str, user: dict = Depends(get_current_user)):
-    frame = await db.frames.find_one({"id": frame_id}, {"_id": 0})
-    if not frame:
-        raise HTTPException(status_code=404, detail="Frame not found")
-    result = await image_gen_service.generate_image(frame["text"])
-    image_url = result.get("s3_url")
-    if image_url:
-        await db.frames.update_one({"id": frame_id}, {"$set": {"image_url": image_url}})
-    return {"success": True, "image_url": image_url}
-
-@api_router.get("/stories/{story_id}/scenes")
-async def get_story_scenes(story_id: str, user: dict = Depends(get_current_user)):
-    scenes = await db.scenes.find({"story_id": story_id}, {"_id": 0}).sort("order", 1).to_list(100)
-    return scenes
-
         "total_jobs": job_count,
         "completed_jobs": completed_jobs
     }

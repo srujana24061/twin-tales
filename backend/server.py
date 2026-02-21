@@ -1658,7 +1658,7 @@ async def export_video_endpoint(story_id: str, user: dict = Depends(get_current_
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
     await db.generation_jobs.insert_one(job_doc)
-    asyncio.create_task(run_ffmpeg_export(story_id, job_id))
+    enqueue_task(ffmpeg_export_task, story_id, job_id)
     return {"job_id": job_id, "status": "pending"}
 
 

@@ -227,12 +227,40 @@ async def upload_character_photo(char_id: str, file: UploadFile = File(...), use
     if len(contents) > 10 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="File too large (max 10MB)")
 
+    asset_id = str(uuid.uuid4())
     s3_key = f"users/{user['id']}/characters/{char_id}/photo.{ext}"
-    s3_url = await s3_service.upload(s3_key, contents, file.content_type)
+    s3_url = None
 
+    # Try S3 upload first, fall back to MongoDB
+    try:
+        s3_url = await s3_service.upload(s3_key, contents, file.content_type)
+        await db.media_assets.insert_one({
+            "id": asset_id, "type": "image", "format": ext,
+            "s3_key": s3_key, "s3_url": s3_url,
+            "character_id": char_id, "owner_id": user["id"],
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        logger.info(f"Character photo uploaded to S3: {s3_key}")
+    except Exception as e:
+        logger.warning(f"S3 upload failed, using MongoDB fallback: {e}")
+        image_b64 = base64.b64encode(contents).decode('utf-8')
+        await db.media_assets.insert_one({
+            "id": asset_id, "type": "image", "format": ext,
+            "data": image_b64,
+            "character_id": char_id, "owner_id": user["id"],
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        logger.info(f"Character photo stored in MongoDB: {asset_id}")
+
+    # Store the API media URL in the character doc (works for both S3 and MongoDB)
+    media_url = f"/api/media/{asset_id}"
     await db.characters.update_one(
         {"id": char_id},
-        {"$set": {"reference_image": s3_url, "reference_image_s3_key": s3_key}}
+        {"$set": {
+            "reference_image": media_url,
+            "reference_image_asset_id": asset_id,
+            "reference_image_s3_key": s3_key if s3_url else None
+        }}
     )
 
     updated = await db.characters.find_one({"id": char_id}, {"_id": 0})

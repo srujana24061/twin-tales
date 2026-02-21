@@ -191,10 +191,10 @@ export const VideoEditorPage = () => {
                 key={scene.id}
                 layout
                 initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: scene.include ? 1 : 0.5, x: 0 }}
+                animate={{ opacity: scene.include_in_video ? 1 : 0.5, x: 0 }}
                 transition={{ delay: idx * 0.03 }}
-                className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all ${
-                  scene.include ? 'border-slate-100 bg-white' : 'border-dashed border-slate-200 bg-slate-50'
+                className={`flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-2xl border-2 transition-all ${
+                  scene.include_in_video ? 'border-slate-100 bg-white' : 'border-dashed border-slate-200 bg-slate-50'
                 }`}
                 data-testid={`timeline-scene-${scene.id}`}
               >

@@ -201,9 +201,9 @@ export const CharacterBuilderPage = () => {
     setPhotoFile(null); 
     setPhotoPreview(null); 
     setUploadedCharacterUrl(null);
-    setShowCartoonOptions(false);
-    setUseCartoonizedVersion(false);
-    resetCartoonization();
+    setShowStyleOptions(false);
+    setUseStyledVersion(false);
+    resetConversion();
   };
 
   const toggleTrait = (trait) => {

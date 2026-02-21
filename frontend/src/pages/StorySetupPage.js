@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Sparkles, BookOpen, Palette, Film, Music, GraduationCap, ArrowRight, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Clock, CheckCircle, XCircle, Loader2, ArrowRight, FileText, Image, BookOpen, Sparkles } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, Loader2, ArrowRight, FileText, Image, BookOpen, Sparkles, Film, Volume2, Music2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';

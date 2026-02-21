@@ -2228,6 +2228,14 @@ async def generate_video_endpoint(story_id: str, user: dict = Depends(get_curren
 
 @api_router.post("/frames/{frame_id}/generate-image")
 async def generate_frame_image(frame_id: str, user: dict = Depends(get_current_user)):
+
+
+@api_router.get("/stories/{story_id}/scenes")
+async def get_story_scenes(story_id: str, user: dict = Depends(get_current_user)):
+    """Get all scenes for a story"""
+    scenes = await db.scenes.find({"story_id": story_id}, {"_id": 0}).sort("order", 1).to_list(100)
+    return scenes
+
     """Generate image for a specific frame"""
     frame = await db.frames.find_one({"id": frame_id}, {"_id": 0})
     if not frame:

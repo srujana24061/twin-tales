@@ -278,8 +278,8 @@ export const CharacterBuilderPage = () => {
                       onChange={handlePhotoSelect} className="hidden" data-testid="char-photo-file-input" />
                   </div>
 
-                  {/* Cartoonization Options - Show after character is created and photo uploaded */}
-                  {showCartoonOptions && uploadedCharacterUrl && (
+                  {/* Image Style Conversion - Show after character is created and photo uploaded */}
+                  {showStyleOptions && uploadedCharacterUrl && (
                     <motion.div 
                       initial={{ opacity: 0, height: 0 }} 
                       animate={{ opacity: 1, height: 'auto' }}
@@ -287,14 +287,15 @@ export const CharacterBuilderPage = () => {
                     >
                       <div className="flex items-center gap-2 mb-2">
                         <Sparkles className="w-4 h-4 text-[#6366F1]" />
-                        <h4 className="font-semibold text-sm text-[#1E293B]">Cartoonize Photo</h4>
+                        <h4 className="font-semibold text-sm text-[#1E293B]">AI Style Conversion</h4>
+                        <Badge className="text-[10px] bg-[#6366F1]/10 text-[#6366F1]">Powered by Gemini</Badge>
                       </div>
 
-                      {/* Template Selector */}
+                      {/* Style Selector */}
                       <div className="space-y-2">
-                        <Label className="text-xs">Cartoon Style</Label>
-                        <Select value={selectedTemplate} onValueChange={setSelectedTemplate} disabled={generating}>
-                          <SelectTrigger className="h-10 rounded-lg bg-white" data-testid="cartoon-template-select">
+                        <Label className="text-xs">Artistic Style</Label>
+                        <Select value={selectedStyle} onValueChange={setSelectedStyle} disabled={converting}>
+                          <SelectTrigger className="h-10 rounded-lg bg-white" data-testid="style-select">
                             <SelectValue placeholder="Select style" />
                           </SelectTrigger>
                           <SelectContent>
@@ -302,41 +303,48 @@ export const CharacterBuilderPage = () => {
                               <SelectItem value="loading" disabled>Loading styles...</SelectItem>
                             ) : templates.length > 0 ? (
                               templates.map(t => (
-                                <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                                <SelectItem key={t.id} value={t.id}>
+                                  {t.name}
+                                  <span className="text-xs text-[#94A3B8] ml-2">• {t.description}</span>
+                                </SelectItem>
                               ))
                             ) : (
-                              <SelectItem value="cartoon_1">Classic Cartoon</SelectItem>
+                              <>
+                                <SelectItem value="cartoon">Cartoon (Disney Style)</SelectItem>
+                                <SelectItem value="anime">Anime (Ghibli)</SelectItem>
+                                <SelectItem value="pixar">Pixar 3D</SelectItem>
+                              </>
                             )}
                           </SelectContent>
                         </Select>
                       </div>
 
-                      {/* Cartoonize Button */}
+                      {/* Convert Button */}
                       <Button
                         type="button"
-                        onClick={handleCartoonize}
-                        disabled={generating}
-                        data-testid="cartoonize-btn"
+                        onClick={handleConvertStyle}
+                        disabled={converting}
+                        data-testid="convert-style-btn"
                         className="w-full h-10 rounded-lg bg-[#6366F1] hover:bg-[#4F46E5] text-white text-sm"
                       >
-                        {generating ? (
+                        {converting ? (
                           <>
                             <motion.div
                               animate={{ rotate: 360 }}
                               transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                               className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full mr-2"
                             />
-                            Cartoonizing...
+                            Converting...
                           </>
                         ) : (
                           <>
-                            <Wand2 className="w-4 h-4 mr-2" /> Cartoonize Image
+                            <Wand2 className="w-4 h-4 mr-2" /> Apply {selectedStyle.charAt(0).toUpperCase() + selectedStyle.slice(1)} Style
                           </>
                         )}
                       </Button>
 
-                      {/* Show result when cartoonization is complete */}
-                      {cartoonResult && (
+                      {/* Show result when conversion is complete */}
+                      {styledResult && (
                         <motion.div 
                           initial={{ opacity: 0, y: 10 }} 
                           animate={{ opacity: 1, y: 0 }}

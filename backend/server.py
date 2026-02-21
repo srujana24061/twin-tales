@@ -1141,6 +1141,9 @@ async def run_music_generation(story_id: str, job_id: str):
 
 # ==================== FFMPEG VIDEO EXPORT ====================
 
+DEFAULT_SCENE_DURATION = 5
+TRANSITION_FADE_SECONDS = 0.4
+
 async def download_media_file(asset_url: str, dest_path: str):
     """Download media from S3/MongoDB asset URL to local file."""
     if not asset_url:

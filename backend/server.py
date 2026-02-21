@@ -1486,6 +1486,46 @@ Return JSON:
         )
 
 
+@celery_app.task(name="tasks.story_generation")
+def story_generation_task(story_id: str, job_id: str):
+    asyncio.run(run_story_generation(story_id, job_id))
+
+
+@celery_app.task(name="tasks.pdf_generation")
+def pdf_generation_task(story_id: str, job_id: str):
+    asyncio.run(run_pdf_generation(story_id, job_id))
+
+
+@celery_app.task(name="tasks.video_generation")
+def video_generation_task(story_id: str, job_id: str):
+    asyncio.run(run_video_generation(story_id, job_id))
+
+
+@celery_app.task(name="tasks.audio_generation")
+def audio_generation_task(story_id: str, job_id: str, voice_style: str):
+    asyncio.run(run_audio_generation(story_id, job_id, voice_style))
+
+
+@celery_app.task(name="tasks.music_generation")
+def music_generation_task(story_id: str, job_id: str):
+    asyncio.run(run_music_generation(story_id, job_id))
+
+
+@celery_app.task(name="tasks.ffmpeg_export")
+def ffmpeg_export_task(story_id: str, job_id: str):
+    asyncio.run(run_ffmpeg_export(story_id, job_id))
+
+
+@celery_app.task(name="tasks.ad_generation")
+def ad_generation_task(story_id: str, job_id: str, platform: str, style: str, cta_text: str):
+    asyncio.run(run_ad_generation(story_id, job_id, platform, style, cta_text))
+
+
+@celery_app.task(name="tasks.image_regeneration")
+def image_regeneration_task(story: dict, scene: dict, job_id: str):
+    asyncio.run(run_image_regeneration(story, scene, job_id))
+
+
 # ==================== GENERATION ROUTES ====================
 
 @api_router.post("/stories/{story_id}/generate")

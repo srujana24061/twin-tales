@@ -150,7 +150,7 @@ export const VideoEditorPage = () => {
             </h1>
             <p className="text-[#64748B] mt-1">{story?.title}</p>
           </div>
-          <Button onClick={exportVideo} disabled={exporting || !hasImages}
+          <Button onClick={exportVideo} disabled={exporting || !hasRenderable}
             data-testid="export-video-btn"
             className="rounded-full bg-[#6366F1] hover:bg-[#4F46E5] text-white font-accent px-8 py-5 shadow-xl shadow-[#6366F1]/25 hover:scale-105 active:scale-95 transition-all">
             {exporting ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Exporting {exportProgress}%</> : <><Download className="w-5 h-5 mr-2" /> Export Video</>}

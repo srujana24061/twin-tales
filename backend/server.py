@@ -438,6 +438,128 @@ async def save_styled_character_image(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== DOODLE TO CHARACTER ROUTES ====================
+
+@api_router.post("/doodle/convert-to-character")
+async def convert_doodle_to_character(request: Request, user: dict = Depends(get_current_user)):
+    """
+    Convert a hand-drawn doodle to a 3D character using Gemini Nano Banana
+    Uses gemini-2.5-flash-image model for image-to-image conversion
+    """
+    try:
+        body = await request.json()
+        image_base64 = body.get("image_base64")
+        style = body.get("style", "3d_cartoon")
+        role = body.get("role", "hero")
+        
+        if not image_base64:
+            raise HTTPException(status_code=400, detail="image_base64 required")
+        
+        # Style-specific prompts
+        style_prompts = {
+            "3d_cartoon": "Convert this sketch into a high-quality 3D cartoon character with smooth skin, rounded features, and Disney-Pixar style. Use subsurface scattering for realistic skin, rounded mesh topology, and vibrant colors. Make it child-friendly and appealing.",
+            "anime": "Transform this drawing into a beautiful anime-style character with large expressive eyes, detailed hair, and cel-shaded rendering. Use vibrant colors and clean line art in Japanese animation style.",
+            "realistic": "Convert this sketch into a photorealistic 3D character with detailed textures, natural lighting, and lifelike proportions. Add realistic skin tones, fabric details, and subtle imperfections.",
+            "pixar": "Transform this doodle into a Pixar-style 3D character with glossy textures, exaggerated proportions, large expressive eyes, and vibrant colors. Add depth, rim lighting, and a polished CGI appearance."
+        }
+        
+        # Role-specific additions
+        role_additions = {
+            "hero": "Make them look brave, confident, and heroic with a friendly smile.",
+            "villain": "Give them a mischievous or mysterious appearance with dramatic features.",
+            "animal": "Create an adorable, friendly animal character with big eyes and cute features.",
+            "magical": "Add magical, fantastical elements like glowing effects or mystical details."
+        }
+        
+        prompt = f"{style_prompts.get(style, style_prompts['3d_cartoon'])} {role_additions.get(role, '')}"
+        
+        logger.info(f"Converting doodle with style={style}, role={role}")
+        
+        # Call Gemini API directly
+        gemini_api_key = os.environ.get('EMERGENT_LLM_KEY')
+        if not gemini_api_key:
+            raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY not configured")
+        
+        # Prepare Gemini API request
+        gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key={gemini_api_key}"
+        
+        payload = {
+            "contents": [{
+                "parts": [
+                    {"text": prompt},
+                    {
+                        "inline_data": {
+                            "mime_type": "image/png",
+                            "data": image_base64
+                        }
+                    }
+                ]
+            }],
+            "generationConfig": {
+                "response_modalities": ["IMAGE"]
+            }
+        }
+        
+        # Make request to Gemini API
+        response = await asyncio.to_thread(
+            requests.post,
+            gemini_url,
+            json=payload,
+            headers={"Content-Type": "application/json"},
+            timeout=60
+        )
+        
+        if response.status_code != 200:
+            logger.error(f"Gemini API error: {response.status_code} - {response.text}")
+            raise HTTPException(status_code=500, detail=f"Gemini API error: {response.status_code}")
+        
+        result = response.json()
+        
+        # Extract the generated image
+        if "candidates" in result and len(result["candidates"]) > 0:
+            parts = result["candidates"][0].get("content", {}).get("parts", [])
+            for part in parts:
+                if "inline_data" in part:
+                    generated_image_b64 = part["inline_data"]["data"]
+                    
+                    # Decode and upload to S3
+                    img_bytes = base64.b64decode(generated_image_b64)
+                    s3_key = f"users/{user['id']}/doodles/character_{uuid.uuid4().hex[:8]}.png"
+                    s3_url = await s3_service.upload(s3_key, img_bytes, 'image/png')
+                    
+                    # Create media asset
+                    asset_id = str(uuid.uuid4())
+                    await db.media_assets.insert_one({
+                        "id": asset_id,
+                        "type": "image",
+                        "format": "png",
+                        "s3_key": s3_key,
+                        "s3_url": s3_url,
+                        "owner_id": user["id"],
+                        "created_from_doodle": True,
+                        "doodle_style": style,
+                        "doodle_role": role,
+                        "created_at": datetime.now(timezone.utc).isoformat()
+                    })
+                    
+                    logger.info(f"Doodle converted successfully, saved to S3: {s3_key}")
+                    
+                    return {
+                        "success": True,
+                        "converted_image_url": f"/api/media/{asset_id}",
+                        "s3_url": s3_url,
+                        "asset_id": asset_id
+                    }
+        
+        raise HTTPException(status_code=500, detail="No image generated by Gemini")
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Doodle conversion error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ==================== STORY ROUTES ====================
 
 @api_router.post("/stories/fix-statuses")

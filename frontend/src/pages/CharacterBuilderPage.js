@@ -84,9 +84,14 @@ export const CharacterBuilderPage = () => {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setCharacters(prev => prev.map(c => c.id === charId ? data : c));
+      setUploadedCharacterUrl(data.reference_image);
       toast.success('Photo uploaded!');
       setPhotoFile(null);
       setPhotoPreview(null);
+      
+      // Show cartoonization options after upload
+      setShowCartoonOptions(true);
+      await fetchTemplates();
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Photo upload failed');
     } finally { setUploadingPhoto(null); }
@@ -135,9 +140,24 @@ export const CharacterBuilderPage = () => {
         });
         setCharacters(prev => prev.map(c => c.id === charId ? data : c));
         toast.success('Photo uploaded!');
+        
+        // Optionally trigger cartoonization flow for existing characters
+        // (For now, we'll keep it simple - cartoonization only in the form)
       } catch (err) { toast.error('Upload failed'); }
       finally { setUploadingPhoto(null); fileInputRef.current.value = ''; }
     };
+  };
+
+  const handleCartoonize = async () => {
+    if (!uploadedCharacterUrl) {
+      toast.error('Please upload a photo first');
+      return;
+    }
+    try {
+      await startCartoonization(uploadedCharacterUrl, selectedTemplate);
+    } catch (error) {
+      // Error already toasted in hook
+    }
   };
 
   const handleDelete = async (id) => {
@@ -156,7 +176,17 @@ export const CharacterBuilderPage = () => {
     setShowForm(true);
   };
 
-  const resetForm = () => { setForm({ ...emptyChar }); setEditId(null); setShowForm(false); setPhotoFile(null); setPhotoPreview(null); };
+  const resetForm = () => { 
+    setForm({ ...emptyChar }); 
+    setEditId(null); 
+    setShowForm(false); 
+    setPhotoFile(null); 
+    setPhotoPreview(null); 
+    setUploadedCharacterUrl(null);
+    setShowCartoonOptions(false);
+    setUseCartoonizedVersion(false);
+    resetCartoonization();
+  };
 
   const toggleTrait = (trait) => {
     setForm(prev => ({

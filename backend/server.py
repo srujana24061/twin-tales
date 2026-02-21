@@ -312,6 +312,56 @@ async def upload_character_photo(char_id: str, file: UploadFile = File(...), use
     return updated
 
 
+# ==================== FOTOR CARTOONIZATION ROUTES ====================
+
+@api_router.get("/fotor/templates")
+async def get_fotor_templates(user: dict = Depends(get_current_user)):
+    """Proxy endpoint to fetch Fotor cartoon templates"""
+    try:
+        templates = await fotor_service.get_templates()
+        return {"templates": templates}
+    except Exception as e:
+        logger.error(f"Fotor templates error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/fotor/generate")
+async def generate_fotor_cartoonization(
+    request: Request,
+    user: dict = Depends(get_current_user)
+):
+    """Proxy endpoint to start Fotor cartoonization job"""
+    try:
+        body = await request.json()
+        image_url = body.get("image_url")
+        template_id = body.get("template_id", "cartoon_1")
+        
+        if not image_url:
+            raise HTTPException(status_code=400, detail="image_url required")
+        
+        result = await fotor_service.generate_cartoonization(image_url, template_id)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Fotor generation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/fotor/tasks/{task_id}")
+async def get_fotor_task_status(
+    task_id: str,
+    user: dict = Depends(get_current_user)
+):
+    """Proxy endpoint to poll Fotor task status"""
+    try:
+        result = await fotor_service.get_task_status(task_id)
+        return result
+    except Exception as e:
+        logger.error(f"Fotor task status error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ==================== STORY ROUTES ====================
 
 @api_router.post("/stories")

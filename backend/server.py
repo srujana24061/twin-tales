@@ -1486,7 +1486,27 @@ Return JSON:
 
 @celery_app.task(name="tasks.story_generation")
 def story_generation_task(story_id: str, job_id: str):
-    asyncio.run(run_story_generation(story_id, job_id))
+    # Create new Motor client for this event loop
+    import motor.motor_asyncio
+    
+    async def _run():
+        # Use new client with fresh event loop
+        local_client = motor.motor_asyncio.AsyncIOMotorClient(mongo_url)
+        local_db = local_client[os.environ['DB_NAME']]
+        
+        # Replace global db with local_db in the execution context
+        import sys
+        original_db = sys.modules[__name__].db
+        sys.modules[__name__].db = local_db
+        
+        try:
+            await run_story_generation(story_id, job_id)
+        finally:
+            # Restore original db
+            sys.modules[__name__].db = original_db
+            local_client.close()
+    
+    asyncio.run(_run())
 
 
 @celery_app.task(name="tasks.pdf_generation")

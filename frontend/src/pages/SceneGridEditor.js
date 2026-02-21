@@ -218,11 +218,13 @@ export const SceneGridEditor = () => {
               scene={scene}
               sceneNumber={idx + 1}
               isEditing={editingScene === scene.id}
+              isGeneratingImage={generatingImages[scene.id]}
+              isGeneratingVideo={generatingVideos[scene.id]}
               onStartEdit={() => setEditingScene(scene.id)}
               onSaveEdit={(text) => updateSceneText(scene.id, text)}
               onCancelEdit={() => setEditingScene(null)}
-              onGenerateImage={() => generateSceneImage(scene.id, scene.scene_text)}
-              onGenerateVideo={() => generateSceneVideo(scene.id, scene.image_url)}
+              onGenerateImage={() => generateSceneImage(scene.id)}
+              onGenerateVideo={() => generateSceneVideo(scene.id)}
               onUploadImage={(file) => uploadMedia(scene.id, file, 'image')}
               onUploadVideo={(file) => uploadMedia(scene.id, file, 'video')}
             />

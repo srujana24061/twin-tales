@@ -696,9 +696,15 @@ async def run_pdf_generation(story_id: str, job_id: str):
 
         pdf_b64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
         asset_id = str(uuid.uuid4())
+
+        # Upload PDF to S3
+        user_id_for_pdf = (await db.stories.find_one({"id": story_id}, {"_id": 0, "owner_id": 1})).get("owner_id", "unknown")
+        s3_key = f"users/{user_id_for_pdf}/stories/{story_id}/pdf/story_{asset_id[:8]}.pdf"
+        s3_url = await s3_service.upload(s3_key, buffer.getvalue(), 'application/pdf')
+
         await db.media_assets.insert_one({
             "id": asset_id, "type": "pdf", "format": "pdf",
-            "data": pdf_b64, "story_id": story_id,
+            "s3_key": s3_key, "s3_url": s3_url, "story_id": story_id,
             "created_at": datetime.now(timezone.utc).isoformat()
         })
 

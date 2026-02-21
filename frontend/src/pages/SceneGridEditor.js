@@ -302,7 +302,7 @@ const SceneCard = ({
             className="text-sm leading-relaxed cursor-pointer hover:opacity-80 line-clamp-3 group relative"
             style={{ color: 'var(--text-secondary)' }}
           >
-            {scene.text}
+            {scene.scene_text}
             <Edit2 className="w-3 h-3 absolute top-0 right-0 opacity-0 group-hover:opacity-100" 
               style={{ color: 'var(--text-tertiary)' }} />
           </div>

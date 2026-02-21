@@ -2,37 +2,35 @@
 
 ## Architecture
 - Frontend: React 19 + TailwindCSS + Shadcn UI + Framer Motion
-- Backend: FastAPI + MongoDB (Motor)
+- Backend: FastAPI + MongoDB (Motor) + FFmpeg
 - AI Text: OpenAI GPT-5.2 via emergentintegrations
-- AI Image: MiniMax Image-01 (with character reference images support)
-- AI Video: MiniMax Hailuo (with subject_reference for character consistency)
-- AI Audio/TTS: MiniMax Speech-02-turbo
+- AI Image: MiniMax Image-01 (with character reference)
+- AI Video: MiniMax Hailuo (with subject_reference)
+- AI Audio/TTS: MiniMax Speech-02-turbo (4 voices)
 - AI Music: MiniMax Music-01
-- Storage: MongoDB base64 fallback (S3 IAM permission issue with provided credentials)
+- Storage: AWS S3 + MongoDB fallback
 - Auth: JWT + bcrypt
+- Video: FFmpeg for final export compilation
 
-## What's Been Implemented
-### Phase 1 - Core Story Pipeline
-- Landing page, JWT auth, Character CRUD, Story setup, AI story gen (GPT-5.2), Scene editor, PDF gen, Job tracking, Responsible AI safety checks, Dashboard
+## Complete Feature Set (All Phases)
+### Phase 1: Core Story Pipeline
+- Landing page (glassmorphism), JWT auth, Character CRUD, Story setup, AI scene gen (GPT-5.2), Scene editor, PDF gen, Job tracking, Responsible AI safety
 
-### Phase 2 - Full Media Pipeline
-- MiniMax Image-01, Video (Hailuo), TTS (Speech), Music integration
-- AWS S3 integration (with MongoDB fallback)
-- Media Studio panel, video/audio players, voice selector
+### Phase 2: Full Media Pipeline
+- MiniMax Image/Video/TTS/Music integration, AWS S3 storage, Media Studio panel, video/audio players, voice selector
 
-### Phase 3 - Character Photo References
-- Character photo upload (JPEG/PNG/WEBP, max 10MB)
-- Photos stored in MongoDB with media asset entries
-- Served via public /api/media/{id} endpoint
-- Reference images passed to MiniMax Image-01 (images param) for visual consistency
-- Reference images passed to MiniMax Hailuo (subject_reference) for video consistency
-- Camera icon overlay on character cards for quick photo upload
-- Photo preview in character creation/edit modal
+### Phase 3: Character Photo References
+- Photo upload to S3, reference images passed to MiniMax for visual consistency in image/video gen
 
-## Note: S3 Permission Issue
-The provided AWS IAM credentials (ses-notification-user) lack s3:PutObject permission. System falls back to MongoDB base64 storage. To fix: grant S3 full access to the IAM user or provide new credentials with proper S3 permissions.
+### Phase 4: Video Editor + Ad Generator + FFmpeg Export
+- Video Editor with timeline UI, scene reorder, duration control
+- FFmpeg export: compiles scenes + narration + background music → final MP4
+- Social Media Ad Generator: AI creates hook/caption/hashtags for 5 platforms
+- Scene reorder API, Ad project management
 
-## Prioritized Backlog
-### P0: Video editor, Social media ad generator, FFmpeg final export
-### P1: Curated templates, WebSocket progress, Character face-mapping
-### P2: Story sharing gallery, Multi-language TTS, User profiles
+## Pages: Landing, Auth, Dashboard, Characters, Story Setup, Story Generation, Scene Editor, Video Editor, Ad Studio, Task History
+
+## Backlog
+### P0: Curated story templates, WebSocket live progress
+### P1: Character face-mapping, multi-language TTS, story sharing gallery
+### P2: Collaborative editing, subscription management

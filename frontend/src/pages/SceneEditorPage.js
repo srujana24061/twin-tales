@@ -233,7 +233,7 @@ export const SceneEditorPage = () => {
             </div>
 
             {/* Voice selector for audio */}
-            <div className="mt-4 flex items-center gap-3">
+            <div className="mt-4 flex items-center gap-3 flex-wrap">
               <span className="text-sm text-[#64748B] font-medium">Narration Voice:</span>
               <Select value={voiceStyle} onValueChange={setVoiceStyle}>
                 <SelectTrigger className="w-40 h-9 rounded-xl border-2 border-slate-200 text-sm" data-testid="voice-style-select">
@@ -246,6 +246,17 @@ export const SceneEditorPage = () => {
                   <SelectItem value="storyteller">Storyteller</SelectItem>
                 </SelectContent>
               </Select>
+              <div className="flex-1" />
+              <Button variant="outline" onClick={() => navigate(`/stories/${storyId}/video-editor`)}
+                data-testid="open-video-editor-btn"
+                className="rounded-full border-2 border-[#6366F1] text-[#6366F1] hover:bg-[#EEF2FF] font-medium">
+                <Scissors className="w-4 h-4 mr-2" /> Video Editor
+              </Button>
+              <Button variant="outline" onClick={() => navigate(`/stories/${storyId}/ads`)}
+                data-testid="open-ad-studio-btn"
+                className="rounded-full border-2 border-[#EC4899] text-[#EC4899] hover:bg-[#FDF2F8] font-medium">
+                <Megaphone className="w-4 h-4 mr-2" /> Ad Studio
+              </Button>
             </div>
 
             {/* Story-level music player */}

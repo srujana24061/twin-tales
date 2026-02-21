@@ -250,7 +250,7 @@ export const VideoEditorPage = () => {
                 </div>
 
                 {/* Include toggle */}
-                <Switch checked={scene.include} onCheckedChange={() => toggleScene(scene.id)}
+                <Switch checked={scene.include_in_video} onCheckedChange={() => toggleScene(scene.id)}
                   data-testid={`toggle-scene-${scene.id}`} />
               </motion.div>
             ))}

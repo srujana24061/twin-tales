@@ -964,6 +964,72 @@ async def generate_pdf(story_id: str, user: dict = Depends(get_current_user)):
     return {"job_id": job_id, "status": "pending"}
 
 
+class VideoGenRequest(BaseModel):
+    voice_style: str = "storyteller"
+
+@api_router.post("/stories/{story_id}/generate-video")
+async def generate_video_endpoint(story_id: str, user: dict = Depends(get_current_user)):
+    story = await db.stories.find_one({"id": story_id, "owner_id": user["id"]})
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+    scenes = await db.scenes.count_documents({"story_id": story_id})
+    if scenes == 0:
+        raise HTTPException(status_code=400, detail="Generate story first")
+
+    job_id = str(uuid.uuid4())
+    job_doc = {
+        "id": job_id, "story_id": story_id, "user_id": user["id"],
+        "job_type": "video", "status": "pending", "progress": 0,
+        "error_message": None, "result_url": None,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.generation_jobs.insert_one(job_doc)
+    asyncio.create_task(run_video_generation(story_id, job_id))
+    return {"job_id": job_id, "status": "pending"}
+
+
+@api_router.post("/stories/{story_id}/generate-audio")
+async def generate_audio_endpoint(story_id: str, body: VideoGenRequest = VideoGenRequest(), user: dict = Depends(get_current_user)):
+    story = await db.stories.find_one({"id": story_id, "owner_id": user["id"]})
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+    scenes = await db.scenes.count_documents({"story_id": story_id})
+    if scenes == 0:
+        raise HTTPException(status_code=400, detail="Generate story first")
+
+    job_id = str(uuid.uuid4())
+    job_doc = {
+        "id": job_id, "story_id": story_id, "user_id": user["id"],
+        "job_type": "audio", "status": "pending", "progress": 0,
+        "error_message": None, "result_url": None,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.generation_jobs.insert_one(job_doc)
+    asyncio.create_task(run_audio_generation(story_id, job_id, body.voice_style))
+    return {"job_id": job_id, "status": "pending"}
+
+
+@api_router.post("/stories/{story_id}/generate-music")
+async def generate_music_endpoint(story_id: str, user: dict = Depends(get_current_user)):
+    story = await db.stories.find_one({"id": story_id, "owner_id": user["id"]})
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+
+    job_id = str(uuid.uuid4())
+    job_doc = {
+        "id": job_id, "story_id": story_id, "user_id": user["id"],
+        "job_type": "music", "status": "pending", "progress": 0,
+        "error_message": None, "result_url": None,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.generation_jobs.insert_one(job_doc)
+    asyncio.create_task(run_music_generation(story_id, job_id))
+    return {"job_id": job_id, "status": "pending"}
+
+
 # ==================== JOB ROUTES ====================
 
 @api_router.get("/jobs/{job_id}")

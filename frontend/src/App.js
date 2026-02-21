@@ -14,6 +14,7 @@ import { AdStudioPage } from "@/pages/AdStudioPage";
 import { TaskHistoryPage } from "@/pages/TaskHistoryPage";
 import { DoodleToStoryPage } from "@/pages/DoodleToStoryPage";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import ParentDashboardPage from "@/pages/ParentDashboardPage";
 
 function App() {
   return (
@@ -34,6 +35,7 @@ function App() {
             <Route path="/stories/:storyId/video-editor" element={<ProtectedRoute><VideoEditorPage /></ProtectedRoute>} />
             <Route path="/stories/:storyId/ads" element={<ProtectedRoute><AdStudioPage /></ProtectedRoute>} />
             <Route path="/tasks" element={<ProtectedRoute><TaskHistoryPage /></ProtectedRoute>} />
+            <Route path="/parent-dashboard" element={<ProtectedRoute><ParentDashboardPage /></ProtectedRoute>} />
           </Routes>
         </BrowserRouter>
         <Toaster position="top-right" richColors />

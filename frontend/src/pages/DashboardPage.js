@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import api from '@/lib/api';
-import { WellbeingCheckin } from '@/components/WellbeingCheckin';
-import { ParentAuthModal } from '@/components/ParentAuthModal';
+import { WellbeingCheckin } from '@/components/wellbeing/WellbeingCheckin';
+import { ParentAuthModal } from '@/components/wellbeing/ParentAuthModal';
 
 const CHECKIN_SEEN_KEY = 'storycraft_checkin_date';
 
@@ -90,7 +90,7 @@ export const DashboardPage = () => {
 
   const handleParentAuth = (token) => {
     setShowParentAuth(false);
-    navigate('/parent/dashboard');
+    navigate('/parent-dashboard');
   };
 
   const deleteStory = async (id) => {

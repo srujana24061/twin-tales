@@ -324,6 +324,9 @@ frontend:
         - working: true
           agent: "testing"
           comment: "Regen MiniMax button (data-testid='regen-minimax-{scene_id}') is visible on scene cards with images. Button is clickable and triggers image regeneration using MiniMax provider without any console errors or network errors. Toast notification 'Image regeneration started (MiniMax)!' appears confirming job started. UI properly handles the regeneration request. Note: External API may have balance limitations but UI handles this gracefully."
+        - working: true
+          agent: "testing"
+          comment: "RE-VERIFIED (2026-02-21): Regen MiniMax button working flawlessly. Button found on scene cards with images using correct test-id format 'regen-minimax-{scene_id}'. Button click successfully triggers MiniMax regeneration job. Toast notification 'Image regeneration started (MiniMax)!' confirmed appearing. Screenshot captured showing toast message. No console errors or network failures detected. Button positioning and visibility correct alongside Regen Nano button."
 
   - task: "Scene Editor - Aspect ratio CSS container adjustment"
     implemented: true

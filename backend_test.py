@@ -436,6 +436,11 @@ class StoryCraftAPITester:
         print("="*50)
         self.test_pdf_generation_endpoint()
 
+        print("\n" + "="*50)
+        print("🎬 MEDIA GENERATION TESTS (Phase 2)")
+        print("="*50)
+        self.test_media_generation_endpoints()
+
         # Print summary
         print("\n" + "="*50)
         print("📈 TEST SUMMARY")

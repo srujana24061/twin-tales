@@ -11,6 +11,7 @@ import asyncio
 import base64
 import re
 import requests as http_requests
+import requests
 import tempfile
 import shutil
 import subprocess
@@ -22,6 +23,9 @@ from datetime import datetime, timezone
 from passlib.context import CryptContext
 import jwt
 from io import BytesIO
+import numpy as np
+from PIL import Image
+import imageio
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')

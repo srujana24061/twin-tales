@@ -155,12 +155,11 @@ export const StorySetupPage = () => {
             ) : (
               <div className="grid sm:grid-cols-2 gap-3">
                 {characters.map(c => (
-                  <button
+                  <div
                     key={c.id}
-                    type="button"
                     onClick={() => toggleChar(c.id)}
                     data-testid={`select-char-${c.id}`}
-                    className={`flex items-center gap-3 p-4 rounded-xl text-left transition-all border-2 ${
+                    className={`flex items-center gap-3 p-4 rounded-xl text-left transition-all border-2 cursor-pointer ${
                       form.character_ids.includes(c.id)
                         ? 'border-[#6366F1] bg-[#EEF2FF]'
                         : 'border-slate-100 hover:border-slate-200'
@@ -171,7 +170,7 @@ export const StorySetupPage = () => {
                       <p className="font-medium text-sm text-[#1E293B]">{c.name}</p>
                       <p className="text-xs text-[#94A3B8] capitalize">{c.role}</p>
                     </div>
-                  </button>
+                  </div>
                 ))}
               </div>
             )}

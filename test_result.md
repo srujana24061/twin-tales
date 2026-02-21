@@ -294,6 +294,9 @@ frontend:
         - working: true
           agent: "testing"
           comment: "Image Model select (data-testid='scene-image-provider-select') is visible in Scene Editor Media Studio section. Defaults to 'Nano Banana' as expected. Allows users to change the default image provider for image regeneration operations. Control is properly positioned and accessible."
+        - working: true
+          agent: "testing"
+          comment: "RE-VERIFIED (2026-02-21): Scene Editor Image Model selector working perfectly. Found in Media Studio section with correct test-id 'scene-image-provider-select'. Defaults to 'Nano Banana' as configured. Selector properly positioned next to Narration Voice dropdown. No console errors or UI issues detected."
 
   - task: "Scene Editor - Regen Nano button"
     implemented: true

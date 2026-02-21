@@ -2353,12 +2353,13 @@ async def generate_nano_banana_video(scene: dict, job_id: str) -> str:
     ]
 
     frames = []
+    TARGET_SIZE = (640, 368)  # Divisible by macro_block_size=16 for codec compatibility
     existing_img = scene.get("image_url")
     if existing_img:
         try:
             resp = await asyncio.to_thread(requests.get, existing_img, timeout=30)
             if resp.status_code == 200:
-                img = Image.open(BytesIO(resp.content)).convert("RGB").resize((640, 360))
+                img = Image.open(BytesIO(resp.content)).convert("RGB").resize(TARGET_SIZE)
                 frames.append(np.array(img))
         except Exception:
             pass
@@ -2369,7 +2370,7 @@ async def generate_nano_banana_video(scene: dict, job_id: str) -> str:
             if results:
                 _, result_data = results[0]
                 img_bytes = base64.b64decode(result_data)
-                img = Image.open(BytesIO(img_bytes)).convert("RGB").resize((640, 368))
+                img = Image.open(BytesIO(img_bytes)).convert("RGB").resize(TARGET_SIZE)
                 frames.append(np.array(img))
         except Exception as e:
             logger.warning(f"Frame generation failed: {e}")

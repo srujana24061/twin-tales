@@ -1,0 +1,167 @@
+{
+  "project_name": "StoryCraft AI",
+  "identity": {
+    "persona": "E1 - The Anti-AI Designer",
+    "tone": "Playful, Magical, Safe, Professional",
+    "core_concept": "Digital Storybook Magic",
+    "key_adjectives": ["Whimsical", "Rounded", "Glassy", "Tactile", "Bouncy"]
+  },
+  "theme": {
+    "mode": "light",
+    "strategy": "Soft Magic",
+    "background_style": "Warm paper-like off-white with subtle grain",
+    "glassmorphism_usage": "High - used for overlays, story reader, and floating menus"
+  },
+  "typography": {
+    "instructions": "Import these fonts from Google Fonts in index.css",
+    "headings": {
+      "family": "Nunito, sans-serif",
+      "weights": ["700", "800"],
+      "usage": "All titles, section headers, hero text. tracking-tight."
+    },
+    "body": {
+      "family": "DM Sans, sans-serif",
+      "weights": ["400", "500", "700"],
+      "usage": "Paragraphs, UI labels, inputs."
+    },
+    "accents": {
+      "family": "Fredoka, sans-serif",
+      "weights": ["600"],
+      "usage": "Buttons, badges, playful callouts."
+    }
+  },
+  "colors": {
+    "palette": {
+      "primary": {
+        "DEFAULT": "#6366F1",
+        "foreground": "#FFFFFF",
+        "hover": "#4F46E5",
+        "description": "Magical Indigo - Use for main CTAs and active states"
+      },
+      "secondary": {
+        "DEFAULT": "#F59E0B",
+        "foreground": "#FFFFFF",
+        "hover": "#D97706",
+        "description": "Storyteller Amber - Use for highlights and secondary actions"
+      },
+      "accent": {
+        "DEFAULT": "#10B981",
+        "foreground": "#FFFFFF",
+        "description": "Safety Teal - Use for success states and safe/verified badges"
+      },
+      "background": {
+        "DEFAULT": "#FDFBF7",
+        "description": "Warm Paper - Not stark white. A very pale cream."
+      },
+      "card": {
+        "DEFAULT": "#FFFFFF",
+        "foreground": "#1E293B"
+      },
+      "muted": {
+        "DEFAULT": "#F1F5F9",
+        "foreground": "#64748B"
+      },
+      "destructive": {
+        "DEFAULT": "#FF6B6B",
+        "foreground": "#FFFFFF"
+      }
+    },
+    "gradients": {
+      "hero_overlay": "linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(245, 158, 11, 0.1) 100%)",
+      "magic_text": "linear-gradient(to right, #6366F1, #8B5CF6, #EC4899)",
+      "glass_surface": "linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.3) 100%)"
+    }
+  },
+  "layout": {
+    "grid_system": "Bento Grid (Asymmetrical)",
+    "container_width": "max-w-7xl",
+    "spacing": {
+      "section_padding": "py-20 md:py-32",
+      "element_gap": "gap-6 md:gap-8"
+    },
+    "border_radius": {
+      "default": "rounded-2xl",
+      "large": "rounded-3xl",
+      "button": "rounded-full"
+    }
+  },
+  "components": {
+    "buttons": {
+      "style": "Pill-shaped, heavy shadow on hover, scale transform.",
+      "classes": "rounded-full font-bold px-8 py-4 transition-all duration-300 hover:scale-105 hover:shadow-xl active:scale-95 shadow-md"
+    },
+    "cards": {
+      "style": "Soft, floating, deep shadows.",
+      "classes": "bg-white rounded-3xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.08)] border border-slate-100 hover:shadow-[0_20px_60px_-15px_rgba(99,102,241,0.15)] transition-all duration-300"
+    },
+    "inputs": {
+      "style": "Chunky, accessible, friendly borders.",
+      "classes": "h-12 rounded-xl border-2 border-slate-200 focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all bg-white"
+    },
+    "glass_panels": {
+      "style": "Frosted glass with white border.",
+      "classes": "backdrop-blur-xl bg-white/60 border border-white/50 shadow-lg"
+    }
+  },
+  "motion": {
+    "library": "framer-motion",
+    "defaults": {
+      "transition": { "type": "spring", "stiffness": 300, "damping": 30 },
+      "hover": { "y": -5 }
+    },
+    "instructions": "Use standard Framer Motion variants. Don't over-animate. Focus on 'enter' animations and 'hover' feedbacks."
+  },
+  "visual_enhancers": {
+    "textures": "Use a subtle SVG noise texture overlay on the main background with opacity 0.4.",
+    "decorations": "Use floating 3D-ish blobs or shapes (circles, squiggles) in the background with absolute positioning.",
+    "shadows": "Colored shadows! If the button is Indigo, the shadow should be a faint Indigo, not black."
+  },
+  "images": {
+    "hero_main": {
+      "url": "https://images.unsplash.com/photo-1767356326735-2da0a10cf1f0?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NzV8MHwxfHNlYXJjaHwxfHxjdXRlJTIwa2lkJTIwcmVhZGluZyUyMGJvb2slMjBtYWdpY3xlbnwwfHx8fDE3NzE2NjYwNjZ8MA&ixlib=rb-4.1.0&q=85",
+      "alt": "Child reading a magical book",
+      "usage": "Hero section main visual, potentially with a 'magic glow' overlay"
+    },
+    "family_reading": {
+      "url": "https://images.unsplash.com/photo-1758687127068-816ae9b29c0c?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1MDV8MHwxfHNlYXJjaHwzfHxwYXJlbnQlMjBhbmQlMjBjaGlsZCUyMHJlYWRpbmclMjB0YWJsZXR8ZW58MHx8fHwxNzcxNjY2MDY3fDA&ixlib=rb-4.1.0&q=85",
+      "alt": "Father and son reading together",
+      "usage": "About/Trust section"
+    },
+    "character_builder_preview": {
+      "url": "https://images.unsplash.com/photo-1739513261598-d1025613319b?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzd8MHwxfHNlYXJjaHwzfHx3aGltc2ljYWwlMjAzZCUyMGN1dGUlMjBjaGFyYWN0ZXJ8ZW58MHx8fHwxNzcxNjY2MDY5fDA&ixlib=rb-4.1.0&q=85",
+      "alt": "Cute 3D character on cloud",
+      "usage": "Character Builder feature card"
+    },
+    "story_example_1": {
+      "url": "https://images.pexels.com/photos/9258376/pexels-photo-9258376.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "alt": "Classic fairytale book",
+      "usage": "Recent Stories / Example Library"
+    },
+    "magic_prop": {
+      "url": "https://images.pexels.com/photos/7978131/pexels-photo-7978131.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "alt": "Kids as wizards",
+      "usage": "Creative Mode / Imagination section"
+    }
+  },
+  "instructions_to_main_agent": [
+    "1. SETUP: Install 'framer-motion' and 'lucide-react'. Add the Google Fonts to index.css immediately.",
+    "2. THEME: Configure tailwind.config.js with the colors provided. Extend the theme, don't just replace.",
+    "3. LANDING PAGE: Build a 'Hero' component with the Glassmorphism card. Use the 'hero_main' image as a backdrop or side image.",
+    "4. COMPONENTS: Modify the standard Shadcn Button to be 'rounded-full' by default. This is a kid app, no sharp edges!",
+    "5. FORMS: When building the Character Builder, use big, chunky inputs and cards. 'Select' triggers should look like game UI buttons.",
+    "6. BACKGROUND: Implement the 'Warm Paper' background globally in index.css.",
+    "7. DATA-TESTID: Add data-testid to every interactive element (buttons, inputs, cards).",
+    "8. ANIMATION: Use <AnimatePresence> for route transitions if possible. Fade in all pages.",
+    "9. RESPONSIBLE AI: Make the Safety Dashboard look like a 'Superhero HQ' - use shields and green checks (Safety Teal)."
+  ],
+  "UNIVERSAL_GUIDELINES": [
+    "Avoid generic 'AI slop' aesthetics. No default cyan/purple gradients.",
+    "Create depth through layered design elements with z-index hierarchy.",
+    "Use glass-morphism effects with backdrop filters (12-24px blur).",
+    "Do NOT center align the app container. No .App { text-align: center }.",
+    "Every interaction needs micro-animations.",
+    "Use 2-3x more spacing than feels comfortable.",
+    "Prioritize using pre-existing components from src/components/ui.",
+    "Components MUST use named exports."
+  ]
+}

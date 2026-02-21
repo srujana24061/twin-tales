@@ -40,8 +40,8 @@ export const SceneGridEditor = () => {
 
   const updateSceneText = async (sceneId, newText) => {
     try {
-      await api.put(`/scenes/${sceneId}`, { text: newText });
-      setScenes(scenes.map(s => s.id === sceneId ? { ...s, text: newText } : s));
+      await api.put(`/scenes/${sceneId}`, { scene_text: newText });
+      setScenes(scenes.map(s => s.id === sceneId ? { ...s, scene_text: newText } : s));
       setEditingScene(null);
       toast.success('Scene updated');
     } catch (err) {

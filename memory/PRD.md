@@ -1,49 +1,43 @@
 # StoryCraft AI - PRD
 
 ## Architecture
-Frontend: React 19 + TailwindCSS + Shadcn + Framer Motion | Backend: FastAPI + MongoDB + FFmpeg
-AI: GPT-5.2 (text), MiniMax Image-01/Hailuo/Speech/Music | Storage: AWS S3 | Auth: JWT
+Frontend: React 19 + TailwindCSS + Shadcn + Framer Motion | Backend: FastAPI + MongoDB + imageio-ffmpeg
+AI: OpenAI GPT (text), **Gemini Nano Banana** (images + video frames) | Storage: AWS S3 | Auth: JWT | Email: Amazon SES
 
 ## Complete Feature Set
-1. Landing page, JWT auth, Dashboard with stats
-2. Character Builder with photo upload (S3) + reference images
-3. Story Setup (tone, visual style, length, theme, characters, topic/full story)
-4. AI Story Generation (GPT-5.2 → scenes with text/prompts)
-5. Scene Editor (edit text, prompts, regenerate images)
-6. Image Generation (MiniMax Image-01 + character reference images)
-7. Video Generation (MiniMax Hailuo) — **image-to-video mode** using scene images as first_frame + character subject_reference
-8. Audio Narration (MiniMax Speech TTS, 4 voices)
-9. Background Music (MiniMax Music-01)
-10. PDF Export (reportlab)
-11. Video Editor (timeline, reorder, duration, export)
-12. FFmpeg Video Export (compile scenes + narration + music → MP4)
-13. Social Media Ad Generator (5 platforms, AI hook/caption/hashtags)
-14. Responsible AI safety checks
-15. Job/Task tracking with progress
+1. Landing page, JWT auth, Dashboard with stats + story suggestion cards (click → auto-populate form)
+2. Character Builder with photo upload (S3)
+3. Story Setup (tone, visual style, length, theme, characters, topic) — pre-fills from dashboard suggestion state
+4. AI Story Generation → scenes with text/prompts
+5. **Scene Grid Editor** — grid view, Image/Video toggle per card, generate/upload/regenerate per scene
+6. **Image Generation** — Gemini Nano Banana (`gemini-3-pro-image-preview`) via Emergent LLM Key
+7. **Video Generation** — Nano Banana generates 4 animated frames → imageio-ffmpeg stitches MP4 slideshow
+8. Audio Narration (ElevenLabs TTS)
+9. PDF Export (reportlab)
+10. Batch Generate All Videos button with job polling
+11. In-app notification bell + Amazon SES email on completion
+12. Healthy Engagement: AI Wellbeing Check-in, Session Timer, PIN-protected Parent Dashboard
+13. Parent Dashboard: analytics, session cap, parent email for notifications
+14. Multi-theme UI switcher
 
-## Video Generation Pipeline (Updated)
-- Auto-detects if scene has image → uses **image-to-video** mode with first_frame_image
-- Falls back to **text-to-video** if no scene image exists
-- Character photos passed as **subject_reference** for visual consistency
-- Rich prompts include character names, traits, descriptions
-- Pattern extracted from user's uploaded reference codebase (src.zip)
+## Video Generation Pipeline
+- Nano Banana generates 4 frame variants (establishing, close-up, action, resolution)
+- Existing scene image used as frame 0 if available
+- imageio-ffmpeg stitches frames into MP4 at 1fps, 4s per frame
+- Uploaded to S3, video_url stored on scene document
+- Job polling in SceneGridEditor frontend (3s interval)
 
-## Note: MiniMax TTS may show "insufficient balance" — user needs to top up MiniMax account
+## Scene Grid Editor
+- Grid layout, per-card Image/Video toggle pill
+- Image tab: generated/uploaded image, generate/regen/upload buttons
+- Video tab: video player (if ready), generate/upload buttons, spinner when generating
+- Auto-switches to Video tab when video becomes available
+- data-testid on all interactive elements
 
-## Implementation Log
-- 2026-02-21: Added Gemini Nano Banana primary image generation with MiniMax fallback, image provider/aspect ratio controls in Story Setup + Scene Editor, and manual regen buttons.
-- 2026-02-21: Added Celery task wiring (preview runs in eager mode with per-task Mongo client), Video Editor scene settings (duration, trim, transitions, include), and FFmpeg export updates (5s default, trims, optional fade transition).
-- 2026-02-26: Completed S3 URL migration — all /api/media/ proxied URLs replaced with direct S3 URLs across scenes, characters, stories, and jobs collections. Fixed 3 code spots (character upload, image regen, music URL in get_story). Uploaded all base64-only assets to S3. Zero proxied URLs remain in DB.
-- 2026-02-26: Added 4-theme system — Magical Glow (lavender/sky/peach), Bedtime (dark navy + amber), Pixar Bright (sky blue vibrant), Parchment (warm sepia). ThemeSwitcher pill in both LandingPage and authenticated Navbar. CSS variables drive all theme changes. localStorage persistence. 100% test pass rate.
-
-## Prioritized Backlog
-P0
-- Ad Generator video rendering (vertical promos for Reels/Shorts/TikTok/Facebook/YouTube).
-- Production Celery worker + broker configuration.
-
-P1
-- Notifications for completed jobs.
-
-P2
-- Dialogue-based video with lip-sync.
-- Expanded Responsible AI checks.
+## Pending / Roadmap
+- P1: S3 presigned URL direct uploads (currently proxied)
+- P2: Phone number field in registration UI (backend schema has it)
+- P2: FFmpeg full-story video export
+- P2: Video Editor page (reorder scenes)
+- P3: Ad Studio page
+- P3: UX Polish (micro-animations)

@@ -2338,22 +2338,49 @@ async def generate_scene_video_v2(scene_id: str, user: dict = Depends(get_curren
     enqueue_task(scene_video_task, scene_id, job_id, fallback_coro=run_scene_video_generation)
     return {"job_id": job_id, "status": "pending"}
 
+async def _get_character_photos(story_id: str) -> list:
+    """Fetch up to 2 character reference photos for the story."""
+    story = await db.stories.find_one({"id": story_id}, {"_id": 0})
+    if not story:
+        return []
+    char_photos = []
+    for cid in (story.get("character_ids") or [])[:2]:
+        char = await db.characters.find_one({"id": cid}, {"_id": 0})
+        if not char:
+            continue
+        # Prefer styled photo, fall back to reference_image
+        photo_url = char.get("styled_photo_url") or char.get("reference_image")
+        if photo_url and not photo_url.startswith("/api/media/"):
+            char_photos.append(photo_url)
+        elif char.get("reference_image_s3_key"):
+            char_photos.append(s3_service.get_signed_url(char["reference_image_s3_key"], expires=3600))
+    return char_photos
+
+
 async def generate_nano_banana_video(scene: dict, job_id: str) -> str:
-    """Generate an animated MP4 slideshow from Nano Banana frames and upload to S3."""
+    """Generate a 5-second animated MP4 slideshow from Nano Banana frames using character references."""
     scene_id = scene["id"]
     scene_text = scene.get("scene_text", "") or scene.get("image_prompt", "")
     base_prompt = f"{scene_text[:300]}. High quality children's illustration, vibrant colors, child-friendly."
 
-    # Generate 4 frames with slightly varied prompts
+    # Fetch character reference photos for visual consistency
+    char_photos = await _get_character_photos(scene.get("story_id", ""))
+    if char_photos:
+        logger.info(f"Using {len(char_photos)} character reference(s) for video frames")
+
+    # 5 frame variants → 5 frames × 1fps = exactly 5 seconds
     frame_variants = [
-        f"{base_prompt} Wide establishing shot.",
-        f"{base_prompt} Close-up moment of emotion.",
-        f"{base_prompt} Action and movement.",
-        f"{base_prompt} Resolution and calm.",
+        f"{base_prompt} Wide establishing shot showing the full scene.",
+        f"{base_prompt} Characters in the center of the action.",
+        f"{base_prompt} Close-up capturing emotion and expression.",
+        f"{base_prompt} Dynamic moment with movement and energy.",
+        f"{base_prompt} Resolution — calm and hopeful ending.",
     ]
 
+    TARGET_SIZE = (640, 368)  # divisible by 16 for H.264 macro blocks
     frames = []
-    TARGET_SIZE = (640, 368)  # Divisible by macro_block_size=16 for codec compatibility
+
+    # Use existing scene image as first frame if available
     existing_img = scene.get("image_url")
     if existing_img:
         try:
@@ -2365,27 +2392,35 @@ async def generate_nano_banana_video(scene: dict, job_id: str) -> str:
             pass
 
     for variant_prompt in frame_variants:
+        if len(frames) >= 5:
+            break
         try:
-            results = await image_gen_service.generate_image(variant_prompt, aspect_ratio="16:9")
+            results = await image_gen_service.generate_image(
+                variant_prompt,
+                aspect_ratio="16:9",
+                reference_images=char_photos if char_photos else None
+            )
             if results:
                 _, result_data = results[0]
                 img_bytes = base64.b64decode(result_data)
                 img = Image.open(BytesIO(img_bytes)).convert("RGB").resize(TARGET_SIZE)
                 frames.append(np.array(img))
         except Exception as e:
-            logger.warning(f"Frame generation failed: {e}")
+            logger.warning(f"Frame {len(frames)} generation failed: {e}")
 
     if not frames:
         raise Exception("No frames generated for video")
 
-    # Create MP4 with imageio (4 seconds per frame, 2fps)
+    # Exactly 5 frames → 5-second video at 1fps
+    frames = frames[:5]
+    while len(frames) < 5:
+        frames.append(frames[-1])  # pad with last frame if fewer than 5
+
     buf = BytesIO()
-    fps = 1
-    with imageio.get_writer(buf, format='mp4', fps=fps, codec='libx264',
+    with imageio.get_writer(buf, format='mp4', fps=1, codec='libx264',
                             output_params=['-preset', 'ultrafast', '-pix_fmt', 'yuv420p']) as writer:
         for frame in frames:
-            for _ in range(4):  # 4 seconds per frame at 1fps
-                writer.append_data(frame)
+            writer.append_data(frame)
 
     mp4_bytes = buf.getvalue()
     s3_key = f"videos/scenes/{scene_id}_{uuid.uuid4().hex[:8]}.mp4"

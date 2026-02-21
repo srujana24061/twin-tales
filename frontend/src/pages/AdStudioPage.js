@@ -15,9 +15,12 @@ import api from '@/lib/api';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
 const platforms = [
-  { id: 'instagram', label: 'Instagram Reel', icon: Instagram, aspect: '9:16', color: '#E4405F' },
-  { id: 'youtube', label: 'YouTube Short', icon: Youtube, aspect: '9:16', color: '#FF0000' },
+  { id: 'instagram', label: 'Instagram Post', icon: Instagram, aspect: '1:1', color: '#E4405F' },
+  { id: 'instagram_reel', label: 'Instagram Reel', icon: Instagram, aspect: '9:16', color: '#E4405F' },
+  { id: 'youtube', label: 'YouTube Video', icon: Youtube, aspect: '16:9', color: '#FF0000' },
+  { id: 'youtube_shorts', label: 'YouTube Shorts', icon: Youtube, aspect: '9:16', color: '#FF0000' },
   { id: 'whatsapp', label: 'WhatsApp Status', icon: MessageCircle, aspect: '9:16', color: '#25D366' },
+  { id: 'tiktok', label: 'TikTok Video', icon: Film, aspect: '4:3', color: '#000000' },
   { id: 'facebook', label: 'Facebook Feed', icon: Facebook, aspect: '4:5', color: '#1877F2' },
   { id: 'linkedin', label: 'LinkedIn Post', icon: Linkedin, aspect: '1:1', color: '#0A66C2' },
 ];

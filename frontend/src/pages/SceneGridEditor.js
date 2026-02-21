@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   ArrowLeft, Edit2, Save, Image as ImageIcon, Video, Upload, 
-  Sparkles, Loader2, CheckCircle, Play, X, RefreshCw
+  Sparkles, Loader2, CheckCircle, Play, X, RefreshCw, Download
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';

@@ -41,6 +41,7 @@ celery_app.conf.update(task_always_eager=CELERY_TASK_ALWAYS_EAGER, task_eager_pr
 
 # Initialize external services
 from services import S3Service, MiniMaxService, ElevenLabsService, EdgeTTSService, GeminiImageService, FotorService
+from notifications import notify_video_complete
 s3_service = S3Service()
 minimax_service = MiniMaxService()
 image_gen_service = GeminiImageService()

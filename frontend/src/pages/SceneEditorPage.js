@@ -362,7 +362,7 @@ export const SceneEditorPage = () => {
                 )}
 
                 {!scene.image_url && (
-                  <div className="aspect-[16/9] bg-gradient-to-br from-[#EEF2FF] to-[#FFFBEB] flex items-center justify-center">
+                  <div className={`${aspectRatioClass} bg-gradient-to-br from-[#EEF2FF] to-[#FFFBEB] flex items-center justify-center`}>
                     <div className="text-center">
                       <Image className="w-12 h-12 text-[#6366F1]/30 mx-auto mb-2" />
                       <p className="text-sm text-[#94A3B8]">Scene {scene.scene_number} — No image yet</p>

@@ -4,7 +4,9 @@ import requests
 import asyncio
 import logging
 import base64
+import uuid
 import edge_tts
+from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
 
 logger = logging.getLogger(__name__)
 

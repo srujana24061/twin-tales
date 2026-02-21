@@ -18,6 +18,8 @@ export const SceneGridEditor = () => {
   const [loading, setLoading] = useState(true);
   const [editingScene, setEditingScene] = useState(null);
   const [batchGenerating, setBatchGenerating] = useState(false);
+  const [generatingImages, setGeneratingImages] = useState({});
+  const [generatingVideos, setGeneratingVideos] = useState({});
 
   useEffect(() => {
     loadData();

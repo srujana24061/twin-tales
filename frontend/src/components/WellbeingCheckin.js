@@ -22,6 +22,7 @@ const TONE_COLORS = {
 };
 
 export const WellbeingCheckin = ({ onComplete, onSkip }) => {
+  const navigate = useNavigate();
   const [phase, setPhase] = useState('loading'); // loading|chat|done|skipped
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');

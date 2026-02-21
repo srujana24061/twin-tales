@@ -264,6 +264,9 @@ frontend:
         - working: true
           agent: "testing"
           comment: "Image Model select (data-testid='story-image-provider-select') is visible in Story Setup page. Defaults to 'Gemini Nano Banana (Default)' as expected. Dropdown works correctly with options for 'nano_banana' and 'minimax'. User can select between image providers before story generation."
+        - working: true
+          agent: "testing"
+          comment: "RE-VERIFIED (2026-02-21): All features working perfectly. Image Model selector found at Story Setup with correct test-id. Default value 'Gemini Nano Banana (Default)' confirmed. Both options (Nano Banana and MiniMax Hailuo) available and selectable. Dropdown opens/closes smoothly. Value changes persist correctly. No console or network errors detected."
 
   - task: "Story Setup - Aspect Ratio selector"
     implemented: true

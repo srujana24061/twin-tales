@@ -49,7 +49,7 @@ export const StorySetupPage = () => {
   const [inputMode, setInputMode] = useState('topic');
   const [form, setForm] = useState({
     title: '', tone: 'funny', visual_style: 'cartoon', video_style: 'narrated',
-    moral_theme: '', story_length: 'medium', character_ids: [],
+    moral_theme: '', story_length: 'medium', image_provider: 'nano_banana', image_aspect_ratio: '16:9', character_ids: [],
     user_topic: '', user_full_story: '',
   });
 

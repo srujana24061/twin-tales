@@ -20,6 +20,8 @@ export const SceneGridEditor = () => {
   const [batchGenerating, setBatchGenerating] = useState(false);
   const [generatingImages, setGeneratingImages] = useState({});
   const [generatingVideos, setGeneratingVideos] = useState({});
+  const [exportingStory, setExportingStory] = useState(false);
+  const [exportedVideoUrl, setExportedVideoUrl] = useState(null);
 
   useEffect(() => {
     loadData();

@@ -251,46 +251,111 @@ const SceneCard = ({
   onUploadVideo
 }) => {
   const [editText, setEditText] = useState(scene.scene_text || '');
+  const [mediaView, setMediaView] = useState('image'); // 'image' | 'video'
   const imageInputRef = useRef(null);
   const videoInputRef = useRef(null);
+
+  // Auto-switch to video tab when video becomes available
+  useEffect(() => {
+    if (scene.video_url) setMediaView('video');
+  }, [scene.video_url]);
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="glass-panel rounded-2xl overflow-hidden"
+      className="glass-panel rounded-2xl overflow-hidden flex flex-col"
       style={{ border: '1px solid var(--glass-border)' }}
     >
       {/* Scene Header */}
-      <div className="p-4 border-b" style={{ borderColor: 'var(--glass-border)', background: 'var(--bg-secondary)' }}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium px-2 py-1 rounded" 
-              style={{ background: 'var(--primary-light)', color: 'var(--primary)' }}>
-              Scene {sceneNumber}
-            </span>
-            <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-              {scene.title}
-            </h3>
-          </div>
-          {scene.image_url && (
-            <CheckCircle className="w-4 h-4" style={{ color: '#22c55e' }} />
-          )}
+      <div className="px-4 pt-4 pb-3 border-b flex items-center justify-between"
+        style={{ borderColor: 'var(--glass-border)', background: 'var(--bg-secondary)' }}>
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0"
+            style={{ background: 'var(--primary-light)', color: 'var(--primary)' }}>
+            Scene {sceneNumber}
+          </span>
+          <h3 className="font-semibold text-sm truncate" style={{ color: 'var(--text-primary)' }}>
+            {scene.title}
+          </h3>
+        </div>
+
+        {/* Image / Video Toggle */}
+        <div className="flex items-center shrink-0 ml-2 rounded-full p-0.5"
+          style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--glass-border)' }}>
+          <button
+            onClick={() => setMediaView('image')}
+            data-testid={`toggle-image-${scene.id}`}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-all"
+            style={{
+              background: mediaView === 'image' ? 'var(--primary)' : 'transparent',
+              color: mediaView === 'image' ? 'white' : 'var(--text-secondary)',
+            }}
+          >
+            <ImageIcon className="w-3 h-3" /> Image
+          </button>
+          <button
+            onClick={() => setMediaView('video')}
+            data-testid={`toggle-video-${scene.id}`}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-all"
+            style={{
+              background: mediaView === 'video' ? '#f97316' : 'transparent',
+              color: mediaView === 'video' ? 'white' : 'var(--text-secondary)',
+            }}
+          >
+            <Video className="w-3 h-3" /> Video
+            {scene.video_url && (
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400 ml-0.5" />
+            )}
+          </button>
         </div>
       </div>
 
-      {/* Image Preview */}
-      <div className="relative aspect-video flex items-center justify-center"
+      {/* Media Preview */}
+      <div className="relative aspect-video flex items-center justify-center overflow-hidden"
         style={{ background: 'var(--bg-tertiary)' }}>
-        {scene.image_url ? (
-          <img src={scene.image_url} alt={scene.title} className="w-full h-full object-cover" />
+
+        {mediaView === 'image' ? (
+          scene.image_url ? (
+            <img src={scene.image_url} alt={scene.title} className="w-full h-full object-cover" />
+          ) : isGeneratingImage ? (
+            <div className="flex flex-col items-center gap-2">
+              <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'var(--primary)' }} />
+              <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Generating image...</span>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-2 cursor-pointer" onClick={onGenerateImage}>
+              <ImageIcon className="w-10 h-10" style={{ color: 'var(--text-tertiary)' }} />
+              <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Click to generate</span>
+            </div>
+          )
         ) : (
-          <ImageIcon className="w-12 h-12" style={{ color: 'var(--text-tertiary)' }} />
+          scene.video_url ? (
+            <video
+              key={scene.video_url}
+              controls
+              autoPlay={false}
+              className="w-full h-full object-cover"
+              data-testid={`scene-video-${scene.id}`}
+            >
+              <source src={scene.video_url} type="video/mp4" />
+            </video>
+          ) : isGeneratingVideo ? (
+            <div className="flex flex-col items-center gap-2">
+              <Loader2 className="w-8 h-8 animate-spin" style={{ color: '#f97316' }} />
+              <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Generating video...</span>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-2 cursor-pointer" onClick={onGenerateVideo}>
+              <Video className="w-10 h-10" style={{ color: 'var(--text-tertiary)' }} />
+              <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Click to generate</span>
+            </div>
+          )
         )}
       </div>
 
       {/* Scene Text */}
-      <div className="p-4">
+      <div className="p-4 flex-1 flex flex-col">
         {isEditing ? (
           <div className="space-y-3">
             <Textarea
@@ -298,144 +363,85 @@ const SceneCard = ({
               onChange={(e) => setEditText(e.target.value)}
               rows={4}
               className="text-sm rounded-xl"
-              style={{ 
-                background: 'var(--bg-secondary)', 
+              style={{
+                background: 'var(--bg-secondary)',
                 borderColor: 'var(--glass-border)',
                 color: 'var(--text-primary)'
               }}
             />
             <div className="flex gap-2">
-              <Button
-                size="sm"
-                onClick={() => onSaveEdit(editText)}
-                className="flex-1 rounded-lg"
-                style={{ background: 'var(--primary)', color: 'white' }}
-              >
+              <Button size="sm" onClick={() => onSaveEdit(editText)} className="flex-1 rounded-lg"
+                style={{ background: 'var(--primary)', color: 'white' }}>
                 <Save className="w-3 h-3 mr-2" /> Save
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={onCancelEdit}
-                className="rounded-lg"
-                style={{ borderColor: 'var(--glass-border)' }}
-              >
+              <Button size="sm" variant="outline" onClick={onCancelEdit} className="rounded-lg"
+                style={{ borderColor: 'var(--glass-border)' }}>
                 <X className="w-3 h-3" />
               </Button>
             </div>
           </div>
         ) : (
-          <div
-            onClick={onStartEdit}
-            className="text-sm leading-relaxed cursor-pointer hover:opacity-80 line-clamp-3 group relative"
-            style={{ color: 'var(--text-secondary)' }}
-          >
+          <div onClick={onStartEdit}
+            className="text-sm leading-relaxed cursor-pointer hover:opacity-80 line-clamp-3 group relative mb-4"
+            style={{ color: 'var(--text-secondary)' }}>
             {scene.scene_text}
-            <Edit2 className="w-3 h-3 absolute top-0 right-0 opacity-0 group-hover:opacity-100" 
+            <Edit2 className="w-3 h-3 absolute top-0 right-0 opacity-0 group-hover:opacity-100"
               style={{ color: 'var(--text-tertiary)' }} />
           </div>
         )}
 
         {/* Action Buttons */}
         {!isEditing && (
-          <div className="mt-4 space-y-2">
+          <div className="mt-auto space-y-2">
             {/* Image Actions */}
             <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={onGenerateImage}
-                disabled={isGeneratingImage}
-                className="flex-1 rounded-lg"
+              <Button size="sm" variant="outline" onClick={onGenerateImage}
+                disabled={isGeneratingImage} className="flex-1 rounded-lg text-xs"
                 style={{ borderColor: 'var(--glass-border)', color: 'var(--text-primary)' }}
-                data-testid={`generate-image-btn-${scene.id}`}
-              >
+                data-testid={`generate-image-btn-${scene.id}`}>
                 {isGeneratingImage ? (
-                  <><Loader2 className="w-3 h-3 mr-2 animate-spin" /> Generating...</>
+                  <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Working...</>
                 ) : (
-                  <><Sparkles className="w-3 h-3 mr-2" />{scene.image_url ? 'Regenerate Image' : 'Generate Image'}</>
+                  <><Sparkles className="w-3 h-3 mr-1" />{scene.image_url ? 'Regen Image' : 'Gen Image'}</>
                 )}
               </Button>
               {scene.image_url && !isGeneratingImage && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={onGenerateImage}
-                  className="rounded-lg"
+                <Button size="sm" variant="outline" onClick={onGenerateImage}
+                  className="rounded-lg" title="Regenerate"
                   style={{ borderColor: 'var(--glass-border)', color: 'var(--primary)' }}
-                  title="Regenerate image"
-                  data-testid={`regen-image-btn-${scene.id}`}
-                >
+                  data-testid={`regen-image-btn-${scene.id}`}>
                   <RefreshCw className="w-3 h-3" />
                 </Button>
               )}
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => imageInputRef.current?.click()}
-                disabled={isGeneratingImage}
-                className="rounded-lg"
-                style={{ borderColor: 'var(--glass-border)' }}
-                title="Upload image"
-              >
+              <Button size="sm" variant="outline" onClick={() => imageInputRef.current?.click()}
+                disabled={isGeneratingImage} className="rounded-lg" title="Upload image"
+                style={{ borderColor: 'var(--glass-border)' }}>
                 <Upload className="w-3 h-3" />
               </Button>
-              <input
-                ref={imageInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) onUploadImage(file);
-                }}
-              />
+              <input ref={imageInputRef} type="file" accept="image/*" className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) onUploadImage(f); }} />
             </div>
 
             {/* Video Actions */}
             <div className="flex gap-2">
-              <Button
-                size="sm"
-                onClick={onGenerateVideo}
-                disabled={isGeneratingVideo}
-                className="flex-1 rounded-lg"
+              <Button size="sm" onClick={onGenerateVideo} disabled={isGeneratingVideo}
+                className="flex-1 rounded-lg text-xs"
                 style={{ background: '#f97316', color: 'white' }}
-                data-testid={`generate-video-btn-${scene.id}`}
-              >
+                data-testid={`generate-video-btn-${scene.id}`}>
                 {isGeneratingVideo ? (
-                  <><Loader2 className="w-3 h-3 mr-2 animate-spin" /> Generating...</>
+                  <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Generating...</>
                 ) : (
-                  <><Video className="w-3 h-3 mr-2" />Generate Video</>
+                  <><Video className="w-3 h-3 mr-1" />{scene.video_url ? 'Regen Video' : 'Gen Video'}</>
                 )}
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => videoInputRef.current?.click()}
-                className="rounded-lg"
-                style={{ borderColor: 'var(--glass-border)' }}
-              >
+              <Button size="sm" variant="outline" onClick={() => videoInputRef.current?.click()}
+                className="rounded-lg" title="Upload video"
+                style={{ borderColor: 'var(--glass-border)' }}>
                 <Upload className="w-3 h-3" />
               </Button>
-              <input
-                ref={videoInputRef}
-                type="file"
-                accept="video/*"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) onUploadVideo(file);
-                }}
-              />
+              <input ref={videoInputRef} type="file" accept="video/*" className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) onUploadVideo(f); }} />
             </div>
-
-            {scene.video_url && (
-              <div className="flex items-center gap-2 text-xs px-2 py-1 rounded"
-                style={{ background: '#22c55e20', color: '#22c55e' }}>
-                <CheckCircle className="w-3 h-3" />
-                Video Ready
-              </div>
-            )}
           </div>
         )}
       </div>

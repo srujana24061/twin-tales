@@ -883,7 +883,7 @@ Return ONLY valid JSON:
                     })
                     await db.scenes.update_one(
                         {"id": scene["id"]},
-                        {"$set": {"image_url": f"/api/media/{asset_id}"}}
+                        {"$set": {"image_url": s3_url}}
                     )
                     logger.info(f"Image uploaded to S3 for scene {i+1}")
             except Exception as e:

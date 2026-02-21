@@ -1705,7 +1705,7 @@ async def generate_ad_endpoint(story_id: str, body: AdGenerateRequest, user: dic
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
     await db.generation_jobs.insert_one(job_doc)
-    enqueue_task(ad_generation_task, story_id, job_id, body.platform, body.style, body.cta_text)
+    enqueue_task(ad_generation_task, story_id, job_id, body.platform, body.style, body.cta_text, fallback_coro=run_ad_generation)
     return {"job_id": job_id, "status": "pending"}
 
 

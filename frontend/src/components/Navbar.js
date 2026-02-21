@@ -78,6 +78,62 @@ export const Navbar = () => {
             {/* Session Timer */}
             <SessionTimer />
             
+            {/* Notification Bell */}
+            <div className="relative">
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="relative p-2 rounded-lg transition-colors"
+                style={{ 
+                  background: showNotifications ? 'var(--primary-light)' : 'transparent',
+                  color: 'var(--text-primary)' 
+                }}
+              >
+                <Bell className="w-5 h-5" />
+                {notifications.length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold"
+                    style={{ background: '#ef4444', color: 'white' }}>
+                    {notifications.length}
+                  </span>
+                )}
+              </button>
+
+              {/* Notification Dropdown */}
+              <AnimatePresence>
+                {showNotifications && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="absolute right-0 mt-2 w-80 glass-panel rounded-xl shadow-lg overflow-hidden z-50"
+                    style={{ border: '1px solid var(--glass-border)' }}
+                  >
+                    <div className="p-3 border-b" style={{ borderColor: 'var(--glass-border)' }}>
+                      <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>Notifications</h3>
+                    </div>
+                    <div className="max-h-96 overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="p-4 text-center text-sm" style={{ color: 'var(--text-secondary)' }}>
+                          No new notifications
+                        </div>
+                      ) : (
+                        notifications.map(notif => (
+                          <div key={notif.id} className="p-3 border-b hover:bg-opacity-50"
+                            style={{ borderColor: 'var(--glass-border)' }}>
+                            <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                              {notif.title}
+                            </p>
+                            <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
+                              {notif.message}
+                            </p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+            
             {/* Theme Switcher */}
             <ThemeSwitcher />
 

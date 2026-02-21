@@ -162,7 +162,7 @@ export const VideoEditorPage = () => {
         {/* Stats Bar */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
           {[
-            { icon: Film, label: 'Scenes', value: scenes.filter(s => s.include).length, color: '#6366F1' },
+            { icon: Film, label: 'Scenes', value: scenes.filter(s => s.include_in_video).length, color: '#6366F1' },
             { icon: Clock, label: 'Duration', value: `${totalDuration}s`, color: '#F59E0B' },
             { icon: Volume2, label: 'Narration', value: hasAudio ? 'Yes' : 'No', color: '#10B981' },
             { icon: Music, label: 'Music', value: story?.music_url ? 'Yes' : 'No', color: '#EC4899' },

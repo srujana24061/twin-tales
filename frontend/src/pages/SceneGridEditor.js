@@ -189,6 +189,7 @@ export const SceneGridEditor = () => {
                 disabled={batchGenerating || scenesWithImages === 0}
                 style={{ background: '#f97316', color: 'white' }}
                 className="rounded-lg"
+                data-testid="generate-all-videos-btn"
               >
                 {batchGenerating ? (
                   <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating...</>

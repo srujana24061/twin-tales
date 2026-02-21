@@ -2330,8 +2330,8 @@ async def generate_scene_image_v2(scene_id: str, user: dict = Depends(get_curren
 @api_router.post("/scenes/{scene_id}/generate-video")
 async def generate_scene_video_v2(scene_id: str, user: dict = Depends(get_current_user)):
     scene = await db.scenes.find_one({"id": scene_id}, {"_id": 0})
-    if not scene or not scene.get("image_url"):
-        raise HTTPException(status_code=400, detail="Scene must have an image first")
+    if not scene:
+        raise HTTPException(status_code=404, detail="Scene not found")
     job_id = str(uuid.uuid4())
     job_doc = {"id": job_id, "scene_id": scene_id, "user_id": user["id"], "job_type": "scene_video", "status": "pending", "progress": 0, "created_at": datetime.now(timezone.utc).isoformat()}
     await db.generation_jobs.insert_one(job_doc)

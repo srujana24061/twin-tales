@@ -120,6 +120,47 @@ class S3Service:
         )
 
 
+class GeminiImageService:
+    def __init__(self):
+        self.api_key = os.environ.get('EMERGENT_LLM_KEY')
+        self.model_id = "gemini-3-pro-image-preview"
+
+    async def _encode_reference(self, image_ref: str) -> str:
+        if image_ref.startswith("data:image/"):
+            return image_ref.split(",", 1)[-1]
+        resp = await asyncio.to_thread(requests.get, image_ref, timeout=60)
+        if resp.status_code != 200:
+            raise Exception(f"Failed to download reference image: {resp.status_code}")
+        return base64.b64encode(resp.content).decode('utf-8')
+
+    async def generate_image(self, prompt: str, aspect_ratio: str = "16:9", reference_images: list = None) -> list:
+        if not self.api_key:
+            raise Exception("EMERGENT_LLM_KEY missing")
+
+        chat = LlmChat(
+            api_key=self.api_key,
+            session_id=f"gemini-image-{uuid.uuid4().hex[:8]}",
+            system_message="You are a helpful AI assistant"
+        )
+        chat.with_model("gemini", self.model_id).with_params(modalities=["image", "text"])
+
+        prompt_text = f"{prompt}. Aspect ratio {aspect_ratio}. High quality children's illustration."
+        file_contents = []
+        if reference_images:
+            for ref in reference_images[:2]:
+                try:
+                    img_b64 = await self._encode_reference(ref)
+                    file_contents.append(ImageContent(img_b64))
+                except Exception as e:
+                    logger.warning(f"Gemini reference image skipped: {e}")
+
+        msg = UserMessage(text=prompt_text, file_contents=file_contents if file_contents else None)
+        text, images = await chat.send_message_multimodal_response(msg)
+        if not images:
+            raise Exception("Gemini image generation returned no images")
+        return [("base64", img.get("data")) for img in images if img.get("data")]
+
+
 class MiniMaxService:
     def __init__(self):
         self.api_key = os.environ.get('MINIMAX_API_KEY')

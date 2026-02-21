@@ -64,6 +64,7 @@ class UserRegister(BaseModel):
     email: str
     password: str
     name: str
+    phone: Optional[str] = None  # Added phone number field
 
 class UserLogin(BaseModel):
     email: str

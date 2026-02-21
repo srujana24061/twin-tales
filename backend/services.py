@@ -226,8 +226,8 @@ class MiniMaxService:
                     headers=self.headers,
                     timeout=30
                 )
-                status_data = status_resp.json()
-                status = status_data.get("status", "").lower()
+                status_data = status_resp.json() or {}
+                status = (status_data.get("status") or "").lower()
                 if status == "success":
                     file_id = status_data.get("file_id")
                     if file_id:
@@ -237,10 +237,12 @@ class MiniMaxService:
                             headers=self.headers,
                             timeout=30
                         )
-                        url = file_resp.json().get("file", {}).get("download_url", "")
+                        file_json = file_resp.json() or {}
+                        url = (file_json.get("file") or {}).get("download_url", "")
                         return {"type": "url", "data": url}
-                    if status_data.get("data", {}).get("audio"):
-                        return {"type": "bytes", "data": bytes.fromhex(status_data["data"]["audio"])}
+                    sd = status_data.get("data") or {}
+                    if isinstance(sd, dict) and sd.get("audio"):
+                        return {"type": "bytes", "data": bytes.fromhex(sd["audio"])}
                 elif status in ["failed", "error"]:
                     raise Exception(f"Music gen failed: {status_data}")
             raise Exception("Music generation timed out")

@@ -1574,7 +1574,7 @@ async def generate_pdf(story_id: str, user: dict = Depends(get_current_user)):
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
     await db.generation_jobs.insert_one(job_doc)
-    enqueue_task(pdf_generation_task, story_id, job_id)
+    enqueue_task(pdf_generation_task, story_id, job_id, fallback_coro=run_pdf_generation)
     return {"job_id": job_id, "status": "pending"}
 
 

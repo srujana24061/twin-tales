@@ -29,3 +29,18 @@ AI: GPT-5.2 (text), MiniMax Image-01/Hailuo/Speech/Music | Storage: AWS S3 | Aut
 - Pattern extracted from user's uploaded reference codebase (src.zip)
 
 ## Note: MiniMax TTS may show "insufficient balance" — user needs to top up MiniMax account
+
+## Implementation Log
+- 2026-02-21: Added Celery task wiring (preview runs in eager mode), Video Editor scene settings (duration, trim, transitions, include), and FFmpeg export updates (5s default, trims, optional fade transition).
+
+## Prioritized Backlog
+P0
+- Ad Generator video rendering (vertical promos for Reels/Shorts/TikTok/Facebook/YouTube).
+- Production Celery worker + broker configuration.
+
+P1
+- Notifications for completed jobs.
+
+P2
+- Dialogue-based video with lip-sync.
+- Expanded Responsible AI checks.

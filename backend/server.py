@@ -835,7 +835,6 @@ async def run_pdf_generation(story_id: str, job_id: str):
 
         c.save()
 
-        pdf_b64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
         asset_id = str(uuid.uuid4())
 
         # Upload PDF to S3

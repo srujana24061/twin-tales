@@ -55,6 +55,7 @@ class SessionSettings(BaseModel):
     session_cap_minutes: Optional[int] = None
     session_cap_enabled: Optional[bool] = None
     child_name: Optional[str] = None
+    parent_email: Optional[str] = None  # Added parent email field
 
 
 # ── Auth helpers ─────────────────────────────────────────────────────────────

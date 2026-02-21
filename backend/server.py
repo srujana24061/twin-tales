@@ -1163,7 +1163,7 @@ async def run_image_regeneration(story: dict, scene: dict, job_id: str, provider
             })
             await db.scenes.update_one(
                 {"id": scene["id"]},
-                {"$set": {"image_url": f"/api/media/{asset_id}"}}
+                {"$set": {"image_url": s3_url}}
             )
 
         await db.generation_jobs.update_one(

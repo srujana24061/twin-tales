@@ -140,6 +140,32 @@ export const SceneGridEditor = () => {
     }
   };
 
+  const handleExportStory = async () => {
+    try {
+      setExportingStory(true);
+      setExportedVideoUrl(null);
+      toast.info('Compiling story video…');
+      const { data } = await api.post(`/stories/${storyId}/export-video`);
+      pollJob(data.job_id, (err) => {
+        setExportingStory(false);
+        if (err) {
+          toast.error(err);
+        } else {
+          // Reload job to get result_url
+          api.get(`/jobs/${data.job_id}`).then(({ data: job }) => {
+            if (job.result_url) {
+              setExportedVideoUrl(job.result_url);
+              toast.success('Story video ready! Click Download to save.');
+            }
+          });
+        }
+      });
+    } catch (err) {
+      setExportingStory(false);
+      toast.error(err.response?.data?.detail || 'Export failed');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">

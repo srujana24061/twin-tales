@@ -1,4 +1,5 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, Response
+from fastapi.responses import RedirectResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -8,6 +9,7 @@ import json
 import asyncio
 import base64
 import re
+import requests as http_requests
 from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import List, Optional
@@ -26,6 +28,11 @@ db = client[os.environ['DB_NAME']]
 
 EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
 JWT_SECRET = os.environ.get('JWT_SECRET')
+
+# Initialize external services
+from services import S3Service, MiniMaxService
+s3_service = S3Service()
+minimax_service = MiniMaxService()
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

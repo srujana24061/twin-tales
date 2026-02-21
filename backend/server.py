@@ -588,11 +588,24 @@ async def run_image_regeneration(story: dict, scene: dict, job_id: str):
             {"$set": {"status": "running", "progress": 10, "updated_at": datetime.now(timezone.utc).isoformat()}}
         )
 
+        # Collect character reference images
+        char_ref_images = []
+        for cid in story.get("character_ids", []):
+            c = await db.characters.find_one({"id": cid}, {"_id": 0})
+            if c and c.get("reference_image_s3_key"):
+                try:
+                    fresh_url = s3_service.get_signed_url(c["reference_image_s3_key"], expires=3600)
+                    char_ref_images.append(fresh_url)
+                except Exception:
+                    pass
+            elif c and c.get("reference_image"):
+                char_ref_images.append(c["reference_image"])
+
         img_prompt = f"{scene['image_prompt']}. Style: {story['visual_style']} illustration, child-friendly, vibrant colors."
         if len(img_prompt) > 1500:
             img_prompt = img_prompt[:1500]
 
-        results = await minimax_service.generate_image(img_prompt, aspect_ratio="16:9")
+        results = await minimax_service.generate_image(img_prompt, aspect_ratio="16:9", reference_images=char_ref_images if char_ref_images else None)
 
         if results:
             result_type, result_data = results[0]

@@ -325,34 +325,6 @@ export const AdStudioPage = () => {
                         <p className="text-sm font-medium text-[#4338CA]">{ad.cta_text}</p>
                       </div>
                     </div>
-
-                    {/* Scene Previews */}
-                    <div className="p-6 bg-slate-50 border-l border-slate-100">
-                      <p className="text-xs font-bold text-[#94A3B8] uppercase tracking-wide mb-3">Selected Scenes</p>
-                      <div className="space-y-3">
-                        {(ad.selected_scenes || []).map((ss, j) => (
-                          <div key={j} className="flex items-center gap-3 bg-white rounded-xl p-3 shadow-sm">
-                            <div className="w-16 h-10 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0">
-                              {ss.image_url ? (
-                                <img src={`${BACKEND_URL}${ss.image_url}`} alt="" className="w-full h-full object-cover" />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center"><Image className="w-4 h-4 text-[#CBD5E1]" /></div>
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-[#1E293B] truncate">{ss.scene_title || `Scene ${ss.scene_number}`}</p>
-                              <div className="flex gap-2">
-                                {ss.video_url && <Badge className="bg-[#EEF2FF] text-[#6366F1] rounded-full text-[10px] px-2 py-0"><Film className="w-2.5 h-2.5 mr-0.5 inline" /> Video</Badge>}
-                                {ss.image_url && <Badge className="bg-[#FFFBEB] text-[#D97706] rounded-full text-[10px] px-2 py-0"><Image className="w-2.5 h-2.5 mr-0.5 inline" /> Image</Badge>}
-                              </div>
-                            </div>
-                            {ad.overlay_texts?.[j] && (
-                              <p className="text-[10px] text-[#94A3B8] italic max-w-[120px] truncate">"{ad.overlay_texts[j]}"</p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
                   </div>
                 </motion.div>
               );

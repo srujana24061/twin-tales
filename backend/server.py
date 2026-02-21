@@ -1556,7 +1556,7 @@ async def generate_story(story_id: str, user: dict = Depends(get_current_user)):
     }
     await db.generation_jobs.insert_one(job_doc)
     await db.stories.update_one({"id": story_id}, {"$set": {"status": "generating"}})
-    enqueue_task(story_generation_task, story_id, job_id)
+    enqueue_task(story_generation_task, story_id, job_id, fallback_coro=run_story_generation)
     return {"job_id": job_id, "status": "pending"}
 
 @api_router.post("/stories/{story_id}/generate-pdf")

@@ -297,12 +297,12 @@ async def upload_character_photo(char_id: str, file: UploadFile = File(...), use
         })
         logger.info(f"Character photo stored in MongoDB: {asset_id}")
 
-    # Store the API media URL in the character doc (works for both S3 and MongoDB)
-    media_url = f"/api/media/{asset_id}"
+    # Store direct S3 URL if available, otherwise fall back to proxied URL
+    reference_image_url = s3_url if s3_url else f"/api/media/{asset_id}"
     await db.characters.update_one(
         {"id": char_id},
         {"$set": {
-            "reference_image": media_url,
+            "reference_image": reference_image_url,
             "reference_image_asset_id": asset_id,
             "reference_image_s3_key": s3_key if s3_url else None
         }}

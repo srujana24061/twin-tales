@@ -114,9 +114,27 @@ export const CharacterBuilderPage = () => {
         setCharacters([...characters, data]);
         toast.success('Character created!');
       }
+      
+      // Upload photo if provided
       if (photoFile && charData?.id) {
         await uploadPhoto(charData.id);
       }
+      
+      // Save cartoonized image if user selected it
+      if (cartoonResult && charData?.id) {
+        try {
+          const { data: updatedChar } = await api.post(`/characters/${charData.id}/save-cartoonized`, {
+            cartoonized_url: cartoonResult,
+            use_cartoonized: useCartoonizedVersion
+          });
+          setCharacters(prev => prev.map(c => c.id === charData.id ? updatedChar : c));
+          toast.success(useCartoonizedVersion ? 'Cartoonized version saved!' : 'Original version selected');
+        } catch (err) {
+          console.error('Failed to save cartoonized image:', err);
+          toast.error('Character saved, but cartoonized image failed to save');
+        }
+      }
+      
       resetForm();
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Failed to save');

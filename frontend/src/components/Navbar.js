@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { BookOpen, Users, PlusCircle, Clock, LayoutDashboard, LogOut, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 
 export const Navbar = () => {
   const navigate = useNavigate();
@@ -35,9 +36,9 @@ export const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <Link to="/dashboard" className="flex items-center gap-2" data-testid="nav-logo">
-            <BookOpen className="w-7 h-7 text-[#6366F1]" />
-            <span className="font-heading font-extrabold text-xl tracking-tight text-[#1E293B]">
-              Story<span className="text-[#6366F1]">Craft</span>
+            <BookOpen className="w-7 h-7" style={{ color: 'hsl(var(--primary))' }} />
+            <span className="font-heading font-extrabold text-xl tracking-tight" style={{ color: 'hsl(var(--foreground))' }}>
+              Story<span style={{ color: 'hsl(var(--primary))' }}>Craft</span>
             </span>
           </Link>
 
@@ -47,11 +48,24 @@ export const Navbar = () => {
                 key={path}
                 to={path}
                 data-testid={`nav-${label.toLowerCase().replace(' ', '-')}`}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                  isActive(path)
-                    ? 'bg-[#6366F1] text-white shadow-lg shadow-[#6366F1]/25'
-                    : 'text-[#64748B] hover:text-[#1E293B] hover:bg-slate-100'
-                }`}
+                className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200"
+                style={{
+                  background: isActive(path) ? 'hsl(var(--primary))' : 'transparent',
+                  color: isActive(path) ? 'hsl(var(--primary-foreground))' : 'hsl(var(--muted-foreground))',
+                  boxShadow: isActive(path) ? '0 4px 16px rgba(var(--shadow-color), 0.28)' : 'none',
+                }}
+                onMouseEnter={e => {
+                  if (!isActive(path)) {
+                    e.currentTarget.style.color = 'hsl(var(--foreground))';
+                    e.currentTarget.style.background = 'hsl(var(--muted))';
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (!isActive(path)) {
+                    e.currentTarget.style.color = 'hsl(var(--muted-foreground))';
+                    e.currentTarget.style.background = 'transparent';
+                  }
+                }}
               >
                 <Icon className="w-4 h-4" />
                 {label}
@@ -60,25 +74,35 @@ export const Navbar = () => {
           </div>
 
           <div className="hidden md:flex items-center gap-3">
-            <span className="text-sm text-[#64748B] font-medium">{user.name || 'User'}</span>
+            {/* Theme Switcher */}
+            <ThemeSwitcher />
+
+            <span className="text-sm font-medium" style={{ color: 'hsl(var(--muted-foreground))' }}>
+              {user.name || 'User'}
+            </span>
             <Button
               variant="ghost"
               size="sm"
               onClick={handleLogout}
               data-testid="nav-logout-btn"
-              className="text-[#64748B] hover:text-red-500 rounded-full"
+              className="rounded-full hover:text-red-500 transition-colors"
+              style={{ color: 'hsl(var(--muted-foreground))' }}
             >
               <LogOut className="w-4 h-4" />
             </Button>
           </div>
 
-          <button
-            className="md:hidden p-2"
-            onClick={() => setMobileOpen(!mobileOpen)}
-            data-testid="nav-mobile-toggle"
-          >
-            {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
+          <div className="md:hidden flex items-center gap-2">
+            <ThemeSwitcher />
+            <button
+              className="p-2"
+              onClick={() => setMobileOpen(!mobileOpen)}
+              data-testid="nav-mobile-toggle"
+              style={{ color: 'hsl(var(--foreground))' }}
+            >
+              {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -87,17 +111,20 @@ export const Navbar = () => {
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: 'auto' }}
           exit={{ opacity: 0, height: 0 }}
-          className="md:hidden glass-panel border-t border-white/30"
+          className="md:hidden glass-panel border-t"
+          style={{ borderColor: 'var(--glass-border)' }}
         >
-          <div className="px-4 py-3 space-y-2">
+          <div className="px-4 py-3 space-y-1">
             {links.map(({ path, label, icon: Icon }) => (
               <Link
                 key={path}
                 to={path}
                 onClick={() => setMobileOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium ${
-                  isActive(path) ? 'bg-[#6366F1] text-white' : 'text-[#64748B]'
-                }`}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all"
+                style={{
+                  background: isActive(path) ? 'hsl(var(--primary))' : 'transparent',
+                  color: isActive(path) ? 'hsl(var(--primary-foreground))' : 'hsl(var(--muted-foreground))',
+                }}
               >
                 <Icon className="w-4 h-4" />
                 {label}

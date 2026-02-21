@@ -568,8 +568,10 @@ Return ONLY valid JSON:
                 if len(img_prompt) > 1500:
                     img_prompt = img_prompt[:1500]
 
-                logger.info(f"Generating image for scene {i+1}/{total} via MiniMax")
-                results = await minimax_service.generate_image(img_prompt, aspect_ratio="16:9", reference_images=char_ref_images if char_ref_images else None)
+                aspect_ratio = story.get("image_aspect_ratio", "16:9")
+                preferred_provider = story.get("image_provider", "nano_banana")
+                logger.info(f"Generating image for scene {i+1}/{total} via {preferred_provider}")
+                provider_used, results = await generate_scene_image(img_prompt, aspect_ratio, char_ref_images if char_ref_images else None, preferred_provider)
 
                 if results:
                     result_type, result_data = results[0]
@@ -586,7 +588,7 @@ Return ONLY valid JSON:
                         "id": asset_id, "type": "image", "format": "png",
                         "s3_key": s3_key, "s3_url": s3_url,
                         "scene_id": scene["id"], "story_id": story_id,
-                        "provider": "minimax",
+                        "provider": provider_used,
                         "created_at": datetime.now(timezone.utc).isoformat()
                     })
                     await db.scenes.update_one(

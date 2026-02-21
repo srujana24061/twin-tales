@@ -1693,7 +1693,7 @@ async def generate_ad_endpoint(story_id: str, body: AdGenerateRequest, user: dic
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
     await db.generation_jobs.insert_one(job_doc)
-    asyncio.create_task(run_ad_generation(story_id, job_id, body.platform, body.style, body.cta_text))
+    enqueue_task(ad_generation_task, story_id, job_id, body.platform, body.style, body.cta_text)
     return {"job_id": job_id, "status": "pending"}
 
 

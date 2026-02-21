@@ -142,7 +142,7 @@ export const VideoEditorPage = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
-            <button onClick={() => navigate(`/stories/${storyId}/edit`)} className="text-sm text-[#64748B] hover:text-[#6366F1] flex items-center gap-1 mb-2">
+            [0m<button onClick={() => navigate(`/stories/${storyId}/edit`)} data-testid="back-to-scene-editor-btn" className="text-sm text-[#64748B] hover:text-[#6366F1] flex items-center gap-1 mb-2">
               <ArrowLeft className="w-4 h-4" /> Back to Scene Editor
             </button>
             <h1 className="font-heading font-extrabold text-3xl tracking-tight">

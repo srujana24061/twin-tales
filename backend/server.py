@@ -655,13 +655,20 @@ async def run_pdf_generation(story_id: str, job_id: str):
             img_y_bottom = height - 380
             if scene.get("image_url"):
                 try:
-                    asset_id = scene["image_url"].split("/")[-1]
-                    asset = await db.media_assets.find_one({"id": asset_id}, {"_id": 0, "data": 1})
-                    if asset and asset.get("data"):
-                        img_data = base64.b64decode(asset["data"])
-                        img_buffer = BytesIO(img_data)
-                        img = ImageReader(img_buffer)
-                        c.drawImage(img, 50, img_y_bottom, width=width - 100, height=300, preserveAspectRatio=True)
+                    asset_id_ref = scene["image_url"].split("/")[-1]
+                    asset = await db.media_assets.find_one({"id": asset_id_ref}, {"_id": 0})
+                    if asset:
+                        img_data = None
+                        if asset.get("s3_url"):
+                            resp = await asyncio.to_thread(http_requests.get, asset["s3_url"], timeout=30)
+                            if resp.status_code == 200:
+                                img_data = resp.content
+                        elif asset.get("data"):
+                            img_data = base64.b64decode(asset["data"])
+                        if img_data:
+                            img_buffer = BytesIO(img_data)
+                            img = ImageReader(img_buffer)
+                            c.drawImage(img, 50, img_y_bottom, width=width - 100, height=300, preserveAspectRatio=True)
                 except Exception as e:
                     logger.error(f"PDF image error: {e}")
 

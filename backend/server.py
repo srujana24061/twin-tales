@@ -410,7 +410,7 @@ async def regenerate_scene_image(story_id: str, scene_id: str, user: dict = Depe
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
     await db.generation_jobs.insert_one(job_doc)
-    enqueue_task(image_regeneration_task, story, scene, job_id)
+    enqueue_task(image_regeneration_task, story, scene, job_id, fallback_coro=run_image_regeneration)
     return {"job_id": job_id, "status": "pending"}
 
 

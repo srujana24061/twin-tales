@@ -413,11 +413,11 @@ async def save_styled_character_image(
                 "created_at": datetime.now(timezone.utc).isoformat()
             })
             
-            # Update character with styled image URL
+            # Update character with styled image URL - use S3 URL directly
             await db.characters.update_one(
                 {"id": char_id},
                 {"$set": {
-                    "styled_photo_url": f"/api/media/{asset_id}",
+                    "styled_photo_url": s3_url,
                     "styled_photo_asset_id": asset_id,
                     "styled_photo_s3_key": s3_key,
                     "image_style": style,

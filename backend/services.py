@@ -87,11 +87,13 @@ class MiniMaxService:
             return [("base64", b) for b in b64_list]
         return [("url", u) for u in urls]
 
-    async def generate_video(self, prompt: str) -> dict:
+    async def generate_video(self, prompt: str, subject_references: list = None) -> dict:
         payload = {
             "model": "video-01",
             "prompt": prompt[:2000],
         }
+        if subject_references:
+            payload["subject_reference"] = [{"image": url} for url in subject_references[:2]]
         logger.info(f"MiniMax video gen: creating task")
         response = await asyncio.to_thread(
             requests.post,

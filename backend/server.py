@@ -1581,9 +1581,12 @@ async def run_ffmpeg_export(story_id: str, job_id: str):
 # ==================== AD GENERATION ====================
 
 PLATFORM_CONFIGS = {
-    "instagram": {"aspect": "9:16", "max_duration": 30, "label": "Instagram Reel"},
-    "youtube": {"aspect": "9:16", "max_duration": 60, "label": "YouTube Short"},
+    "instagram": {"aspect": "1:1", "max_duration": 60, "label": "Instagram Post"},
+    "instagram_reel": {"aspect": "9:16", "max_duration": 90, "label": "Instagram Reel"},
+    "youtube": {"aspect": "16:9", "max_duration": 60, "label": "YouTube Video"},
+    "youtube_shorts": {"aspect": "9:16", "max_duration": 60, "label": "YouTube Shorts"},
     "whatsapp": {"aspect": "9:16", "max_duration": 30, "label": "WhatsApp Status"},
+    "tiktok": {"aspect": "4:3", "max_duration": 60, "label": "TikTok Video"},
     "facebook": {"aspect": "4:5", "max_duration": 30, "label": "Facebook Feed"},
     "linkedin": {"aspect": "1:1", "max_duration": 30, "label": "LinkedIn Post"},
 }

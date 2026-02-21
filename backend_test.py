@@ -311,9 +311,93 @@ class StoryCraftAPITester:
         self.run_test("Cleanup PDF Test Story", "DELETE", f"stories/{story_id}", 200)
         return success
 
+    def test_media_generation_endpoints(self):
+        """Test Phase 2 media generation endpoints (structure only, no actual generation)"""
+        # Create a story first
+        story_data = {
+            "title": "Media Test Story",
+            "tone": "adventure",
+            "visual_style": "cartoon",
+            "story_length": "short",
+            "user_topic": "A hero's journey"
+        }
+        success, story_response = self.run_test(
+            "Create Story for Media Tests",
+            "POST",
+            "stories",
+            200,
+            data=story_data
+        )
+        if not success:
+            return False
+
+        story_id = story_response.get('id')
+        if not story_id:
+            return False
+
+        # Test video generation endpoint (should return 400 because no scenes)
+        success, _ = self.run_test(
+            "Video Generation (No Scenes)",
+            "POST",
+            f"stories/{story_id}/generate-video",
+            400  # Should fail because story has no scenes yet
+        )
+
+        # Test audio generation with voice_style parameter
+        audio_data = {"voice_style": "storyteller"}
+        success, _ = self.run_test(
+            "Audio Generation with Voice Style",
+            "POST",
+            f"stories/{story_id}/generate-audio",
+            400,  # Should fail because story has no scenes yet
+            data=audio_data
+        )
+
+        # Test music generation (should work even without scenes)
+        success, music_response = self.run_test(
+            "Music Generation Request",
+            "POST", 
+            f"stories/{story_id}/generate-music",
+            200
+        )
+        if success and 'job_id' in music_response:
+            print(f"   🎵 Music job ID: {music_response['job_id']}")
+
+        # Test 404 for non-existent story
+        fake_story_id = str(uuid.uuid4())
+        success, _ = self.run_test(
+            "Video Generation (404 Test)",
+            "POST",
+            f"stories/{fake_story_id}/generate-video",
+            404
+        )
+
+        # Test jobs listing
+        success, jobs_response = self.run_test(
+            "List Jobs",
+            "GET",
+            "jobs",
+            200
+        )
+        if success:
+            print(f"   📋 Found {len(jobs_response)} jobs")
+
+        # Test 404 for non-existent media
+        fake_media_id = str(uuid.uuid4())
+        success, _ = self.run_test(
+            "Media Retrieval (404 Test)",
+            "GET",
+            f"media/{fake_media_id}",
+            404
+        )
+
+        # Cleanup
+        self.run_test("Cleanup Media Test Story", "DELETE", f"stories/{story_id}", 200)
+        return True
+
     def run_all_tests(self):
         """Run comprehensive API test suite"""
-        print("🚀 Starting StoryCraft API Testing...")
+        print("🚀 Starting StoryCraft API Phase 2 Testing...")
         print(f"Base URL: {self.base_url}")
         
         # Test authentication flow first

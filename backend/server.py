@@ -2338,41 +2338,72 @@ async def generate_scene_video_v2(scene_id: str, user: dict = Depends(get_curren
     enqueue_task(scene_video_task, scene_id, job_id, fallback_coro=run_scene_video_generation)
     return {"job_id": job_id, "status": "pending"}
 
+async def generate_nano_banana_video(scene: dict, job_id: str) -> str:
+    """Generate an animated MP4 slideshow from Nano Banana frames and upload to S3."""
+    scene_id = scene["id"]
+    scene_text = scene.get("scene_text", "") or scene.get("image_prompt", "")
+    base_prompt = f"{scene_text[:300]}. High quality children's illustration, vibrant colors, child-friendly."
+
+    # Generate 4 frames with slightly varied prompts
+    frame_variants = [
+        f"{base_prompt} Wide establishing shot.",
+        f"{base_prompt} Close-up moment of emotion.",
+        f"{base_prompt} Action and movement.",
+        f"{base_prompt} Resolution and calm.",
+    ]
+
+    frames = []
+    existing_img = scene.get("image_url")
+    if existing_img:
+        try:
+            resp = await asyncio.to_thread(requests.get, existing_img, timeout=30)
+            if resp.status_code == 200:
+                img = Image.open(BytesIO(resp.content)).convert("RGB").resize((640, 360))
+                frames.append(np.array(img))
+        except Exception:
+            pass
+
+    for variant_prompt in frame_variants:
+        try:
+            results = await image_gen_service.generate_image(variant_prompt, aspect_ratio="16:9")
+            if results:
+                _, result_data = results[0]
+                img_bytes = base64.b64decode(result_data)
+                img = Image.open(BytesIO(img_bytes)).convert("RGB").resize((640, 368))
+                frames.append(np.array(img))
+        except Exception as e:
+            logger.warning(f"Frame generation failed: {e}")
+
+    if not frames:
+        raise Exception("No frames generated for video")
+
+    # Create MP4 with imageio (4 seconds per frame, 2fps)
+    buf = BytesIO()
+    fps = 1
+    with imageio.get_writer(buf, format='mp4', fps=fps, codec='libx264',
+                            output_params=['-preset', 'ultrafast', '-pix_fmt', 'yuv420p']) as writer:
+        for frame in frames:
+            for _ in range(4):  # 4 seconds per frame at 1fps
+                writer.append_data(frame)
+
+    mp4_bytes = buf.getvalue()
+    s3_key = f"videos/scenes/{scene_id}_{uuid.uuid4().hex[:8]}.mp4"
+    video_url = await s3_service.upload(s3_key, mp4_bytes, "video/mp4")
+    return video_url
+
+
 async def run_scene_video_generation(scene_id: str, job_id: str):
     try:
+        await db.generation_jobs.update_one({"id": job_id}, {"$set": {"progress": 10, "message": "Generating video frames with Nano Banana..."}})
         scene = await db.scenes.find_one({"id": scene_id}, {"_id": 0})
         if not scene:
             raise Exception("Scene not found")
 
-        image_url = scene.get("image_url")
+        video_url = await generate_nano_banana_video(scene, job_id)
 
-        # If no image exists, auto-generate one with Nano Banana first
-        if not image_url:
-            await db.generation_jobs.update_one({"id": job_id}, {"$set": {"progress": 15, "message": "Generating frame image with Nano Banana..."}})
-            prompt = scene.get("image_prompt") or scene.get("scene_text", "")
-            prompt_text = f"{prompt}. High quality children's illustration, vibrant colors, child-friendly."
-            results = await image_gen_service.generate_image(prompt_text, aspect_ratio="16:9")
-            if results:
-                result_type, result_data = results[0]
-                img_s3_key = f"scenes/{scene_id}/image_{uuid.uuid4().hex[:8]}.png"
-                if result_type == "base64":
-                    img_bytes = base64.b64decode(result_data)
-                    image_url = await s3_service.upload(img_s3_key, img_bytes, 'image/png')
-                else:
-                    image_url = await s3_service.upload_from_url(img_s3_key, result_data, 'image/png')
-                await db.scenes.update_one({"id": scene_id}, {"$set": {"image_url": image_url}})
-                await db.generation_jobs.update_one({"id": job_id}, {"$set": {"progress": 35}})
-
-        video_prompt = f"{scene.get('title', '')}: {scene.get('scene_text', '')[:500]}"
-        result = await minimax_service.generate_video(prompt=video_prompt, first_frame_image=image_url, generation_type="image-to-video")
-        video_url = result.get("url")
-        if video_url:
-            video_response = await asyncio.to_thread(requests.get, video_url, timeout=120)
-            if video_response.status_code == 200:
-                s3_key = f"videos/scenes/{scene_id}.mp4"
-                video_s3_url = await s3_service.upload(s3_key, video_response.content, "video/mp4")
-                await db.scenes.update_one({"id": scene_id}, {"$set": {"video_url": video_s3_url}})
+        await db.scenes.update_one({"id": scene_id}, {"$set": {"video_url": video_url}})
         await db.generation_jobs.update_one({"id": job_id}, {"$set": {"status": "completed", "progress": 100}})
+        logger.info(f"Nano Banana video complete for scene {scene_id}: {video_url}")
     except Exception as e:
         logger.error(f"Scene video generation failed: {e}")
         await db.generation_jobs.update_one({"id": job_id}, {"$set": {"status": "failed", "error_message": str(e)}})

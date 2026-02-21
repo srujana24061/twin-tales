@@ -189,12 +189,13 @@ async def register(data: UserRegister):
         "id": user_id,
         "email": data.email,
         "name": data.name,
+        "phone": data.phone,  # Store phone number
         "password_hash": hash_password(data.password),
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.users.insert_one(user_doc)
     token = create_token(user_id)
-    return {"token": token, "user": {"id": user_id, "email": data.email, "name": data.name}}
+    return {"token": token, "user": {"id": user_id, "email": data.email, "name": data.name, "phone": data.phone}}
 
 @api_router.post("/auth/login")
 async def login(data: UserLogin):
@@ -202,11 +203,11 @@ async def login(data: UserLogin):
     if not user or not verify_password(data.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     token = create_token(user["id"])
-    return {"token": token, "user": {"id": user["id"], "email": user["email"], "name": user["name"]}}
+    return {"token": token, "user": {"id": user["id"], "email": user["email"], "name": user["name"], "phone": user.get("phone")}}
 
 @api_router.get("/auth/me")
 async def get_me(user: dict = Depends(get_current_user)):
-    return {"id": user["id"], "email": user["email"], "name": user["name"]}
+    return {"id": user["id"], "email": user["email"], "name": user["name"], "phone": user.get("phone")}
 
 
 # ==================== CHARACTER ROUTES ====================

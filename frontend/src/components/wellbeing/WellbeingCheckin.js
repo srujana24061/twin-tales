@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,7 @@ export const WellbeingCheckin = ({ onComplete, onSkip }) => {
   const [starting, setStarting] = useState(true);
   const [exchangeCount, setExchangeCount] = useState(0);
 
-  useState(() => {
+  useEffect(() => {
     startCheckin();
   }, []);
 

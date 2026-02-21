@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { X, Shield, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,7 @@ export const ParentAuthModal = ({ onSuccess, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [hasPinSet, setHasPinSet] = useState(null);
 
-  useState(() => {
+  useEffect(() => {
     checkPinStatus();
   }, []);
 

@@ -2223,6 +2223,52 @@ async def export_video_endpoint(story_id: str, user: dict = Depends(get_current_
         raise HTTPException(status_code=404, detail="Story not found")
     scenes = await db.scenes.count_documents({"story_id": story_id})
     if scenes == 0:
+
+
+@api_router.post("/stories/{story_id}/generate-all-videos")
+async def generate_all_videos_endpoint(story_id: str, user: dict = Depends(get_current_user)):
+    """Generate videos for all frames in all scenes of a story (batch operation)"""
+    story = await db.stories.find_one({"id": story_id, "owner_id": user["id"]})
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+    
+    # Get all scenes and frames
+    scenes = await db.scenes.find({"story_id": story_id}, {"_id": 0}).to_list(100)
+    all_frames = []
+    for scene in scenes:
+        frames = await db.frames.find({"scene_id": scene["id"]}, {"_id": 0}).to_list(100)
+        all_frames.extend(frames)
+    
+    if not all_frames:
+        raise HTTPException(status_code=400, detail="No frames found to generate videos")
+    
+    # Create a batch job
+    job_id = str(uuid.uuid4())
+    job_doc = {
+        "id": job_id,
+        "story_id": story_id,
+        "user_id": user["id"],
+        "job_type": "batch_video_generation",
+        "status": "pending",
+        "progress": 0,
+        "total_frames": len(all_frames),
+        "completed_frames": 0,
+        "error_message": None,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.generation_jobs.insert_one(job_doc)
+    
+    # Enqueue the batch task
+    enqueue_task(batch_video_generation_task, story_id, job_id, fallback_coro=run_batch_video_generation)
+    
+    return {
+        "job_id": job_id,
+        "status": "pending",
+        "total_frames": len(all_frames),
+        "message": f"Queued {len(all_frames)} frames for video generation"
+    }
+
         raise HTTPException(status_code=400, detail="No scenes to export")
     job_id = str(uuid.uuid4())
     job_doc = {

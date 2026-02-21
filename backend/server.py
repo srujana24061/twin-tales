@@ -1079,6 +1079,15 @@ async def generate_pdf(story_id: str, user: dict = Depends(get_current_user)):
 class VideoGenRequest(BaseModel):
     voice_style: str = "storyteller"
 
+class ReorderScenesRequest(BaseModel):
+    scene_ids: List[str]
+
+class AdGenerateRequest(BaseModel):
+    platform: str = "instagram"
+    duration: int = 15
+    style: str = "emotional"
+    cta_text: str = "Watch the full story!"
+
 @api_router.post("/stories/{story_id}/generate-video")
 async def generate_video_endpoint(story_id: str, user: dict = Depends(get_current_user)):
     story = await db.stories.find_one({"id": story_id, "owner_id": user["id"]})

@@ -1,0 +1,75 @@
+{
+  "summary": "Comprehensive backend and frontend testing of new StoryCraft AI features: video generation without image, story suggestion card pre-fill, SceneGridEditor loading states, parent email settings, and notification bell. Fixed critical imageio frame-size bug and updated outdated backend tests.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "generate_nano_banana_video (internal)",
+        "issue": "Frame size mismatch: existing image resized to (640, 360) but Nano Banana frames resized to (640, 368), causing imageio 'All images in a movie should have same size' error on every video generation when scene had an existing image.",
+        "priority": "CRITICAL",
+        "status": "FIXED - unified to TARGET_SIZE = (640, 368)"
+      }
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "StorySetupPage",
+        "issue": "Title pre-fill appends 'Adventure' even when theme already contains the word - e.g., theme='Ocean Adventure' → title='Ocean Adventure Adventure'. Code: `title: suggestion?.theme ? \\`${suggestion.theme} Adventure\\` : ''`",
+        "selector": "[data-testid='story-title-input']",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_scene_and_notifications.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Fix story title pre-fill: in StorySetupPage.js, change `title: suggestion?.theme ? \\`${suggestion.theme} Adventure\\` : ''` to just `title: suggestion?.theme || ''` or handle the case where theme already ends with 'Adventure'."
+  ],
+  "critical_code_review_comments": [
+    "FIXED: generate_nano_banana_video in server.py had inconsistent frame sizes (640x360 for existing_img vs 640x368 for new frames). Fixed by adding TARGET_SIZE = (640, 368) constant used for all frames.",
+    "MINOR: Story suggestion title pre-fill has a logic issue - if theme is 'Ocean Adventure', title becomes 'Ocean Adventure Adventure' (duplicate word). Should check if 'Adventure' is already in theme or just use theme as-is.",
+    "ADDED: data-testid='notification-bell' to Navbar.js bell button (was missing testid).",
+    "ADDED: data-testid='generate-all-videos-btn' to SceneGridEditor.js generate all button (was missing testid).",
+    "BACKEND: generate-video endpoint (POST /scenes/{scene_id}/generate-video) correctly works without requiring a pre-existing image - confirmed behavior change from old version.",
+    "BACKEND: batch-generate-videos still requires scenes with images (returns 400 if none) - this is intentional per current code but inconsistent with single scene video generation which no longer requires an image."
+  ],
+  "updated_files": [
+    "/app/backend/server.py (line 2355-2376: fixed frame size bug, added TARGET_SIZE constant)",
+    "/app/frontend/src/components/Navbar.js (added data-testid='notification-bell')",
+    "/app/frontend/src/pages/SceneGridEditor.js (added data-testid='generate-all-videos-btn')",
+    "/app/backend/tests/test_scene_and_notifications.py (updated story_and_scene fixture to wait for generation, updated video tests to reflect new no-image-required behavior)"
+  ],
+  "success_rate": {
+    "backend": "18/18 (100%)",
+    "frontend": "95% (1 minor pre-fill UX bug)"
+  },
+  "test_credentials": {
+    "video_test_user": {
+      "email": "video_test_1771703962@test.com",
+      "password": "TestPass123!",
+      "story_id": "07e708eb-58aa-4ce6-b02b-d75f999b8b9f",
+      "scene_ids": ["3387a3e8-eb11-4f0a-84ce-b4b6b4b4e246", "d6d31bd3-13bc-43c6-bdbd-b55eefb13dc0", "93c1f009-16f4-4c96-b578-9237e502976b"]
+    },
+    "theme_tester": {
+      "email": "theme_test_1771690478@test.com",
+      "password": "Test123!",
+      "parent_pin": "1234"
+    }
+  },
+  "seed_data_creation": "Created video_test_1771703962@test.com with story 'Test Video Story' (3 scenes, 3 images, 2 videos generated)",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Key changes tested: 1) generate-video now works WITHOUT an image (no 400 error for missing image). 2) Suggestion cards pre-fill story form (title/tone/moral/topic) - works but has duplicate word bug in title. 3) SceneGridEditor has generate-image/generate-video with loading spinners. 4) Generate All Videos button works. 5) CRITICAL BUG FIXED: imageio frame size inconsistency in generate_nano_banana_video (was 640x360 vs 640x368, now unified to 640x368). 6) batch-generate-videos still requires images (400 if none). Test user: video_test_1771703962@test.com / TestPass123!. Story: 07e708eb. Backend tests: 18/18 passing.",
+  "rca_of_the_issue": {
+    "bug": "imageio 'All images in a movie should have same size' error",
+    "root_cause": "In generate_nano_banana_video(), existing scene image was resized to (640, 360) but newly generated Nano Banana frames were resized to (640, 368). imageio requires all frames to have identical dimensions for MP4 encoding.",
+    "reproduction": "Trigger generate-video on a scene that already has an image_url. The existing image becomes frame 1 at 640x360, while subsequent Nano Banana frames are 640x368, causing the size mismatch error.",
+    "fix": "Added TARGET_SIZE = (640, 368) constant (divisible by macro_block_size=16) and applied it consistently to both existing image resize and new frame resize in generate_nano_banana_video().",
+    "verification": "Job 9eecdfa9 for scene d6d31bd3 completed successfully after fix (visible in backend logs at 20:13:56)"
+  }
+}

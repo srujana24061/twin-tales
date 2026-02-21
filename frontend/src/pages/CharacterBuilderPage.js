@@ -120,18 +120,19 @@ export const CharacterBuilderPage = () => {
         await uploadPhoto(charData.id);
       }
       
-      // Save cartoonized image if user selected it
-      if (cartoonResult && charData?.id) {
+      // Save styled image if user selected it
+      if (styledResult && charData?.id) {
         try {
-          const { data: updatedChar } = await api.post(`/characters/${charData.id}/save-cartoonized`, {
-            cartoonized_url: cartoonResult,
-            use_cartoonized: useCartoonizedVersion
+          const { data: updatedChar } = await api.post(`/characters/${charData.id}/save-styled-image`, {
+            styled_image_b64: styledResult.base64,
+            style: selectedStyle,
+            use_styled: useStyledVersion
           });
           setCharacters(prev => prev.map(c => c.id === charData.id ? updatedChar : c));
-          toast.success(useCartoonizedVersion ? 'Cartoonized version saved!' : 'Original version selected');
+          toast.success(useStyledVersion ? `${selectedStyle} style saved!` : 'Original version selected');
         } catch (err) {
-          console.error('Failed to save cartoonized image:', err);
-          toast.error('Character saved, but cartoonized image failed to save');
+          console.error('Failed to save styled image:', err);
+          toast.error('Character saved, but styled image failed to save');
         }
       }
       

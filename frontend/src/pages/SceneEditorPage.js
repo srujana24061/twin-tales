@@ -59,6 +59,7 @@ export const SceneEditorPage = () => {
       const { data } = await api.get(`/stories/${storyId}`);
       setStory(data);
       setScenes(data.scenes || []);
+      setImageProvider(data.image_provider || 'nano_banana');
     } catch (err) {
       toast.error('Failed to load story');
       navigate('/dashboard');

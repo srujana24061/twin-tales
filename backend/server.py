@@ -1548,8 +1548,8 @@ def ad_generation_task(story_id: str, job_id: str, platform: str, style: str, ct
 
 
 @celery_app.task(name="tasks.image_regeneration")
-def image_regeneration_task(story: dict, scene: dict, job_id: str):
-    run_celery_async(run_image_regeneration(story, scene, job_id))
+def image_regeneration_task(story: dict, scene: dict, job_id: str, provider: str = "nano_banana"):
+    run_celery_async(run_image_regeneration(story, scene, job_id, provider))
 
 
 # ==================== GENERATION ROUTES ====================

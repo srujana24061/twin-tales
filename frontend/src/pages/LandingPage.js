@@ -49,6 +49,7 @@ export const LandingPage = () => {
             </span>
           </div>
           <div className="flex items-center gap-3">
+            <ThemeSwitcher />
             {token ? (
               <Button
                 onClick={() => navigate('/dashboard')}

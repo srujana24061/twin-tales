@@ -102,6 +102,11 @@ class SceneUpdate(BaseModel):
     dialogue_text: Optional[str] = None
     image_prompt: Optional[str] = None
     video_prompt: Optional[str] = None
+    duration_seconds: Optional[int] = None
+    trim_start_seconds: Optional[float] = None
+    trim_end_seconds: Optional[float] = None
+    transition_type: Optional[str] = None
+    include_in_video: Optional[bool] = None
 
 
 # ==================== AUTH HELPERS ====================

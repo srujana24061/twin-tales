@@ -50,6 +50,7 @@ export const SceneEditorPage = () => {
   const [musicLoading, setMusicLoading] = useState(false);
   const [mediaProgress, setMediaProgress] = useState({ video: 0, audio: 0, music: 0 });
   const [voiceStyle, setVoiceStyle] = useState('storyteller');
+  const [imageProvider, setImageProvider] = useState('nano_banana');
 
   useEffect(() => { loadStory(); }, [storyId]); // eslint-disable-line
 

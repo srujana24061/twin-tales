@@ -1,61 +1,38 @@
 # StoryCraft AI - Product Requirements Document
 
-## Original Problem Statement
-StoryCraft AI — Responsible AI Kids Story PDF & Video Generator. A distributed AI orchestration platform for creating personalized children's stories with illustrated scenes, video generation, audio narration, background music, PDF export, and safety checks.
-
 ## Architecture
-- **Frontend**: React 19 + TailwindCSS + Shadcn UI + Framer Motion
-- **Backend**: FastAPI + MongoDB (Motor async driver)
-- **AI Text**: OpenAI GPT-5.2 via emergentintegrations (Emergent LLM Key)
-- **AI Image**: MiniMax Image-01 API
-- **AI Video**: MiniMax Hailuo (video-01) API
-- **AI Audio/TTS**: MiniMax Speech (speech-02-turbo) API
-- **AI Music**: MiniMax Music (music-01) API
-- **Storage**: AWS S3 (storymaker-jcool bucket, ap-south-1)
-- **Auth**: JWT-based with bcrypt hashing
-
-## User Personas
-- Parents (25-45), Teachers, Content Creators
+- Frontend: React 19 + TailwindCSS + Shadcn UI + Framer Motion
+- Backend: FastAPI + MongoDB (Motor)
+- AI Text: OpenAI GPT-5.2 via emergentintegrations
+- AI Image: MiniMax Image-01 (with character reference images support)
+- AI Video: MiniMax Hailuo (with subject_reference for character consistency)
+- AI Audio/TTS: MiniMax Speech-02-turbo
+- AI Music: MiniMax Music-01
+- Storage: MongoDB base64 fallback (S3 IAM permission issue with provided credentials)
+- Auth: JWT + bcrypt
 
 ## What's Been Implemented
+### Phase 1 - Core Story Pipeline
+- Landing page, JWT auth, Character CRUD, Story setup, AI story gen (GPT-5.2), Scene editor, PDF gen, Job tracking, Responsible AI safety checks, Dashboard
 
-### Phase 1 (Feb 2026)
-- Landing page with glassmorphism + animations
-- JWT auth (register/login)
-- Character Builder CRUD
-- Story setup with full config
-- AI story generation (GPT-5.2)
-- Scene editor with editing
-- PDF generation (reportlab)
-- Job tracking with progress
-- Responsible AI safety checks
-- Dashboard with stats
+### Phase 2 - Full Media Pipeline
+- MiniMax Image-01, Video (Hailuo), TTS (Speech), Music integration
+- AWS S3 integration (with MongoDB fallback)
+- Media Studio panel, video/audio players, voice selector
 
-### Phase 2 (Feb 2026)
-- MiniMax Image-01 integration (replaced GPT Image 1)
-- MiniMax Hailuo video generation per scene
-- MiniMax Speech TTS narration per scene (4 voice options)
-- MiniMax Music background music generation
-- AWS S3 media storage (replaced MongoDB base64)
-- Media Studio panel in Scene Editor
-- Video/audio players per scene
-- Voice style selector for narration
-- Progress tracking for all media types
-- Updated Task History with new job types
+### Phase 3 - Character Photo References
+- Character photo upload (JPEG/PNG/WEBP, max 10MB)
+- Photos stored in MongoDB with media asset entries
+- Served via public /api/media/{id} endpoint
+- Reference images passed to MiniMax Image-01 (images param) for visual consistency
+- Reference images passed to MiniMax Hailuo (subject_reference) for video consistency
+- Camera icon overlay on character cards for quick photo upload
+- Photo preview in character creation/edit modal
+
+## Note: S3 Permission Issue
+The provided AWS IAM credentials (ses-notification-user) lack s3:PutObject permission. System falls back to MongoDB base64 storage. To fix: grant S3 full access to the IAM user or provide new credentials with proper S3 permissions.
 
 ## Prioritized Backlog
-### P0 (Next)
-- Video editor (timeline, drag-drop, clip management)
-- Social media ad generator
-- Final video export (FFmpeg compile all scenes + audio + music)
-
-### P1
-- Curated story templates
-- WebSocket live progress
-- Character face-mapping
-- Multi-language TTS support
-
-### P2
-- Story sharing/publishing gallery
-- Collaborative editing
-- User profile & subscription management
+### P0: Video editor, Social media ad generator, FFmpeg final export
+### P1: Curated templates, WebSocket progress, Character face-mapping
+### P2: Story sharing gallery, Multi-language TTS, User profiles

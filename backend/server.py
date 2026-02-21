@@ -99,20 +99,9 @@ class StoryCreate(BaseModel):
     user_topic: str = ""
     user_full_story: str = ""
 
-class SceneUpdate(BaseModel):
-    scene_text: Optional[str] = None
-    narration_text: Optional[str] = None
-    dialogue_text: Optional[str] = None
-    image_prompt: Optional[str] = None
-    video_prompt: Optional[str] = None
-    duration_seconds: Optional[int] = None
-    trim_start_seconds: Optional[float] = None
-    trim_end_seconds: Optional[float] = None
-    transition_type: Optional[str] = None
-    include_in_video: Optional[bool] = None
+class ImageRegenRequest(BaseModel):
+    provider: str = "nano_banana"
 
-
-# ==================== AUTH HELPERS ====================
 
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)

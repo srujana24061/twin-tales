@@ -93,6 +93,8 @@ class StoryCreate(BaseModel):
     video_style: str = "narrated"
     moral_theme: str = ""
     story_length: str = "medium"
+    image_provider: str = "nano_banana"
+    image_aspect_ratio: str = "16:9"
     character_ids: List[str] = []
     user_topic: str = ""
     user_full_story: str = ""

@@ -319,7 +319,7 @@ export const CharacterBuilderPage = () => {
                   <div className="relative">
                     {char.reference_image ? (
                       <div className="w-14 h-14 rounded-2xl overflow-hidden border-2 border-slate-100 shadow-sm">
-                        <img src={char.reference_image} alt={char.name}
+                        <img src={char.reference_image.startsWith('/api') ? `${BACKEND_URL}${char.reference_image}` : char.reference_image} alt={char.name}
                           className="w-full h-full object-cover" data-testid={`char-photo-${char.id}`} />
                       </div>
                     ) : (

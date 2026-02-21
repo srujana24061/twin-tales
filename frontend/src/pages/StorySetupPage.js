@@ -153,7 +153,7 @@ export const StorySetupPage = () => {
             <div className="bg-white rounded-3xl p-8 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.06)] border border-slate-100">
               <Label className="text-sm font-bold text-[#1E293B] mb-3 block"><Film className="w-4 h-4 inline mr-2 text-[#6366F1]" />Image Model</Label>
               <Select value={form.image_provider} onValueChange={(v) => setForm({ ...form, image_provider: v })}>
-                <SelectTrigger className="h-12 rounded-xl border-2 border-slate-200" data-testid="image-provider-select"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-12 rounded-xl border-2 border-slate-200" data-testid="story-image-provider-select"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {imageProviders.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
                 </SelectContent>

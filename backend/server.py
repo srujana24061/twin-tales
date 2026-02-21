@@ -355,9 +355,18 @@ async def run_story_generation(story_id: str, job_id: str):
         num_scenes = length_map.get(story.get("story_length", "medium"), 5)
 
         char_descriptions = ""
+        char_ref_images = []
         for c in characters:
             traits = ", ".join(c.get("personality_traits", []))
             char_descriptions += f"- {c['name']}: Role={c['role']}, Traits={traits}, Speaking style={c.get('speaking_style', 'normal')}\n"
+            if c.get("reference_image_s3_key"):
+                try:
+                    fresh_url = s3_service.get_signed_url(c["reference_image_s3_key"], expires=3600)
+                    char_ref_images.append(fresh_url)
+                except Exception:
+                    pass
+            elif c.get("reference_image"):
+                char_ref_images.append(c["reference_image"])
 
         if not char_descriptions:
             char_descriptions = "- Create appropriate original characters for the story\n"

@@ -149,6 +149,14 @@ export const SceneEditorPage = () => {
   };
 
   const hasScenes = scenes.length > 0;
+  const aspectRatioClass = (() => {
+    const ratio = story?.image_aspect_ratio || '16:9';
+    if (ratio === '4:3') return 'aspect-[4/3]';
+    if (ratio === '1:1') return 'aspect-square';
+    if (ratio === '3:4') return 'aspect-[3/4]';
+    if (ratio === '9:16') return 'aspect-[9/16]';
+    return 'aspect-[16/9]';
+  })();
 
   if (loading) {
     return (

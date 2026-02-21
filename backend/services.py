@@ -4,8 +4,52 @@ import requests
 import asyncio
 import logging
 import base64
+from elevenlabs import ElevenLabs, VoiceSettings
 
 logger = logging.getLogger(__name__)
+
+# ElevenLabs voice map (voice_style → ElevenLabs voice_id)
+ELEVENLABS_VOICES = {
+    "child": "EXAVITQu4vr4xnSDxMaL",       # Bella - young female
+    "female": "21m00Tcm4TlvDq8ikWAM",       # Rachel - warm female
+    "male": "TxGEqnHWrfWFTfGW9XjX",         # Josh - deep male
+    "storyteller": "pNInz6obpgDQGcFmaJgB",   # Adam - narrator
+}
+
+
+class ElevenLabsService:
+    def __init__(self):
+        self.api_key = os.environ.get('ELEVENLABS_API_KEY')
+        self.client = ElevenLabs(api_key=self.api_key) if self.api_key else None
+
+    async def generate_tts(self, text: str, voice_style: str = "storyteller") -> bytes:
+        if not self.client:
+            raise Exception("ElevenLabs API key not configured")
+
+        voice_id = ELEVENLABS_VOICES.get(voice_style, ELEVENLABS_VOICES["storyteller"])
+
+        def _generate():
+            audio_generator = self.client.text_to_speech.convert(
+                text=text[:5000],
+                voice_id=voice_id,
+                model_id="eleven_multilingual_v2",
+                voice_settings=VoiceSettings(
+                    stability=0.7,
+                    similarity_boost=0.8,
+                    style=0.3,
+                    use_speaker_boost=True
+                )
+            )
+            audio_data = b""
+            for chunk in audio_generator:
+                audio_data += chunk
+            return audio_data
+
+        audio_bytes = await asyncio.to_thread(_generate)
+        if not audio_bytes:
+            raise Exception("ElevenLabs: empty audio response")
+        logger.info(f"ElevenLabs TTS generated: {len(audio_bytes)} bytes, voice={voice_style}")
+        return audio_bytes
 
 
 class S3Service:

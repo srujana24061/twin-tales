@@ -2118,6 +2118,98 @@ async def generate_music_endpoint(story_id: str, user: dict = Depends(get_curren
         "error_message": None, "result_url": None,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "updated_at": datetime.now(timezone.utc).isoformat()
+
+# ==================== S3 PRESIGNED URL ENDPOINTS ====================
+
+@api_router.post("/media/presigned-url")
+async def get_presigned_upload_url(
+    filename: str,
+    content_type: str,
+    user: dict = Depends(get_current_user)
+):
+    """Generate presigned URL for direct upload to S3"""
+    try:
+        # Generate unique file key
+        file_ext = filename.split('.')[-1] if '.' in filename else 'bin'
+        unique_filename = f"{uuid.uuid4()}.{file_ext}"
+        s3_key = f"user-uploads/{user['id']}/{unique_filename}"
+        
+        # Generate presigned URL for PUT upload
+        presigned_url = s3_service.s3_client.generate_presigned_url(
+            'put_object',
+            Params={
+                'Bucket': s3_service.bucket_name,
+                'Key': s3_key,
+                'ContentType': content_type
+            },
+            ExpiresIn=3600
+        )
+        
+        # Generate the final S3 URL
+        s3_url = f"https://{s3_service.bucket_name}.s3.{s3_service.region}.amazonaws.com/{s3_key}"
+        
+        return {
+            "presigned_url": presigned_url,
+            "s3_url": s3_url,
+            "s3_key": s3_key
+        }
+    except Exception as e:
+        logger.error(f"Failed to generate presigned URL: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== FRAME ENDPOINTS ====================
+
+class FrameCreate(BaseModel):
+    scene_id: str
+    text: str
+    order: int = 0
+
+class FrameUpdate(BaseModel):
+    text: Optional[str] = None
+    image_url: Optional[str] = None
+    video_url: Optional[str] = None
+    audio_url: Optional[str] = None
+
+@api_router.post("/frames")
+async def create_frame(data: FrameCreate, user: dict = Depends(get_current_user)):
+    """Create a new frame within a scene"""
+    frame_id = str(uuid.uuid4())
+    frame_doc = {
+        "id": frame_id,
+        "scene_id": data.scene_id,
+        "text": data.text,
+        "order": data.order,
+        "image_url": None,
+        "video_url": None,
+        "audio_url": None,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.frames.insert_one(frame_doc)
+    frame_doc.pop("_id")
+    return frame_doc
+
+@api_router.get("/scenes/{scene_id}/frames")
+async def get_scene_frames(scene_id: str, user: dict = Depends(get_current_user)):
+    """Get all frames for a scene"""
+    frames = await db.frames.find({"scene_id": scene_id}, {"_id": 0}).sort("order", 1).to_list(100)
+    return frames
+
+@api_router.put("/frames/{frame_id}")
+async def update_frame(frame_id: str, data: FrameUpdate, user: dict = Depends(get_current_user)):
+    """Update a frame"""
+    update_data = {k: v for k, v in data.dict().items() if v is not None}
+    if update_data:
+        update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+        await db.frames.update_one({"id": frame_id}, {"$set": update_data})
+    frame = await db.frames.find_one({"id": frame_id}, {"_id": 0})
+    return frame
+
+@api_router.delete("/frames/{frame_id}")
+async def delete_frame(frame_id: str, user: dict = Depends(get_current_user)):
+    """Delete a frame"""
+    await db.frames.delete_one({"id": frame_id})
+    return {"success": True}
+
     }
     await db.generation_jobs.insert_one(job_doc)
     enqueue_task(music_generation_task, story_id, job_id, fallback_coro=run_music_generation)

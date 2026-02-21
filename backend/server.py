@@ -33,9 +33,10 @@ EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
 JWT_SECRET = os.environ.get('JWT_SECRET')
 
 # Initialize external services
-from services import S3Service, MiniMaxService
+from services import S3Service, MiniMaxService, ElevenLabsService
 s3_service = S3Service()
 minimax_service = MiniMaxService()
+elevenlabs_service = ElevenLabsService()
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

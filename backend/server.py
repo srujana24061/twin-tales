@@ -1448,6 +1448,29 @@ async def run_video_generation(story_id: str, job_id: str):
         )
         logger.info(f"Video generation completed for story {story_id}")
 
+        # Send notifications to user and parent
+        try:
+            user = await db.users.find_one({"id": user_id}, {"_id": 0})
+            if user:
+                # Build frontend video URL
+                frontend_url = os.environ.get('REACT_APP_BACKEND_URL', '').replace('/api', '')
+                video_url = f"{frontend_url}/stories/{story_id}/edit"
+                
+                # Get parent email from user settings
+                settings = await db.user_settings.find_one({"user_id": user_id}, {"_id": 0})
+                parent_email = settings.get("parent_email") if settings else None
+                
+                await notify_video_complete(
+                    user_email=user.get("email"),
+                    parent_email=parent_email,
+                    phone_number=user.get("phone"),
+                    story_title=story.get("title", "Your Story"),
+                    video_url=video_url
+                )
+                logger.info(f"Notifications sent for video completion: {story_id}")
+        except Exception as notif_err:
+            logger.error(f"Failed to send notifications: {notif_err}")
+
     except Exception as e:
         logger.error(f"Video generation failed: {e}")
         await db.generation_jobs.update_one(

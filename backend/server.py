@@ -992,17 +992,26 @@ async def run_audio_generation(story_id: str, job_id: str, voice_style: str = "s
                     logger.info(f"Trying MiniMax TTS for scene {i+1}/{total}")
                     audio_bytes = await minimax_service.generate_tts(narration, voice_id)
                 except Exception as mm_err:
-                    logger.warning(f"MiniMax TTS failed: {mm_err}. Falling back to ElevenLabs...")
+                    logger.warning(f"MiniMax TTS failed: {mm_err}. Trying fallbacks...")
 
-                # Fallback to ElevenLabs
+                # Fallback 1: ElevenLabs
                 if not audio_bytes:
                     try:
-                        logger.info(f"Using ElevenLabs TTS for scene {i+1}/{total}")
+                        logger.info(f"Trying ElevenLabs TTS for scene {i+1}/{total}")
                         audio_bytes = await elevenlabs_service.generate_tts(narration, voice_style)
                         provider = "elevenlabs"
                     except Exception as el_err:
-                        logger.error(f"ElevenLabs TTS also failed: {el_err}")
-                        raise Exception(f"Both TTS providers failed. MiniMax: {mm_err}, ElevenLabs: {el_err}")
+                        logger.warning(f"ElevenLabs TTS failed: {el_err}. Using Edge TTS...")
+
+                # Fallback 2: Edge TTS (free, always works)
+                if not audio_bytes:
+                    try:
+                        logger.info(f"Using Edge TTS for scene {i+1}/{total}")
+                        audio_bytes = await edge_tts_service.generate_tts(narration, voice_style)
+                        provider = "edge-tts"
+                    except Exception as edge_err:
+                        logger.error(f"All TTS providers failed for scene {scene['id']}")
+                        continue
 
                 s3_key = f"users/{user_id}/stories/{story_id}/scenes/{scene['scene_number']}/narration.mp3"
                 s3_url = await s3_service.upload(s3_key, audio_bytes, 'audio/mpeg')

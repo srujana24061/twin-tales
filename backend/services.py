@@ -361,22 +361,24 @@ class MiniMaxService:
             first_frame_image: Scene image URL for image-to-video mode
             generation_type: 'text-to-video' or 'image-to-video'
         """
+        # Simplified payload - start with basics
         payload = {
             "model": "video-01",
-            "prompt": prompt[:2000],
+            "prompt": prompt[:2000]
         }
 
-        # Image-to-video: use scene image as first frame for visual consistency
+        # Image-to-video: use scene image as first frame
         if generation_type == "image-to-video" and first_frame_image:
             payload["first_frame_image"] = first_frame_image
             logger.info("Using image-to-video mode with first_frame_image")
 
-        # Character subject references for consistency
-        if subject_references:
-            payload["subject_reference"] = [{"image": url} for url in subject_references[:2]]
-            logger.info(f"Using {len(subject_references[:2])} character subject references")
+        # Note: subject_references might not be supported in current API version
+        # Commenting out for now to fix "invalid params" error
+        # if subject_references:
+        #     payload["subject_reference"] = [{"image": url} for url in subject_references[:2]]
+        #     logger.info(f"Using {len(subject_references[:2])} character subject references")
 
-        logger.info(f"MiniMax video gen: creating task ({generation_type})")
+        logger.info(f"MiniMax video gen: creating task ({generation_type}) with payload keys: {list(payload.keys())}")
         response = await asyncio.to_thread(
             requests.post,
             f"{self.base_url}/video_generation",
@@ -385,6 +387,13 @@ class MiniMaxService:
             timeout=60
         )
         data = response.json()
+        
+        # Better error logging
+        if 'base_resp' in data and data['base_resp'].get('status_code') != 0:
+            error_msg = data['base_resp'].get('status_msg', 'unknown')
+            logger.error(f"MiniMax API error: {data}")
+            raise Exception(f"MiniMax video API error: {error_msg}")
+        
         task_id = data.get("task_id")
         if not task_id:
             raise Exception(f"MiniMax video: no task_id: {data}")

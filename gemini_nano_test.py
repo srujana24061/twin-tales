@@ -10,7 +10,7 @@ import time
 import uuid
 
 class GeminiNanoBananaIntegrationTester:
-    def __init__(self, base_url="https://storycraft-ai-86.preview.emergentagent.com"):
+    def __init__(self, base_url="https://craft-stories-2.preview.emergentagent.com"):
         self.base_url = base_url
         self.token = None
         self.test_results = []

@@ -3,66 +3,67 @@ The user wants to build a full-stack application named **StoryCraft AI**. This p
 
 **PRODUCT REQUIREMENTS:**
 -   **Core Flow:** Users create characters (with photo uploads), define story parameters, and the system generates a story with scene-by-scene text, images, and video.
--   **Generation Engine:** Use LLMs (GPT/Gemini) for text and various models for media.
 -   **Media Generation:**
-    -   **Images:** Generate images for each scene using models like MiniMax or Gemini Nano Banana. A new request is to allow cartoonization of character photos using the Fotor API.
+    -   **Images:** Generate images for each scene. The system now uses Gemini Nano Banana for high-quality image generation and has replaced the Fotor API with a Gemini-based image styler for character photos. A new feature allows users to draw a doodle on a canvas, which is then converted into a scene image via Gemini.
     -   **Video:** Create narrated videos from scenes.
     -   **Audio:** Use TTS services for narration.
--   **Editing:** Provide a scene editor and a video timeline editor.
--   **Architecture:** The initial request specified Django + Celery. The project was built with FastAPI, and has now been migrated from  to **Celery** for background tasks as requested by the user.
--   **Build Order:** Character Builder → Story Text → Scene Editor → Image/PDF Gen → Task System (now migrated to Celery) → Video.
+-   **Editing:** Provide a scene editor and a video timeline editor. Users must be able to edit story or scene text.
+-   **Storage:** All media assets (user uploads, generated images) should be stored in AWS S3, and the application should reference them using direct S3 URLs.
+-   **Architecture:** The application uses a FastAPI backend with Celery for background tasks, and a React frontend.
 
 **User's preferred language**: English
 
 **what currently exists?**
-A full-stack application with a React frontend and a FastAPI backend.
--   **Authentication:** JWT-based user registration and login.
--   **Async Tasks:** The backend has been successfully migrated from a simple  background task system to a robust **Celery + Redis** architecture to handle long-running generation jobs.
--   **Core Features:** Users can create characters (with S3 photo upload), define stories, and generate scenes.
--   **Generation Pipeline:** The system can generate story text (OpenAI), scene images (MiniMax, with Gemini Nano Banana integration in progress), and audio narration (using a 3-tier fallback ending with ).
--   **Storage:** All media is stored in AWS S3.
--   **Fotor API Integration (In Progress):** The backend has been set up with proxy endpoints () to communicate with the Fotor API for image cartoonization. The frontend work to integrate this feature into the character creation flow has begun.
+A full-stack application with a React frontend and FastAPI backend using Celery + Redis for asynchronous tasks. Key features include JWT authentication, character creation, story generation (text and images), and an Ad Studio. The Fotor API for cartoonization has been completely replaced by a more powerful image styling feature using Gemini Nano Banana. A new Doodle-to-Story feature has been added, allowing users to draw an image on a canvas to be used in a story. The system is in the process of being migrated to use direct S3 URLs for all media assets instead of proxying them through the backend.
 
 **Last working item**:
--   **Last item agent was working:** Implementing a new feature to cartoonize a character's uploaded photo using the Fotor API. The user provided a complete React hook () and the agent was in the process of integrating it. This involves creating the frontend UI in  and implementing the backend proxy endpoints in  to handle requests to the Fotor API.
+-   **Last item agent was working:** Migrating the application to use direct S3 URLs for all media assets. The user reported that an API call was still returning the old proxied URL format (). The agent confirmed the issue was due to existing data in the database and was about to create a migration script to update all existing records in the database to use the correct, direct S3 URLs.
 -   **Status:** IN PROGRESS
 -   **Agent Testing Done:** N
--   **Which testing method agent to use?** both
+-   **Which testing method agent to use?** backend testing agent to verify the database migration and then both to do a full E2E check.
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1:** The infinite loading screen during story generation was fixed. The root cause was an event loop conflict with Celery's eager mode, which the agent resolved.
-    -   **Status:** RESOLVED
+-   **Issue 1: API returns proxied media URLs instead of direct S3 URLs (P0)**
+    -   **Description:** The API endpoint for fetching story details () returns  fields with the old  format for previously generated stories. This prevents the frontend from displaying images correctly after recent changes.
+    -   **Attempted fixes:** The agent updated the backend code to save new images with direct S3 URLs and updated the frontend to consume them. However, this did not affect existing database records.
+    -   **Next debug checklist:**
+        1.  Create a Python script or a temporary FastAPI endpoint to iterate through all  and  collections in MongoDB.
+        2.  For each document, find fields containing  URLs (e.g., , ).
+        3.  For each such URL, fetch the corresponding  to get its .
+        4.  Update the document to replace the old proxied URL with the direct .
+        5.  Run the script and verify the database is updated.
+        6.  Test the  endpoint again to confirm it returns the correct S3 URLs.
+    -   **Why fix this issue and what will be achieved with the fix?** This is a critical fix to ensure that all images (new and old) are displayed correctly across the application. It completes the migration to a more efficient and scalable direct SS3 URL architecture.
+    -   **Status:** IN PROGRESS
+    -   **Is recurring issue?** N
+    -   **Should Test frontend/backend/both after fix?** both
+    -   **Blocked on other issue:** None. This is the primary blocker.
 
 **In progress Task List**:
--   **Task 1: Implement Fotor API Cartoonization (P0)**
-    -   **Where to resume:** The user provided a React hook . The agent has created this file. The next steps are:
-        1.  Integrate this hook into  to add UI elements for selecting a cartoon style and displaying the results.
-        2.  Finish implementing the backend proxy endpoints in  (, , ) that securely call the external Fotor API.
-        3.  Ensure the cartoonized image can be selected and saved as the character's primary photo.
-    -   **What will be achieved with this?** Users will be able to apply various cartoon effects to their uploaded character photos, enhancing personalization.
+-   **Task 1: Complete the database migration to use direct S3 URLs (P0)**
+    -   **Where to resume:** The agent needs to write and execute the migration script as outlined in Issue 1 above.
+    -   **What will be achieved with this?** All media URLs in the database will be direct S3 links, making the application more robust and fixing the broken image display for existing stories.
     -   **Status:** IN PROGRESS
     -   **Should Test frontend/backend/both after fix?** both
-    -   **Blocked on something:** Requires Fotor API keys to be added to the  file.
-
--   **Task 2: Complete Gemini Nano Banana Image Generation (P1)**
-    -   **Where to resume:** The agent started this task before the user prioritized Fotor. The  library is installed, and a service function in  was being created. The work needs to be integrated into the  in  and the UI toggle in  needs to be finalized.
-    -   **What will be achieved with this?** Provides a powerful, high-quality image generation option using the Emergent LLM Key, with MiniMax as a fallback.
-    -   **Status:** IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?** both
-    -   **Blocked on something:** Blocked by the higher-priority Fotor task.
+    -   **Blocked on something:** This is the highest priority task.
 
 **Upcoming and Future Tasks**
--   **P1: Implement FFmpeg Video Export:** The backend function  and its API endpoint  are placeholders. This involves writing the Celery task to download all scene media from S3, compose them into a final MP4 (5s per scene, hard cuts), and upload the result back to S3.
--   **P1: Implement Video Editor Functionality:** The  is a static UI. This requires implementing the scene reordering logic on the backend () and wiring up the frontend to allow users to drag-and-drop scenes and edit durations.
--   **P2: Implement Ad Generator Logic:** The  and backend endpoint () are placeholders. This task involves using an LLM to generate marketing copy and triggering an FFmpeg process to render short-form vertical videos for all major platforms (Reels, Shorts, etc.).
--   **P2: Notification System:** Implement a notification system (e.g., email) to inform users when their generation tasks are complete.
--   **P2: Dialogue-based Video:** Implement the advanced video generation feature with character dialogues and lip-syncing.
+-   **P1: Implement FFmpeg Video Export:** The backend function  and its API endpoint  are placeholders. This involves writing the Celery task to download all scene media from S3, compose them into a final MP4, and upload the result back to S3.
+-   **P1: Implement Video Editor Functionality:**  is a static UI. This requires implementing scene reordering on the backend () and wiring up the frontend.
+-   **P2: Implement Ad Generator Logic:**  and the backend endpoint  are placeholders for the video rendering part. This task involves using FFmpeg to render short-form vertical videos for various platforms.
+-   **P2: Notification System:** Implement a system (e.g., email) to notify users when generation tasks are complete.
+-   **P2: Dialogue-based Video:** Implement advanced video generation with character dialogues and lip-syncing.
 
 **Completed work in this session**
--   **Major Refactor: Migrated Async Tasks to Celery:** Replaced the  background task system with a production-grade **Celery + Redis** architecture for improved scalability and reliability. This involved creating , , and refactoring all generation logic from  into Celery tasks.
--   **Bug Fix: Resolved Infinite Story Generation:** Fixed a critical bug where story generation would hang indefinitely. The issue was an event-loop conflict in Celery's eager mode, which was patched in .
--   **Started Fotor API Integration:** Created backend proxy endpoints and started frontend work to allow users to cartoonize character images.
+-   **Feature: Replaced Fotor with Gemini Image Styler:** Removed the Fotor API integration and replaced it with a superior feature using Gemini Nano Banana to apply artistic styles (anime, toy, etc.) to character photos.
+-   **Feature: Doodle-to-Story:** Implemented a new creative workflow where users can draw a doodle on a canvas, which is then converted into a high-quality scene image using Gemini.
+-   **Refactor: Media URLs to S3:** Began the migration to use direct S3 URLs for all media assets, updating the backend logic and frontend components. The database migration is the last remaining step.
+-   **Fix: Ad Studio Aspect Ratios:** Corrected the aspect ratios in the Ad Studio to match platform requirements (e.g., Instagram 1:1, YouTube 16:9).
+-   **Fix: Missing Generate Buttons:** Resolved a UI bug in the  where Generate buttons were not appearing for scenes that had no image.
+-   **Fix: Story Generation Stuck:** Investigated and resolved an issue where stories appeared stuck in a generating state. Implemented a utility endpoint to fix statuses and verified that the Celery generation tasks are working correctly.
+-   **UX/UI:** Enhanced the Ad Studio UI to make scene images more prominent and added UI for a share functionality.
+-   **Performance: Disabled PostHog Analytics:** Commented out the PostHog analytics script in  to resolve an issue where it was making excessive, looping API calls.
 
 **Earlier issues found/mentioned but not fixed**
 -   **Issue 1: S3 Delete Permission Missing**
@@ -72,89 +73,99 @@ A full-stack application with a React frontend and a FastAPI backend.
     -   **Is recurring issue?** N
 
 **Known issue recurrence from previous fork**
--   N/A
+-   **Issue:** Story generation can appear to be stuck for the user.
+-   **Recurrence count:** 2
+-   **Status:** RESOLVED (Agent created a fix and verified the backend process works, but the user may still perceive issues due to frontend polling or caching. This should be monitored).
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Backend:** FastAPI, **Celery** (for async tasks), **Redis** (as Celery broker), MongoDB (for metadata).
--   **Frontend:** React, TailwindCSS, Axios.
--   **Storage:** AWS S3 for all media.
--   **AI Integrations:** OpenAI, MiniMax, Edge TTS, **Gemini Nano Banana (in progress)**, **Fotor API (in progress)**.
+-   **Backend:** FastAPI, **Celery** (for async tasks), **Redis** (as Celery broker), MongoDB.
+-   **Frontend:** React, TailwindCSS, Axios, .
+-   **Storage:** AWS S3 for all media, now using direct URLs.
+-   **AI Integrations:** OpenAI (Text), **Gemini Nano Banana** (Image Generation & Styling), Edge TTS.
 
 **key DB schema**
 -   **Database:** MongoDB
--   **Collections:** , , , , . (No changes this session).
+-   **Collections:** , , , , .
+-   **Schema Change in Progress:** The format of URL fields (, ) is being migrated from a local API path () to a direct S3 URL ().
 
 **changes in tech stack**
--   **Async Task Queue:** Major migration from  background tasks to a full **Celery + Redis** architecture.
+-   **Fotor API was removed.**
+-   **Gemini Nano Banana** usage was expanded from just scene generation to also include character image styling, replacing Fotor entirely.
+-   Added  and  to the frontend for the new Doodle feature.
 
 **All files of reference**
--   : New file for Celery app initialization.
--   : New file containing the definitions for all background generation tasks.
--   : Heavily modified to delegate all long-running tasks to Celery via . Now also includes proxy endpoints for the Fotor API.
--   : Modified to add service logic for Gemini and Fotor.
--   : New file provided by the user to manage Fotor API interaction.
--   : To be modified to integrate the  hook.
--   : To be modified for the Gemini/MiniMax image generation toggle.
+-   : Modified to add new Gemini styler and doodle-to-scene endpoints, and updated all media creation logic to store direct S3 URLs.
+-   : Modified to ensure image generation tasks save direct S3 URLs.
+-   : Deleted.
+-   : New file, replacing the old Fotor hook with logic for the Gemini styler.
+-   : Updated to integrate  instead of the old hook.
+-   : Modified to add generate buttons for scenes without images. All  tags updated to use direct S3 URLs.
+-   : Modified to fix aspect ratios and improve UI.
+-   : New file to implement the doodle-to-story feature.
+-   : Modified to add the route for the new  page.
+-   : Modified to comment out the PostHog analytics script.
 
 **Areas that need refactoring**:
--   The  hook provided by the user is large and contains both API logic and state management. It could be split into a service file for API calls and a leaner hook for component state.
--   The original concern that  is too large has been partially addressed by moving business logic to , but the file still manages all API routing and could be split into smaller routers.
+-    is still growing and manages all API routing. It should be split into smaller, feature-specific routers (e.g., , ) to improve maintainability.
 
 **key api endpoints**
--   (Existing auth, character, story endpoints)
+-    (New - Replaces Fotor endpoints)
 -    (New)
--    (New)
--    (New)
+-    (New - Utility endpoint)
+-    (GET, POST)
+-    (GET)
 
 **Critical Info for New Agent**
--   **PRIORITY SHIFT:** The user has pivoted to implementing the **Fotor cartoonization feature**. This is the new P0 task, superseding the video editor and ad generator for now.
--   **CELERY IS LIVE:** The entire backend now runs on Celery for background tasks. Do not use . All heavy processing must be a Celery task defined in .
--   **FOTOR API PROXY:** The backend must act as a proxy for the Fotor API. Do not call Fotor from the frontend directly. The backend endpoints () will handle authentication and polling.
--   **EMERGENT LLM KEY:** The Gemini Nano Banana integration should use the  via the  library. No user key is needed for this.
+-   **TOP PRIORITY:** You must complete the database migration to fix broken images for existing stories. The application will not function correctly until all proxied  URLs in the database are replaced with direct S3 URLs.
+-   **FOTOR IS GONE:** Do not attempt to use or fix anything related to the Fotor API. It has been fully removed and replaced with a Gemini-based image styler.
+-   **DIRECT S3 URLS:** All new media assets are saved with direct S3 URLs. All frontend components now expect direct S3 URLs. Do not re-introduce the backend media proxy.
 
 **documents and test reports created in this job**
 -   None.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Story generation is stuck on Finalizing forever.
-    -   **Status:** RESOLVED. Agent identified an event-loop conflict with Celery and patched it.
-2.  **User:** Images are not generating. Use Gemini Nano Banana (via Emergent credits) as the default and MiniMax as a fallback.
-    -   **Status:** IN PROGRESS. Agent started the integration.
-3.  **User (Confirmation):** Confirmed Gemini as default, MiniMax as toggleable fallback, keep 16:9 aspect ratio but add options, and add a Regenerate button.
-    -   **Status:** ACKNOWLEDGED.
-4.  **User (NEW PRIORITY):** choose an option to cartoonize your image using fotor apis... followed by a large code snippet for a  React hook.
-    -   **Status:** IN PROGRESS. This is the current highest-priority task. The agent has started implementing it.
+1.  **User:** Ads in Ad Studio have the wrong aspect ratios.
+    -   **Status:** RESOLVED. Agent fixed the configs on both frontend and backend.
+2.  **User:** Add images to the ads.
+    -   **Status:** RESOLVED. Agent improved the Ad Studio UI to make images more prominent.
+3.  **User:** Add an option to share the post/ad.
+    -   **Status:** RESOLVED. Agent added share buttons and a share modal UI.
+4.  **User:** Scene 3 image is not generated, and regenerate buttons are missing.
+    -   **Status:** RESOLVED. Agent fixed the UI logic to show generate buttons even when an image URL is missing.
+5.  **User:** A PostHog API is being called repeatedly.
+    -   **Status:** RESOLVED. Agent disabled PostHog by commenting it out in .
+6.  **User:** Implement a new feature: a 3-question flow to let users draw a doodle on a canvas and convert it to a scene image using Gemini.
+    -   **Status:** RESOLVED. Agent implemented the  and the corresponding backend endpoint.
+7.  **User:** Use direct S3 URLs instead of proxied API URLs for images.
+    -   **Status:** IN PROGRESS. Agent implemented the code changes but needs to run a data migration.
+8.  **User:** An API call is still returning the old proxied URL, not the S3 URL.
+    -   **Status:** IN PROGRESS. This is the current active issue. The agent has identified the cause (old data in DB) and is about to create a migration script.
 
 **Project Health Check:**
 -   **Broken:**
-    -   **Fotor Cartoonization:** Feature is partially implemented and non-functional.
-    -   **Gemini Image Generation:** Partially implemented and non-functional.
-    -   **Video Editor / Ad Generator:** These are still non-functional UI placeholders.
-    -   **Video Export:** The backend FFmpeg logic is not implemented.
+    -   **Image Display for Existing Stories:** Any story or character created before the S3 URL migration will have broken images until the database migration is completed.
 -   **Mocked:** N/A.
 
 **3rd Party Integrations**
 -   **OpenAI:** For text generation (User Key).
--   **MiniMax:** For image/video/music (User Key).
+-   **MiniMax:** Image generation fallback (User Key).
 -   **AWS S3:** For media storage (User Credentials).
--   **ElevenLabs:** TTS fallback (User Key, non-functional).
--   **Edge TTS:** Final TTS fallback (No Key, functional).
--   **Fotor API:** For image cartoonization (User Key required, in progress).
--   **Gemini Nano Banana:** For image generation (via **Emergent LLM Key**, in progress).
--   **Celery/Redis:** New backend task queue infrastructure.
+-   **Edge TTS:** TTS fallback (No Key, functional).
+-   **Gemini Nano Banana:** For image generation and character styling (via **Emergent LLM Key**).
+-   **Celery/Redis:** Backend task queue infrastructure.
 
 **Testing status**
--   **Testing agent used after significant changes:** NO (Not used after the Celery migration).
--   **Troubleshoot agent used after agent stuck in loop:** YES (For debugging the infinite loading issue).
+-   **Testing agent used after significant changes:** YES (Used for testing Gemini integration).
+-   **Troubleshoot agent used after agent stuck in loop:** NO.
 -   **Test files created:** None.
--   **Known regressions:** None functional. The Playwright auth session lost error from the previous fork is a known testing artifact.
+-   **Known regressions:** Display of all previously generated images is currently broken due to the ongoing S3 URL migration.
 
 **Credentials to test flow:**
 -   Register a new user on the frontend.
--   Backend  requires keys for , , , and now  and .
+-   Backend  requires keys for , , and .  keys are no longer needed.
 
 **What agent forgot to execute**
--   The agent correctly followed user priorities. The user's frequent priority shifts meant that the originally planned P0 tasks (Video Editor, FFmpeg Export, Ad Generator) were deferred. They are captured in the Upcoming and Future Tasks section and have not been forgotten, but rather deprioritized by the user.</analysis>
+-   The agent was actively working on the S3 URL migration when the session ended. The immediate next step is to create and run the database migration script. Nothing was forgotten, but the task is incomplete.</analysis>

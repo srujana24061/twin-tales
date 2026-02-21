@@ -239,6 +239,8 @@ const SceneCard = ({
   scene,
   sceneNumber,
   isEditing,
+  isGeneratingImage,
+  isGeneratingVideo,
   onStartEdit,
   onSaveEdit,
   onCancelEdit,

@@ -13,6 +13,7 @@ export const AuthPage = ({ mode: initialMode }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
   const navigate = useNavigate();
@@ -22,7 +23,7 @@ export const AuthPage = ({ mode: initialMode }) => {
     setLoading(true);
     try {
       const endpoint = mode === 'login' ? '/auth/login' : '/auth/register';
-      const payload = mode === 'login' ? { email, password } : { email, password, name };
+      const payload = mode === 'login' ? { email, password } : { email, password, name, phone };
       const { data } = await api.post(endpoint, payload);
       localStorage.setItem('storycraft_token', data.token);
       localStorage.setItem('storycraft_user', JSON.stringify(data.user));

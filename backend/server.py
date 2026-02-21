@@ -312,132 +312,129 @@ async def upload_character_photo(char_id: str, file: UploadFile = File(...), use
     return updated
 
 
-# ==================== FOTOR CARTOONIZATION ROUTES ====================
+# ==================== GEMINI IMAGE STYLE CONVERSION ROUTES ====================
 
-@api_router.get("/fotor/templates")
-async def get_fotor_templates(user: dict = Depends(get_current_user)):
-    """Proxy endpoint to fetch Fotor cartoon templates"""
-    try:
-        templates = await fotor_service.get_templates()
-        return {"templates": templates}
-    except Exception as e:
-        logger.error(f"Fotor templates error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+@api_router.get("/image-styles/templates")
+async def get_image_style_templates(user: dict = Depends(get_current_user)):
+    """Get available image style conversion templates"""
+    templates = [
+        {"id": "cartoon", "name": "Cartoon (Disney Style)", "description": "Colorful 3D animation style"},
+        {"id": "anime", "name": "Anime (Studio Ghibli)", "description": "Japanese anime with vibrant colors"},
+        {"id": "pixar", "name": "Pixar 3D", "description": "Pixar-style 3D character"},
+        {"id": "toy", "name": "Toy Figurine", "description": "3D plastic toy with bright colors"},
+        {"id": "comic", "name": "Comic Book", "description": "Bold outlines and halftone shading"},
+        {"id": "watercolor", "name": "Watercolor Art", "description": "Soft watercolor painting"},
+        {"id": "sketch", "name": "Pencil Sketch", "description": "Detailed pencil drawing"},
+        {"id": "realistic", "name": "Realistic Photo", "description": "Hyper-realistic 8k photograph"}
+    ]
+    return {"templates": templates}
 
 
-@api_router.post("/fotor/generate")
-async def generate_fotor_cartoonization(
+@api_router.post("/image-styles/convert")
+async def convert_image_style(
     request: Request,
     user: dict = Depends(get_current_user)
 ):
-    """Proxy endpoint to start Fotor cartoonization job"""
+    """Convert image to different artistic style using Gemini"""
     try:
         body = await request.json()
         image_url = body.get("image_url")
-        template_id = body.get("template_id", "cartoon_1")
+        style = body.get("style", "cartoon")
         
         if not image_url:
             raise HTTPException(status_code=400, detail="image_url required")
         
-        result = await fotor_service.generate_cartoonization(image_url, template_id)
-        return result
+        # Convert relative URLs to absolute
+        if image_url.startswith("/api/media/"):
+            # For media assets, we need to get the actual URL
+            asset_id = image_url.split("/")[-1]
+            asset = await db.media_assets.find_one({"id": asset_id}, {"_id": 0})
+            if asset and asset.get("s3_key"):
+                image_url = s3_service.get_signed_url(asset["s3_key"], expires=3600)
+            elif asset and asset.get("s3_url"):
+                image_url = asset["s3_url"]
+            elif asset and asset.get("data"):
+                # Base64 data - convert to data URL
+                image_url = f"data:image/{asset.get('format', 'png')};base64,{asset['data']}"
+        
+        logger.info(f"Converting image to {style} style")
+        result = await image_gen_service.convert_image_style(image_url, style)
+        
+        return {
+            "status": "completed",
+            "style": style,
+            "result_base64": result["image_base64"]
+        }
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Fotor generation error: {e}")
+        logger.error(f"Image style conversion error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@api_router.get("/fotor/tasks/{task_id}")
-async def get_fotor_task_status(
-    task_id: str,
-    user: dict = Depends(get_current_user)
-):
-    """Proxy endpoint to poll Fotor task status"""
-    try:
-        result = await fotor_service.get_task_status(task_id)
-        return result
-    except Exception as e:
-        logger.error(f"Fotor task status error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@api_router.post("/characters/{char_id}/save-cartoonized")
-async def save_cartoonized_image(
+@api_router.post("/characters/{char_id}/save-styled-image")
+async def save_styled_character_image(
     char_id: str,
     request: Request,
     user: dict = Depends(get_current_user)
 ):
-    """Save cartoonized image URL and user preference to character"""
+    """Save styled image to character"""
     try:
         body = await request.json()
-        cartoonized_url = body.get("cartoonized_url")
-        use_cartoonized = body.get("use_cartoonized", False)
+        styled_image_b64 = body.get("styled_image_b64")
+        style = body.get("style", "cartoon")
+        use_styled = body.get("use_styled", False)
         
-        if not cartoonized_url:
-            raise HTTPException(status_code=400, detail="cartoonized_url required")
+        if not styled_image_b64:
+            raise HTTPException(status_code=400, detail="styled_image_b64 required")
         
         char = await db.characters.find_one({"id": char_id, "owner_id": user["id"]})
         if not char:
             raise HTTPException(status_code=404, detail="Character not found")
         
-        # Download and store the cartoonized image in S3
+        # Decode base64 and upload to S3
         try:
-            # Download the cartoonized image
-            import requests as http_requests
-            resp = await asyncio.to_thread(http_requests.get, cartoonized_url, timeout=60)
-            if resp.status_code != 200:
-                raise Exception(f"Failed to download cartoonized image: {resp.status_code}")
-            
-            # Upload to S3
-            ext = "png"
-            s3_key = f"users/{user['id']}/characters/{char_id}/cartoon.{ext}"
-            s3_url = await s3_service.upload(s3_key, resp.content, 'image/png')
+            img_bytes = base64.b64decode(styled_image_b64)
+            s3_key = f"users/{user['id']}/characters/{char_id}/styled_{style}.png"
+            s3_url = await s3_service.upload(s3_key, img_bytes, 'image/png')
             
             # Create media asset
             asset_id = str(uuid.uuid4())
             await db.media_assets.insert_one({
                 "id": asset_id,
                 "type": "image",
-                "format": ext,
+                "format": "png",
                 "s3_key": s3_key,
                 "s3_url": s3_url,
                 "character_id": char_id,
                 "owner_id": user["id"],
-                "is_cartoonized": True,
+                "style": style,
+                "is_styled": True,
                 "created_at": datetime.now(timezone.utc).isoformat()
             })
             
-            # Update character with cartoonized image URL
+            # Update character with styled image URL
             await db.characters.update_one(
                 {"id": char_id},
                 {"$set": {
-                    "cartoonized_photo_url": f"/api/media/{asset_id}",
-                    "cartoonized_photo_asset_id": asset_id,
-                    "cartoonized_photo_s3_key": s3_key,
-                    "use_cartoonized": use_cartoonized
+                    "styled_photo_url": f"/api/media/{asset_id}",
+                    "styled_photo_asset_id": asset_id,
+                    "styled_photo_s3_key": s3_key,
+                    "image_style": style,
+                    "use_styled": use_styled
                 }}
             )
             
             updated = await db.characters.find_one({"id": char_id}, {"_id": 0})
             return updated
         except Exception as e:
-            logger.error(f"Failed to save cartoonized image: {e}")
-            # Fallback: just store the external URL
-            await db.characters.update_one(
-                {"id": char_id},
-                {"$set": {
-                    "cartoonized_photo_url": cartoonized_url,
-                    "use_cartoonized": use_cartoonized
-                }}
-            )
-            updated = await db.characters.find_one({"id": char_id}, {"_id": 0})
-            return updated
+            logger.error(f"Failed to save styled image: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to save image: {str(e)}")
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Save cartoonized error: {e}")
+        logger.error(f"Save styled image error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

@@ -625,6 +625,11 @@ class StoryCraftAPITester:
         self.test_media_generation_endpoints()
 
         print("\n" + "="*50)
+        print("📹 PHASE 4 VIDEO EDITOR & AD STUDIO TESTS")
+        print("="*50)
+        self.test_phase4_video_editor_endpoints()
+
+        print("\n" + "="*50)
         print("🧹 CLEANUP")
         print("="*50)
         self.cleanup_test_character()

@@ -384,17 +384,24 @@ async def run_story_generation(story_id: str, job_id: str):
 
         char_descriptions = ""
         char_ref_images = []
+        backend_url = os.environ.get('BACKEND_PUBLIC_URL', '')
         for c in characters:
             traits = ", ".join(c.get("personality_traits", []))
             char_descriptions += f"- {c['name']}: Role={c['role']}, Traits={traits}, Speaking style={c.get('speaking_style', 'normal')}\n"
+            # Build accessible URL for character reference image
             if c.get("reference_image_s3_key"):
                 try:
                     fresh_url = s3_service.get_signed_url(c["reference_image_s3_key"], expires=3600)
                     char_ref_images.append(fresh_url)
                 except Exception:
                     pass
-            elif c.get("reference_image"):
-                char_ref_images.append(c["reference_image"])
+            elif c.get("reference_image_asset_id"):
+                # Fetch base64 from MongoDB and pass inline
+                asset = await db.media_assets.find_one({"id": c["reference_image_asset_id"]}, {"_id": 0})
+                if asset and asset.get("data"):
+                    char_ref_images.append(f"data:image/{asset.get('format','png')};base64,{asset['data']}")
+                elif asset and asset.get("s3_url"):
+                    char_ref_images.append(asset["s3_url"])
 
         if not char_descriptions:
             char_descriptions = "- Create appropriate original characters for the story\n"

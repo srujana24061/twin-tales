@@ -162,7 +162,7 @@ export const StorySetupPage = () => {
             <div className="bg-white rounded-3xl p-8 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.06)] border border-slate-100">
               <Label className="text-sm font-bold text-[#1E293B] mb-3 block"><Film className="w-4 h-4 inline mr-2 text-[#F59E0B]" />Image Aspect Ratio</Label>
               <Select value={form.image_aspect_ratio} onValueChange={(v) => setForm({ ...form, image_aspect_ratio: v })}>
-                <SelectTrigger className="h-12 rounded-xl border-2 border-slate-200" data-testid="aspect-ratio-select"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-12 rounded-xl border-2 border-slate-200" data-testid="story-aspect-ratio-select"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {aspectRatios.map(a => <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>)}
                 </SelectContent>

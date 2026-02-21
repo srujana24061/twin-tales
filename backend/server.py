@@ -1668,20 +1668,100 @@ async def download_media_file(asset_url: str, dest_path: str):
 
 
 async def run_ffmpeg_export(story_id: str, job_id: str):
+    """Compile all scene videos into a single MP4 using imageio (no system ffmpeg required)."""
     tmpdir = tempfile.mkdtemp(prefix="storycraft_export_")
     try:
-        await db.generation_jobs.update_one(
-            {"id": job_id},
-            {"$set": {"status": "running", "progress": 5, "updated_at": datetime.now(timezone.utc).isoformat()}}
-        )
+        await db.generation_jobs.update_one({"id": job_id}, {"$set": {"status": "running", "progress": 5}})
 
         story = await db.stories.find_one({"id": story_id}, {"_id": 0})
-        scenes_raw = await db.scenes.find({"story_id": story_id}, {"_id": 0}).sort("scene_number", 1).to_list(100)
-        scenes = [s for s in scenes_raw if s.get("include_in_video", True)]
+        if not story:
+            raise Exception("Story not found")
         user_id = story.get("owner_id", "unknown")
 
+        scenes = await db.scenes.find(
+            {"story_id": story_id}, {"_id": 0}
+        ).sort("scene_number", 1).to_list(100)
+        scenes = [s for s in scenes if s.get("include_in_video", True) and (s.get("video_url") or s.get("image_url"))]
+
         if not scenes:
-            raise Exception("No scenes to export")
+            raise Exception("No scenes with video or image content to export")
+
+        TARGET_SIZE = (1280, 720)
+        all_frames = []
+
+        for i, scene in enumerate(scenes):
+            progress = 10 + int((i / len(scenes)) * 70)
+            await db.generation_jobs.update_one({"id": job_id}, {"$set": {"progress": progress, "message": f"Processing scene {i+1}/{len(scenes)}..."}})
+
+            duration = max(1, int(scene.get("duration_seconds") or 5))
+            scene_frames = []
+
+            # Try video first
+            if scene.get("video_url"):
+                try:
+                    resp = await asyncio.to_thread(requests.get, scene["video_url"], timeout=60)
+                    if resp.status_code == 200:
+                        vid_path = os.path.join(tmpdir, f"scene_{i}.mp4")
+                        with open(vid_path, "wb") as f:
+                            f.write(resp.content)
+                        reader = imageio.get_reader(vid_path, format='mp4')
+                        for frame in reader:
+                            img = Image.fromarray(frame).convert("RGB").resize(TARGET_SIZE)
+                            scene_frames.append(np.array(img))
+                        reader.close()
+                except Exception as e:
+                    logger.warning(f"Scene {i} video read failed: {e}")
+
+            # Fall back to image (shown as static frames = duration seconds)
+            if not scene_frames and scene.get("image_url"):
+                try:
+                    resp = await asyncio.to_thread(requests.get, scene["image_url"], timeout=30)
+                    if resp.status_code == 200:
+                        img = Image.open(BytesIO(resp.content)).convert("RGB").resize(TARGET_SIZE)
+                        frame = np.array(img)
+                        scene_frames = [frame] * duration  # 1fps, hold for duration seconds
+                except Exception as e:
+                    logger.warning(f"Scene {i} image read failed: {e}")
+
+            all_frames.extend(scene_frames)
+
+        if not all_frames:
+            raise Exception("No frames collected from scenes")
+
+        await db.generation_jobs.update_one({"id": job_id}, {"$set": {"progress": 85, "message": "Compiling final video..."}})
+
+        # Write compiled video using imageio
+        export_path = os.path.join(tmpdir, "export.mp4")
+        with imageio.get_writer(export_path, format='mp4', fps=1, codec='libx264',
+                                output_params=['-preset', 'ultrafast', '-pix_fmt', 'yuv420p']) as writer:
+            for frame in all_frames:
+                writer.append_data(frame)
+
+        with open(export_path, 'rb') as f:
+            video_bytes = f.read()
+
+        asset_id = str(uuid.uuid4())
+        s3_key = f"users/{user_id}/stories/{story_id}/exports/final_{asset_id[:8]}.mp4"
+        s3_url = await s3_service.upload(s3_key, video_bytes, 'video/mp4')
+
+        await db.media_assets.insert_one({
+            "id": asset_id, "type": "video", "format": "mp4",
+            "s3_key": s3_key, "s3_url": s3_url, "story_id": story_id,
+            "is_export": True, "created_at": datetime.now(timezone.utc).isoformat()
+        })
+
+        await db.generation_jobs.update_one({"id": job_id}, {"$set": {
+            "status": "completed", "progress": 100,
+            "result_url": s3_url,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }})
+        logger.info(f"Story video export complete: {story_id} → {len(all_frames)} frames")
+
+    except Exception as e:
+        logger.error(f"Story export failed: {e}")
+        await db.generation_jobs.update_one({"id": job_id}, {"$set": {"status": "failed", "error_message": str(e)}})
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
 
         scene_videos = []
 

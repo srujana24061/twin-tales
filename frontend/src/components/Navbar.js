@@ -62,10 +62,13 @@ export const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <Link to="/dashboard" className="flex items-center gap-2" data-testid="nav-logo">
-            <img
+            <motion.img
               src="/twinnee-logo.png"
               alt="TWINNEE"
               className="w-10 h-10 object-contain"
+              initial={{ rotate: -180, scale: 0 }}
+              animate={{ rotate: 0, scale: 1 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 20, delay: 0.1 }}
             />
             <span className="font-heading font-extrabold text-xl tracking-tight" 
               style={{ 

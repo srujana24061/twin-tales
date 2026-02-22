@@ -169,9 +169,9 @@ export const CollaborationPage = () => {
         >
           <div className="space-y-4">
             {session.story.content.map((item, idx) => {
-              const isTwintee = item.contributor === 'twintee';
+              const isTwinnee = item.contributor === 'twintee';
               const isCurrentUser = item.contributor === currentUserId;
-              const contributor = isTwintee 
+              const contributor = isTwinnee 
                 ? 'TWINNEE' 
                 : isCurrentUser 
                   ? 'You' 
@@ -188,13 +188,13 @@ export const CollaborationPage = () => {
                   {/* Avatar */}
                   <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
                     style={{ 
-                      background: isTwintee 
+                      background: isTwinnee 
                         ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
                         : isCurrentUser
                           ? '#10B98120'
                           : '#F59E0B20'
                     }}>
-                    {isTwintee ? (
+                    {isTwinnee ? (
                       <Brain className="w-5 h-5 text-white" />
                     ) : (
                       <User className="w-5 h-5" style={{ color: isCurrentUser ? '#10B981' : '#F59E0B' }} />
@@ -206,7 +206,7 @@ export const CollaborationPage = () => {
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-xs font-bold"
                         style={{ 
-                          color: isTwintee ? '#667eea' : isCurrentUser ? '#10B981' : '#F59E0B'
+                          color: isTwinnee ? '#667eea' : isCurrentUser ? '#10B981' : '#F59E0B'
                         }}>
                         {contributor}
                       </span>
@@ -219,7 +219,7 @@ export const CollaborationPage = () => {
                     </div>
                     <p className="text-sm leading-relaxed p-3 rounded-2xl rounded-tl-sm"
                       style={{ 
-                        background: isTwintee 
+                        background: isTwinnee 
                           ? '#667eea15' 
                           : 'var(--bg-tertiary)',
                         color: 'var(--text-primary)'

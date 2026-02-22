@@ -2426,7 +2426,7 @@ async def shutdown_db_client():
     client.close()
 
 
-# ==================== TWINTEE AI CHATBOT ====================
+# ==================== TWINNEE AI CHATBOT ====================
 
 from twintee import TwinteeChat, get_user_behavior_context, update_behavior_scores
 
@@ -2445,7 +2445,7 @@ class ActivityLog(BaseModel):
 
 @api_router.post("/chat/message")
 async def send_chat_message(body: ChatMessage, user: dict = Depends(get_current_user)):
-    """Send message to TWINTEE chatbot"""
+    """Send message to TWINNEE chatbot"""
     try:
         user_id = user["id"]
         

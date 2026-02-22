@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import api from '@/lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export function TwinteeChatWidget() {
+export function TwinneeChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BookOpen, Users, PlusCircle, Clock, LayoutDashboard, LogOut, Menu, X, Bell } from 'lucide-react';
+import { Brain, Users, PlusCircle, Clock, LayoutDashboard, LogOut, Menu, X, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { SessionTimer } from '@/components/wellbeing/SessionTimer';
@@ -62,9 +62,17 @@ export const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <Link to="/dashboard" className="flex items-center gap-2" data-testid="nav-logo">
-            <BookOpen className="w-7 h-7" style={{ color: 'hsl(var(--primary))' }} />
-            <span className="font-heading font-extrabold text-xl tracking-tight" style={{ color: 'hsl(var(--foreground))' }}>
-              Story<span style={{ color: 'hsl(var(--primary))' }}>Craft</span>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+              <Brain className="w-6 h-6 text-white" />
+            </div>
+            <span className="font-heading font-extrabold text-xl tracking-tight" 
+              style={{ 
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent'
+              }}>
+              TWINTEE
             </span>
           </Link>
 

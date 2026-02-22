@@ -488,6 +488,20 @@ export const VideoEditorPage = () => {
             <span className="text-xs font-semibold" style={{ color: 'var(--text-tertiary)' }}>TIMELINE</span>
             <div className="flex-1" />
 
+            {/* Toggle Media Library */}
+            <button
+              onClick={() => setShowMediaLibrary(!showMediaLibrary)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
+              style={{ 
+                background: showMediaLibrary ? 'var(--primary-light)' : 'var(--bg-tertiary)', 
+                color: showMediaLibrary ? 'var(--primary)' : 'var(--text-secondary)',
+                border: `1px solid ${showMediaLibrary ? 'var(--primary)' : 'var(--glass-border)'}`
+              }}
+              data-testid="toggle-media-library-btn">
+              {showMediaLibrary ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
+              Media Library
+            </button>
+
             {/* Add audio file */}
             <button
               onClick={() => audioInputRef.current?.click()}
@@ -580,22 +594,7 @@ export const VideoEditorPage = () => {
                   <div className="relative flex-1"
                     style={{ background: trackIdx % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-tertiary)' }}
                     onDragOver={(e) => e.preventDefault()}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      const clipId = e.dataTransfer.getData('text/clip-id');
-                      const fromTrack = parseInt(e.dataTransfer.getData('text/track-idx'));
-                      if (!clipId || isNaN(fromTrack)) return;
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      const newStart = Math.max(0, (e.clientX - rect.left) / pxPerSec);
-                      setVideoTracks(prev => {
-                        const next = prev.map(t => [...t]);
-                        const clip = next[fromTrack].find(c => c.id === clipId);
-                        if (!clip) return prev;
-                        next[fromTrack] = next[fromTrack].filter(c => c.id !== clipId);
-                        next[trackIdx] = [...next[trackIdx], { ...clip, startTime: newStart }];
-                        return next;
-                      });
-                    }}>
+                    onDrop={(e) => handleTimelineDrop(e, trackIdx)}>
                     {track.map(clip => (
                       <motion.div key={clip.id}
                         className="absolute top-1 bottom-1 rounded-xl overflow-hidden cursor-grab active:cursor-grabbing flex items-center"
@@ -717,6 +716,13 @@ export const VideoEditorPage = () => {
             </div>
           </div>
         </div>
+
+        {/* ── RIGHT PANEL: MEDIA LIBRARY ── */}
+        {showMediaLibrary && (
+          <div className="w-72 flex-shrink-0 border-l" style={{ borderColor: 'var(--glass-border)' }}>
+            <MediaLibrary onMediaSelect={handleMediaFromLibrary} />
+          </div>
+        )}
       </div>
 
       {/* Clip editor dialog */}

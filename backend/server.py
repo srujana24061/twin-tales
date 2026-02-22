@@ -2883,24 +2883,3 @@ async def get_collaboration_report(session_id: str, user: dict = Depends(get_cur
     except Exception as e:
         logger.error(f"Get report error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
-
-            "requires_attention": len(parent_risks) > 0
-        }
-    
-    except Exception as e:
-        logger.error(f"Risk check error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-
-        return scores_doc
-    
-    except Exception as e:
-        logger.error(f"Get scores error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-
-

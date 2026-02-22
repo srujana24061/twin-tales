@@ -59,9 +59,9 @@ export const AuthPage = ({ mode: initialMode }) => {
       >
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2 mb-6" data-testid="auth-logo">
-            <BookOpen className="w-8 h-8 text-[#6366F1]" />
+            <img src="/twinnee-logo.png" alt="TWINNEE" className="w-9 h-9 object-contain" />
             <span className="font-heading font-extrabold text-2xl">
-              Story<span className="text-[#6366F1]">Craft</span>
+              Twinn<span className="text-[#6366F1]">ee</span>
             </span>
           </Link>
           <h1 className="font-heading font-extrabold text-2xl sm:text-3xl tracking-tight" data-testid="auth-title">

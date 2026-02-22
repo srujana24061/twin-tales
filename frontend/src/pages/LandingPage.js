@@ -455,9 +455,9 @@ export const LandingPage = () => {
               style={{ background: 'linear-gradient(135deg, #8B5CF6 0%, #A855F7 100%)' }}>
               <Shield className="w-10 h-10 text-white" />
             </div>
-            <h2 className="font-heading font-black text-3xl sm:text-4xl mb-6"
+            <h2 className="font-heading font-black text-4xl sm:text-5xl mb-6"
               style={{ color: '#1a1a2e' }}>
-              Safe. Private. <span style={{ color: '#8B5CF6' }}>Responsible.</span>
+              Playful. Private. <span style={{ color: '#8B5CF6' }}>Responsible.</span>
             </h2>
             <div className="space-y-3 text-base max-w-xl mx-auto" style={{ color: '#64748B' }}>
               {[

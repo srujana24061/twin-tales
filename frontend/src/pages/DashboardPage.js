@@ -287,7 +287,7 @@ export const DashboardPage = () => {
           )}
         </motion.div>
       </div>
-      <TwinteeChatWidget />
+      <TwinneeChatWidget />
     </>
   );
 };

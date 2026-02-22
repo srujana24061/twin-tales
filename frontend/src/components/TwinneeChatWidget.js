@@ -169,8 +169,15 @@ export function TwinneeChatWidget() {
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 borderColor: 'var(--glass-border)'
               }}>
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-white" />
+              <div className="flex items-center gap-3">
+                <motion.img
+                  src="/twinnee-logo.png"
+                  alt="TWINNEE"
+                  style={{ width: '36px', height: '36px', objectFit: 'contain' }}
+                  initial={{ rotate: -180, scale: 0 }}
+                  animate={{ rotate: 0, scale: 1 }}
+                  transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+                />
                 <div>
                   <h3 className="font-bold text-white text-sm">TWINNEE</h3>
                   <p className="text-xs text-white/80">Your AI Companion</p>

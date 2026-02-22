@@ -2556,7 +2556,15 @@ async def get_behavior_scores(user: dict = Depends(get_current_user)):
                 "last_updated": datetime.now(timezone.utc).isoformat()
             }
         
-
+        return {
+            "scores": scores_doc.get("scores", {}),
+            "screen_time_week": scores_doc.get("screen_time_week", 0),
+            "last_updated": scores_doc.get("last_updated", datetime.now(timezone.utc)).isoformat() if scores_doc.get("last_updated") else datetime.now(timezone.utc).isoformat()
+        }
+    
+    except Exception as e:
+        logger.error(f"Behavior scores error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @api_router.get("/twinnee/story-suggestions")

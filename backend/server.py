@@ -2461,9 +2461,7 @@ async def send_chat_message(body: ChatMessage, user: dict = Depends(get_current_
         bot_response = await twinnee_chat.get_response(
             body.message,
             conversation_history=list(reversed(conversations)),
-            user_context=context,
-            db=db,
-            user_id=user_id
+            user_context=context
         )
         
         # Save conversation

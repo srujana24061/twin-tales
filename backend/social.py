@@ -199,12 +199,17 @@ class CollaborativeSession:
             {"$push": {"story.content": {
                 "contributor": "twinnee",
                 "text": twinnee_intro,
-                "timestamp": datetime.now(timezone.utc),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "turn": 0
             }}}
         )
         
-        return session_doc
+        # Return a clean copy without _id
+        result = {k: v for k, v in session_doc.items() if k != "_id"}
+        result["started_at"] = result["started_at"].isoformat()
+        result["last_activity"] = result["last_activity"].isoformat()
+        
+        return result
     
     @staticmethod
     async def take_turn(db, session_id: str, user_id: str, contribution: str) -> Dict:

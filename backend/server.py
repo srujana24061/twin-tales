@@ -2458,7 +2458,7 @@ async def send_chat_message(body: ChatMessage, user: dict = Depends(get_current_
         context = await get_user_behavior_context(db, user_id)
         
         # Get chatbot response
-        bot_response = await twintee_chat.get_response(
+        bot_response = await twinnee_chat.get_response(
             body.message,
             conversation_history=list(reversed(conversations)),
             user_context=context,

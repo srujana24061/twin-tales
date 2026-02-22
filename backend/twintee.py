@@ -192,6 +192,239 @@ class BehaviorScorer:
         return round(overall, 1)
 
 
+
+class BehavioralRiskDetector:
+    """Detect behavioral patterns and risks"""
+    
+    @staticmethod
+    def detect_risks(user_context: Dict, activities: List[Dict]) -> List[Dict]:
+        """
+        Detect behavioral risks and return triggers
+        
+        Returns list of risk triggers with actions
+        """
+        risks = []
+        screen_time = user_context.get('screen_time_today', 0)
+        scores = user_context.get('scores', {})
+        
+        # Screen time > limit (120 minutes = 2 hours)
+        if screen_time > 120:
+            risks.append({
+                'type': 'screen_time_high',
+                'severity': 'medium',
+                'action': 'soft_reminder',
+                'message': "Looks like you've been on screen for a while 😄 Want to try a quick fun challenge or story?"
+            })
+        
+        # Repeated missed tasks
+        missed_tasks = [a for a in activities if a.get('activity_type') == 'task' and not a.get('completed')]
+        if len(missed_tasks) >= 3:
+            risks.append({
+                'type': 'missed_tasks',
+                'severity': 'medium',
+                'action': 'motivation_prompt',
+                'message': "Hey, should we finish your pending mission together? 🎯"
+            })
+        
+        # Negative mood streak (emotional score < 50)
+        if scores.get('emotional', 75) < 50:
+            risks.append({
+                'type': 'negative_mood',
+                'severity': 'high',
+                'action': 'emotional_support',
+                'message': "I'm here if you want to talk about anything. Want to create a fun story together? 🌟"
+            })
+        
+        # Low activity (physical score < 40)
+        if scores.get('physical', 50) < 40:
+            risks.append({
+                'type': 'low_activity',
+                'severity': 'low',
+                'action': 'suggest_movement',
+                'message': "How about a quick movement break? Maybe a fun dance or stretch? 💃"
+            })
+        
+        # Sudden behavior change (discipline or emotional drop > 20 points)
+        # This would need historical comparison - simplified for now
+        if scores.get('discipline', 100) < 40 or scores.get('emotional', 75) < 40:
+            risks.append({
+                'type': 'behavior_change',
+                'severity': 'high',
+                'action': 'flag_for_parent',
+                'message': None,  # Silent flag
+                'parent_alert': True
+            })
+        
+        return risks
+    
+    @staticmethod
+    def should_trigger_nudge(risks: List[Dict], last_nudge_time: datetime = None) -> Dict:
+        """
+        Determine if a nudge should be triggered
+        Respects cooldown period to avoid annoyance
+        """
+        if not risks:
+            return None
+        
+        # Don't nudge more than once per hour
+        if last_nudge_time:
+            time_since_last = datetime.now(timezone.utc) - last_nudge_time
+            if time_since_last.total_seconds() < 3600:  # 1 hour
+                return None
+        
+        # Prioritize by severity
+        high_severity = [r for r in risks if r.get('severity') == 'high']
+        if high_severity:
+            return high_severity[0]
+        
+        medium_severity = [r for r in risks if r.get('severity') == 'medium']
+        if medium_severity:
+            return medium_severity[0]
+        
+        return risks[0] if risks else None
+
+
+class PatternLearner:
+    """Learn and track user patterns over time"""
+    
+    @staticmethod
+    async def track_pattern(db, user_id: str, pattern_type: str, value: any):
+        """
+        Track a pattern data point
+        
+        Pattern types: peak_time, content_preference, attention_span, mood
+        """
+        pattern_doc = {
+            "id": str(uuid4()),
+            "user_id": user_id,
+            "pattern_type": pattern_type,
+            "value": value,
+            "timestamp": datetime.now(timezone.utc)
+        }
+        await db.user_patterns.insert_one(pattern_doc)
+    
+    @staticmethod
+    async def get_patterns(db, user_id: str, days: int = 7) -> Dict:
+        """
+        Get learned patterns for user
+        """
+        since = datetime.now(timezone.utc) - timedelta(days=days)
+        
+        patterns = await db.user_patterns.find(
+            {"user_id": user_id, "timestamp": {"$gte": since}}
+        ).to_list(1000)
+        
+        result = {
+            'peak_activity_times': [],
+            'favorite_content': [],
+            'average_attention_span': 0,
+            'mood_cycles': []
+        }
+        
+        # Analyze patterns
+        peak_times = [p for p in patterns if p.get('pattern_type') == 'peak_time']
+        if peak_times:
+            # Group by hour of day
+            hour_counts = {}
+            for p in peak_times:
+                hour = p['timestamp'].hour
+                hour_counts[hour] = hour_counts.get(hour, 0) + 1
+            result['peak_activity_times'] = sorted(hour_counts.items(), key=lambda x: x[1], reverse=True)[:3]
+        
+        # Favorite content
+        content_prefs = [p for p in patterns if p.get('pattern_type') == 'content_preference']
+        if content_prefs:
+            content_counts = {}
+            for p in content_prefs:
+                val = p['value']
+                content_counts[val] = content_counts.get(val, 0) + 1
+            result['favorite_content'] = sorted(content_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+        
+        # Attention span
+        attention = [p for p in patterns if p.get('pattern_type') == 'attention_span']
+        if attention:
+            result['average_attention_span'] = sum(p['value'] for p in attention) / len(attention)
+        
+        # Mood cycles
+        moods = [p for p in patterns if p.get('pattern_type') == 'mood']
+        result['mood_cycles'] = moods[-10:]  # Last 10 mood entries
+        
+        return result
+
+
+class StoryPersonalizer:
+    """Personalize story suggestions based on behavior and patterns"""
+    
+    @staticmethod
+    def get_story_suggestions(scores: Dict, patterns: Dict, user_interests: List[str] = None) -> List[Dict]:
+        """
+        Generate personalized story suggestions
+        """
+        suggestions = []
+        
+        creativity = scores.get('creativity', 50)
+        discipline = scores.get('discipline', 100)
+        emotional = scores.get('emotional', 75)
+        
+        # Low creativity → guided story
+        if creativity < 40:
+            suggestions.append({
+                'type': 'guided',
+                'title': 'The Magical Adventure',
+                'description': 'Follow the hero through exciting choices!',
+                'reason': 'This story will spark your creativity! 🎨'
+            })
+        
+        # High creativity → open-ended story
+        if creativity >= 70:
+            suggestions.append({
+                'type': 'open_ended',
+                'title': 'Create Your Own World',
+                'description': 'Build anything you can imagine!',
+                'reason': "You're so creative! Let your imagination run wild! ✨"
+            })
+        
+        # Low discipline → moral story
+        if discipline < 40:
+            suggestions.append({
+                'type': 'moral',
+                'title': 'The Persistent Hero',
+                'description': 'Learn about never giving up!',
+                'reason': 'A story about finishing what you start 🎯'
+            })
+        
+        # Low emotional → comforting story
+        if emotional < 50:
+            suggestions.append({
+                'type': 'comforting',
+                'title': 'The Friendly Dragon',
+                'description': 'A heartwarming tale of friendship',
+                'reason': 'This story will make you smile! 😊'
+            })
+        
+        # Based on interests
+        if user_interests:
+            for interest in user_interests[:2]:
+                suggestions.append({
+                    'type': 'interest_based',
+                    'title': f'Adventure with {interest.title()}',
+                    'description': f'A story about your favorite: {interest}!',
+                    'reason': f'You love {interest}! 💖'
+                })
+        
+        # Based on favorite content patterns
+        if patterns.get('favorite_content'):
+            top_content = patterns['favorite_content'][0][0]
+            suggestions.append({
+                'type': 'pattern_based',
+                'title': f'More {top_content}',
+                'description': f'Similar to stories you enjoyed before',
+                'reason': 'Based on what you like! 🌟'
+            })
+        
+        return suggestions[:5]  # Return top 5
+
+
 class TwinteeChat:
     """TWINTEE Chatbot with OpenAI"""
     

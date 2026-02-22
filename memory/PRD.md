@@ -3,6 +3,10 @@
 ## Product Overview
 TWINNEE is an AI-powered "digital twin" companion for children, designed to promote healthy habits, creativity, and emotional balance through conversational interaction.
 
+## Branding
+- **Logo**: Dolphin mascot image (`/twinnee-logo.png` in public folder)
+- Used in: Navbar (top left), LandingPage header + hero section, Dashboard greeting
+
 ## Core Features
 
 ### 1. AI Digital Twin (TWINNEE)

@@ -23,6 +23,7 @@ export const SceneGridEditor = () => {
   const [generatingVideos, setGeneratingVideos] = useState({});
   const [exportingStory, setExportingStory] = useState(false);
   const [exportedVideoUrl, setExportedVideoUrl] = useState(null);
+  const [doodleModalScene, setDoodleModalScene] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -41,6 +42,11 @@ export const SceneGridEditor = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDoodleImageGenerated = async (imageUrl) => {
+    // Reload scenes to get the updated image
+    await loadData();
   };
 
   const updateSceneText = async (sceneId, newText) => {

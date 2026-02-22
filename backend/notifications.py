@@ -61,7 +61,7 @@ Your animated story has been generated! 🎬
 
 View it here: {video_url}
 
-✨ StoryCraft AI
+✨ Twinnee AI
 """
     
     try:

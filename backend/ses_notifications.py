@@ -72,7 +72,7 @@ async def send_video_complete_email_ses(
                 </p>
             </div>
             <div class="footer">
-                <p>StoryCraft AI - Where imagination comes to life 🎨</p>
+                <p>Twinnee AI - Where imagination comes to life 🎨</p>
                 <p>This is an automated notification email</p>
             </div>
         </div>

@@ -1,4 +1,4 @@
-# StoryCraft AI - PRD
+# Twinnee AI - PRD
 
 ## Architecture
 Frontend: React 19 + TailwindCSS + Shadcn + Framer Motion | Backend: FastAPI + MongoDB + imageio-ffmpeg

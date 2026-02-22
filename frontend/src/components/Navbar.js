@@ -12,7 +12,7 @@ export const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
-  const user = JSON.parse(localStorage.getItem('storycraft_user') || '{}');
+  const user = JSON.parse(localStorage.getItem('Twinnee_user') || '{}');
 
   useEffect(() => {
     const loadNotifications = async () => {

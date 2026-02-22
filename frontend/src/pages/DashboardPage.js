@@ -144,6 +144,7 @@ export const DashboardPage = () => {
                 </p>
               )}
             </div>
+          </div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={() => setShowParentAuth(true)}
                 data-testid="parent-view-btn"

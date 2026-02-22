@@ -491,17 +491,16 @@ const SceneCard = ({
                 {isGeneratingImage ? (
                   <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Working...</>
                 ) : (
-                  <><Sparkles className="w-3 h-3 mr-1" />{scene.image_url ? 'Regen Image' : 'Gen Image'}</>
+                  <><Sparkles className="w-3 h-3 mr-1" />{scene.image_url ? 'Regen' : 'Gen Image'}</>
                 )}
               </Button>
-              {scene.image_url && !isGeneratingImage && (
-                <Button size="sm" variant="outline" onClick={onGenerateImage}
-                  className="rounded-lg" title="Regenerate"
-                  style={{ borderColor: 'var(--glass-border)', color: 'var(--primary)' }}
-                  data-testid={`regen-image-btn-${scene.id}`}>
-                  <RefreshCw className="w-3 h-3" />
-                </Button>
-              )}
+              <Button size="sm" variant="outline" onClick={onOpenDoodle}
+                disabled={isGeneratingImage} className="rounded-lg text-xs"
+                style={{ borderColor: 'var(--glass-border)', color: '#8B5CF6' }}
+                title="Draw a doodle to convert to image"
+                data-testid={`doodle-btn-${scene.id}`}>
+                <Pencil className="w-3 h-3 mr-1" /> Draw
+              </Button>
               <Button size="sm" variant="outline" onClick={() => imageInputRef.current?.click()}
                 disabled={isGeneratingImage} className="rounded-lg" title="Upload image"
                 style={{ borderColor: 'var(--glass-border)' }}>

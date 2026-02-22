@@ -2559,11 +2559,11 @@ async def get_behavior_scores(user: dict = Depends(get_current_user)):
 
 
 
-@api_router.get("/twintee/story-suggestions")
+@api_router.get("/twinnee/story-suggestions")
 async def get_story_suggestions(user: dict = Depends(get_current_user)):
     """Get personalized story suggestions based on behavior"""
     try:
-        from twintee import StoryPersonalizer, PatternLearner
+        from twinnee import StoryPersonalizer, PatternLearner
         
         # Get user scores
         scores_doc = await db.user_scores.find_one({"user_id": user["id"]}, {"_id": 0})
@@ -2586,11 +2586,11 @@ async def get_story_suggestions(user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@api_router.get("/twintee/patterns")
+@api_router.get("/twinnee/patterns")
 async def get_user_patterns(user: dict = Depends(get_current_user)):
     """Get learned patterns for user (for parent dashboard)"""
     try:
-        from twintee import PatternLearner
+        from twinnee import PatternLearner
         
         patterns = await PatternLearner.get_patterns(db, user["id"], days=30)
         
@@ -2608,11 +2608,11 @@ async def get_user_patterns(user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@api_router.get("/twintee/risk-check")
+@api_router.get("/twinnee/risk-check")
 async def check_behavioral_risks(user: dict = Depends(get_current_user)):
     """Check for behavioral risks (for parent dashboard)"""
     try:
-        from twintee import BehavioralRiskDetector, get_user_behavior_context
+        from twinnee import BehavioralRiskDetector, get_user_behavior_context
         
         # Get context
         context = await get_user_behavior_context(db, user["id"])

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Search, Users, UserPlus, Check, X, Loader2, BookOpen, Send } from 'lucide-react';
+import { Search, Users, UserPlus, Check, X, Loader2, BookOpen, Send, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
@@ -13,6 +13,7 @@ export const FriendsPage = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [friends, setFriends] = useState([]);
   const [pendingRequests, setPendingRequests] = useState({ incoming: [], outgoing: [] });
+  const [activeSessions, setActiveSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
 
@@ -23,13 +24,15 @@ export const FriendsPage = () => {
   const loadFriendsData = async () => {
     try {
       setLoading(true);
-      const [friendsRes, requestsRes] = await Promise.all([
+      const [friendsRes, requestsRes, sessionsRes] = await Promise.all([
         api.get('/friends/list'),
-        api.get('/friends/requests')
+        api.get('/friends/requests'),
+        api.get('/collab/my-sessions')
       ]);
       
       setFriends(friendsRes.data.friends || []);
       setPendingRequests(requestsRes.data);
+      setActiveSessions(sessionsRes.data.sessions?.filter(s => s.status === 'active') || []);
     } catch (err) {
       toast.error('Failed to load friends data');
     } finally {
@@ -89,6 +92,10 @@ export const FriendsPage = () => {
     }
   };
 
+  const continueCollaboration = (sessionId) => {
+    navigate(`/collab/chat/${sessionId}`);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -115,6 +122,51 @@ export const FriendsPage = () => {
           </p>
         </motion.div>
 
+        {/* Active Collaborations */}
+        {activeSessions.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="glass-panel rounded-3xl p-6 mb-6"
+            style={{ background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(168, 85, 247, 0.05) 100%)' }}
+          >
+            <h2 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+              <MessageCircle className="w-5 h-5" style={{ color: 'var(--primary)' }} />
+              Active Story Collaborations
+            </h2>
+            <div className="grid sm:grid-cols-2 gap-4">
+              {activeSessions.map(session => (
+                <div key={session.id} className="p-4 rounded-2xl bg-white border"
+                  style={{ borderColor: 'var(--glass-border)' }}>
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <p className="font-bold" style={{ color: 'var(--text-primary)' }}>
+                        "{session.story?.topic}"
+                      </p>
+                      <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                        with {session.participants_data?.map(p => p.name).join(' & ')}
+                      </p>
+                      <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
+                        Turn {session.turn_count || 0} • {session.story?.content?.length || 0} contributions
+                      </p>
+                    </div>
+                    <BookOpen className="w-8 h-8" style={{ color: 'var(--primary)' }} />
+                  </div>
+                  <Button
+                    className="w-full"
+                    onClick={() => continueCollaboration(session.id)}
+                    style={{ background: 'var(--primary)', color: 'white' }}
+                    data-testid={`continue-collab-${session.id}`}
+                  >
+                    <MessageCircle className="w-4 h-4 mr-2" />
+                    Continue Story
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
         {/* Search Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -134,9 +186,10 @@ export const FriendsPage = () => {
                 onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                 placeholder="Search by name or email..."
                 className="pl-10"
+                data-testid="friend-search-input"
               />
             </div>
-            <Button onClick={handleSearch} disabled={searching}>
+            <Button onClick={handleSearch} disabled={searching} data-testid="friend-search-btn">
               {searching ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Search'}
             </Button>
           </div>
@@ -155,7 +208,7 @@ export const FriendsPage = () => {
                       {user.email}
                     </p>
                   </div>
-                  <Button size="sm" onClick={() => sendFriendRequest(user.id)}>
+                  <Button size="sm" onClick={() => sendFriendRequest(user.id)} data-testid={`add-friend-${user.id}`}>
                     <UserPlus className="w-4 h-4 mr-2" />
                     Add Friend
                   </Button>
@@ -180,7 +233,7 @@ export const FriendsPage = () => {
             {pendingRequests.incoming?.length > 0 && (
               <div className="mb-4">
                 <p className="text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
-                  Incoming (Parent Approval Needed):
+                  Incoming Requests:
                 </p>
                 <div className="space-y-2">
                   {pendingRequests.incoming.map(req => (
@@ -196,10 +249,11 @@ export const FriendsPage = () => {
                       </div>
                       <div className="flex gap-2">
                         <Button size="sm" onClick={() => respondToRequest(req.id, 'accept')}
-                          className="bg-green-500 hover:bg-green-600">
+                          className="bg-green-500 hover:bg-green-600" data-testid={`accept-req-${req.id}`}>
                           <Check className="w-4 h-4" />
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => respondToRequest(req.id, 'decline')}>
+                        <Button size="sm" variant="outline" onClick={() => respondToRequest(req.id, 'decline')}
+                          data-testid={`decline-req-${req.id}`}>
                           <X className="w-4 h-4" />
                         </Button>
                       </div>
@@ -220,7 +274,7 @@ export const FriendsPage = () => {
                     <div key={req.id} className="flex items-center justify-between p-3 rounded-xl"
                       style={{ background: 'var(--bg-tertiary)' }}>
                       <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                        Request sent (waiting for parent approval)
+                        Request to {req.to_user?.name || 'User'} (waiting)
                       </p>
                       <Loader2 className="w-4 h-4 animate-spin" style={{ color: 'var(--text-tertiary)' }} />
                     </div>
@@ -271,6 +325,7 @@ export const FriendsPage = () => {
                     className="w-full"
                     onClick={() => startCollaboration(friend.id, friend.name)}
                     style={{ background: 'var(--primary)', color: 'white' }}
+                    data-testid={`create-story-${friend.id}`}
                   >
                     <BookOpen className="w-4 h-4 mr-2" />
                     Create Story Together

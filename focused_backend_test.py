@@ -8,7 +8,7 @@ import json
 import uuid
 from datetime import datetime
 
-BASE_URL = "https://craft-timeline-2.preview.emergentagent.com"
+BASE_URL = "https://collab-stories.preview.emergentagent.com"
 
 def register_and_login():
     """Register a test user and get token"""

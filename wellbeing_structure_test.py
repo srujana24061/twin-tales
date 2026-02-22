@@ -7,7 +7,7 @@ import json
 from datetime import datetime, timezone
 
 # Configuration
-BASE_URL = "https://craft-timeline-2.preview.emergentagent.com"
+BASE_URL = "https://collab-stories.preview.emergentagent.com"
 API_BASE = f"{BASE_URL}/api"
 
 # Test user credentials

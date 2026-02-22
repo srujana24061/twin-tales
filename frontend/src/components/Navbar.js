@@ -45,6 +45,7 @@ export const Navbar = () => {
 
   const links = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/friends', label: 'Friends', icon: Users },
     { path: '/characters', label: 'Characters', icon: Users },
     { path: '/stories/new', label: 'New Story', icon: PlusCircle },
     { path: '/tasks', label: 'Tasks', icon: Clock },

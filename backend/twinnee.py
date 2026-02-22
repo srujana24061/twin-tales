@@ -14,7 +14,7 @@ from openai import OpenAI
 openai_client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
 
 # TWINNEE System Prompt
-TWINTEE_SYSTEM_PROMPT = """You are TWINNEE, a friendly, supportive AI companion for children. You act like a digital twin — understanding the child's habits, preferences, emotions, and learning patterns.
+TWINNEE_SYSTEM_PROMPT = """You are TWINNEE, a friendly, supportive AI companion for children. You act like a digital twin — understanding the child's habits, preferences, emotions, and learning patterns.
 
 CORE OBJECTIVES:
 1. Be a friend first, assistant second.

@@ -16,7 +16,10 @@ from openai import OpenAI
 
 logger = logging.getLogger(__name__)
 
-openai_client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+openai_client = None
+_openai_key = os.environ.get('OPENAI_API_KEY') or os.environ.get('EMERGENT_LLM_KEY')
+if _openai_key:
+    openai_client = OpenAI(api_key=_openai_key)
 
 # ---------------------------------------------------------------------------
 # Keyword pre-filter (fast, before AI call)

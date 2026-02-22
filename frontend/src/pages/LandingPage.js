@@ -40,10 +40,10 @@ export const LandingPage = () => {
             
             {/* Logo */}
             <div className="flex items-center gap-2" data-testid="landing-logo">
+              <img src="/twinnee-logo.png" alt="TWINNEE" className="w-9 h-9 object-contain" />
               <span className="font-heading font-black text-xl tracking-tight" style={{ color: '#1a1a2e' }}>
                 Twinnee
               </span>
-              <span className="w-2 h-2 rounded-full" style={{ background: '#8B5CF6' }}></span>
             </div>
 
             {/* Nav Links */}

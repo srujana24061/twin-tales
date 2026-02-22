@@ -3064,6 +3064,250 @@ async def get_collaboration_report(session_id: str, user: dict = Depends(get_cur
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== TIMELINE & SOCIAL ====================
+
+class CreatePostBody(BaseModel):
+    content: str
+    image: Optional[str] = None  # base64 image
+
+
+@api_router.get("/timeline/posts")
+async def get_timeline_posts(user: dict = Depends(get_current_user)):
+    """Get posts for timeline - all posts from users"""
+    try:
+        posts = await db.posts.find({}, {"_id": 0}).sort("created_at", -1).limit(50).to_list(50)
+        
+        # Add author info and like status
+        for post in posts:
+            author = await db.users.find_one({"id": post.get("author_id")}, {"_id": 0, "password": 0})
+            post["author_name"] = author.get("name", "User") if author else "User"
+            
+            # Check if current user liked this post
+            post["liked"] = user["id"] in post.get("liked_by", [])
+            post["likes_count"] = len(post.get("liked_by", []))
+            post["comments_count"] = len(post.get("comments", []))
+            
+            # Convert datetime to ISO string
+            if post.get("created_at"):
+                post["created_at"] = post["created_at"].isoformat() if hasattr(post["created_at"], 'isoformat') else post["created_at"]
+        
+        return {"posts": posts}
+    except Exception as e:
+        logger.error(f"Get timeline posts error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/timeline/posts")
+async def create_post(body: CreatePostBody, user: dict = Depends(get_current_user)):
+    """Create a new post"""
+    try:
+        post_id = str(uuid.uuid4())
+        image_url = None
+        
+        # Upload image if provided
+        if body.image:
+            img_bytes = base64.b64decode(body.image)
+            img_key = f"posts/{post_id}/{uuid.uuid4().hex[:8]}.png"
+            image_url = await s3_service.upload(img_key, img_bytes, 'image/png')
+        
+        post_doc = {
+            "id": post_id,
+            "author_id": user["id"],
+            "content": body.content,
+            "image_url": image_url,
+            "liked_by": [],
+            "comments": [],
+            "created_at": datetime.now(timezone.utc)
+        }
+        
+        await db.posts.insert_one(post_doc)
+        
+        # Return without _id
+        result = {k: v for k, v in post_doc.items() if k != "_id"}
+        result["created_at"] = result["created_at"].isoformat()
+        result["author_name"] = user.get("name", "User")
+        result["likes_count"] = 0
+        result["comments_count"] = 0
+        result["liked"] = False
+        
+        return {"post": result}
+    except Exception as e:
+        logger.error(f"Create post error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/timeline/posts/{post_id}/like")
+async def like_post(post_id: str, user: dict = Depends(get_current_user)):
+    """Like or unlike a post"""
+    try:
+        post = await db.posts.find_one({"id": post_id})
+        if not post:
+            raise HTTPException(status_code=404, detail="Post not found")
+        
+        liked_by = post.get("liked_by", [])
+        
+        if user["id"] in liked_by:
+            # Unlike
+            await db.posts.update_one(
+                {"id": post_id},
+                {"$pull": {"liked_by": user["id"]}}
+            )
+            return {"liked": False}
+        else:
+            # Like
+            await db.posts.update_one(
+                {"id": post_id},
+                {"$addToSet": {"liked_by": user["id"]}}
+            )
+            return {"liked": True}
+    except Exception as e:
+        logger.error(f"Like post error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/timeline/suggested-users")
+async def get_suggested_users(user: dict = Depends(get_current_user)):
+    """Get suggested users to connect with"""
+    try:
+        # Get user's existing friends
+        friendships = await db.friendships.find({
+            "$or": [{"user1_id": user["id"]}, {"user2_id": user["id"]}]
+        }).to_list(100)
+        
+        friend_ids = set()
+        for f in friendships:
+            friend_ids.add(f["user1_id"])
+            friend_ids.add(f["user2_id"])
+        friend_ids.add(user["id"])  # Exclude self
+        
+        # Get pending requests
+        pending = await db.friend_requests.find({
+            "$or": [{"from_user_id": user["id"]}, {"to_user_id": user["id"]}],
+            "status": "pending"
+        }).to_list(100)
+        
+        for p in pending:
+            friend_ids.add(p["from_user_id"])
+            friend_ids.add(p["to_user_id"])
+        
+        # Get users not in friends list
+        suggested = await db.users.find(
+            {"id": {"$nin": list(friend_ids)}},
+            {"_id": 0, "password": 0}
+        ).limit(5).to_list(5)
+        
+        return {"users": suggested}
+    except Exception as e:
+        logger.error(f"Get suggested users error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== DIRECT CHAT ====================
+
+class DirectMessageBody(BaseModel):
+    friend_id: str
+    message: str
+
+
+@api_router.post("/chat/direct/start")
+async def start_direct_chat(body: dict, user: dict = Depends(get_current_user)):
+    """Start or get existing direct chat with a friend"""
+    try:
+        friend_id = body.get("friend_id")
+        
+        # Check if chat exists
+        chat = await db.direct_chats.find_one({
+            "$or": [
+                {"user1_id": user["id"], "user2_id": friend_id},
+                {"user1_id": friend_id, "user2_id": user["id"]}
+            ]
+        })
+        
+        if chat:
+            return {"chat_id": chat["id"]}
+        
+        # Create new chat
+        chat_id = str(uuid.uuid4())
+        chat_doc = {
+            "id": chat_id,
+            "user1_id": user["id"],
+            "user2_id": friend_id,
+            "messages": [],
+            "created_at": datetime.now(timezone.utc)
+        }
+        
+        await db.direct_chats.insert_one(chat_doc)
+        return {"chat_id": chat_id}
+    except Exception as e:
+        logger.error(f"Start direct chat error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/chat/direct/send")
+async def send_direct_message(body: DirectMessageBody, user: dict = Depends(get_current_user)):
+    """Send a direct message to a friend"""
+    try:
+        # Find the chat
+        chat = await db.direct_chats.find_one({
+            "$or": [
+                {"user1_id": user["id"], "user2_id": body.friend_id},
+                {"user1_id": body.friend_id, "user2_id": user["id"]}
+            ]
+        })
+        
+        if not chat:
+            # Create chat if doesn't exist
+            chat_id = str(uuid.uuid4())
+            chat = {
+                "id": chat_id,
+                "user1_id": user["id"],
+                "user2_id": body.friend_id,
+                "messages": [],
+                "created_at": datetime.now(timezone.utc)
+            }
+            await db.direct_chats.insert_one(chat)
+        
+        # Add message
+        message = {
+            "id": str(uuid.uuid4()),
+            "sender_id": user["id"],
+            "sender_name": user.get("name", "User"),
+            "message": body.message,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.direct_chats.update_one(
+            {"id": chat["id"]},
+            {"$push": {"messages": message}}
+        )
+        
+        return {"success": True, "message": message}
+    except Exception as e:
+        logger.error(f"Send direct message error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/chat/direct/{friend_id}")
+async def get_direct_messages(friend_id: str, user: dict = Depends(get_current_user)):
+    """Get direct messages with a friend"""
+    try:
+        chat = await db.direct_chats.find_one({
+            "$or": [
+                {"user1_id": user["id"], "user2_id": friend_id},
+                {"user1_id": friend_id, "user2_id": user["id"]}
+            ]
+        }, {"_id": 0})
+        
+        if not chat:
+            return {"messages": []}
+        
+        return {"messages": chat.get("messages", [])}
+    except Exception as e:
+        logger.error(f"Get direct messages error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ==================== APP SETUP ====================
 # Include router AFTER all routes are defined
 app.include_router(api_router)
+

@@ -2633,6 +2633,243 @@ async def check_behavioral_risks(user: dict = Depends(get_current_user)):
         return {
             "risks": parent_risks,
             "total_risks": len(risks),
+
+
+
+# ==================== SOCIAL COLLABORATION ====================
+
+from social import FriendSystem, CollaborativeSession, InteractionLogger, InteractionAnalyzer
+
+class FriendRequestBody(BaseModel):
+    to_user_id: str
+
+class FriendResponseBody(BaseModel):
+    request_id: str
+    action: str  # 'accept' or 'decline'
+
+class CollabCreateBody(BaseModel):
+    friend_id: str
+    topic: str
+
+class CollabContributeBody(BaseModel):
+    session_id: str
+    contribution: str
+
+
+@api_router.post("/friends/request")
+async def send_friend_request(body: FriendRequestBody, user: dict = Depends(get_current_user)):
+    """Send a friend request"""
+    try:
+        result = await FriendSystem.send_friend_request(db, user["id"], body.to_user_id)
+        return result
+    except Exception as e:
+        logger.error(f"Friend request error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/friends/respond")
+async def respond_friend_request(body: FriendResponseBody, user: dict = Depends(get_current_user)):
+    """Parent approves or declines friend request"""
+    try:
+        # Verify the request is for this user
+        request = await db.friend_requests.find_one({"id": body.request_id})
+        if not request or request["to_user_id"] != user["id"]:
+            raise HTTPException(status_code=403, detail="Not authorized")
+        
+        success = await FriendSystem.respond_to_request(db, body.request_id, body.action)
+        return {"success": success}
+    except Exception as e:
+        logger.error(f"Friend response error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/friends/list")
+async def get_friends_list(user: dict = Depends(get_current_user)):
+    """Get user's friend list"""
+    try:
+        friends = await FriendSystem.get_friends(db, user["id"])
+        return {"friends": friends}
+    except Exception as e:
+        logger.error(f"Get friends error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/friends/requests")
+async def get_friend_requests(user: dict = Depends(get_current_user)):
+    """Get pending friend requests"""
+    try:
+        # Incoming requests
+        incoming = await db.friend_requests.find({
+            "to_user_id": user["id"],
+            "status": "pending"
+        }, {"_id": 0}).to_list(50)
+        
+        # Outgoing requests
+        outgoing = await db.friend_requests.find({
+            "from_user_id": user["id"],
+            "status": "pending"
+        }, {"_id": 0}).to_list(50)
+        
+        # Get user details for incoming requests
+        for req in incoming:
+            from_user = await db.users.find_one({"id": req["from_user_id"]}, {"_id": 0, "password": 0})
+            req["from_user"] = from_user
+        
+        return {
+            "incoming": incoming,
+            "outgoing": outgoing
+        }
+    except Exception as e:
+        logger.error(f"Get requests error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/friends/search")
+async def search_users(query: str, user: dict = Depends(get_current_user)):
+    """Search for users"""
+    try:
+        if not query or len(query) < 2:
+            return {"users": []}
+        
+        users = await FriendSystem.search_users(db, query, user["id"])
+        return {"users": users}
+    except Exception as e:
+        logger.error(f"Search error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/collab/create")
+async def create_collaboration(body: CollabCreateBody, user: dict = Depends(get_current_user)):
+    """Create a collaborative story session"""
+    try:
+        # Verify friendship
+        friendship = await db.friendships.find_one({
+            "$or": [
+                {"user1_id": user["id"], "user2_id": body.friend_id},
+                {"user1_id": body.friend_id, "user2_id": user["id"]}
+            ]
+        })
+        
+        if not friendship:
+            raise HTTPException(status_code=403, detail="Not friends")
+        
+        session = await CollaborativeSession.create_session(
+            db, user["id"], body.friend_id, body.topic
+        )
+        
+        # Update friendship collaboration count
+        await db.friendships.update_one(
+            {"id": friendship["id"]},
+            {
+                "$inc": {"collaboration_count": 1},
+                "$set": {"last_collaboration": datetime.now(timezone.utc)}
+            }
+        )
+        
+        return {"session": session}
+    except Exception as e:
+        logger.error(f"Create collab error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/collab/contribute")
+async def contribute_to_collab(body: CollabContributeBody, user: dict = Depends(get_current_user)):
+    """Add contribution to collaborative session"""
+    try:
+        result = await CollaborativeSession.take_turn(
+            db, body.session_id, user["id"], body.contribution
+        )
+        
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+        
+        return result
+    except Exception as e:
+        logger.error(f"Contribute error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/collab/session/{session_id}")
+async def get_collaboration_session(session_id: str, user: dict = Depends(get_current_user)):
+    """Get collaborative session details"""
+    try:
+        session = await CollaborativeSession.get_session(db, session_id)
+        
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        # Verify user is participant
+        if user["id"] not in session["participants"]:
+            raise HTTPException(status_code=403, detail="Not authorized")
+        
+        # Get participant details
+        participants_data = []
+        for p_id in session["participants"]:
+            p_user = await db.users.find_one({"id": p_id}, {"_id": 0, "password": 0})
+            if p_user:
+                participants_data.append({
+                    "id": p_user["id"],
+                    "name": p_user.get("name", "User")
+                })
+        
+        session["participants_data"] = participants_data
+        
+        return {"session": session}
+    except Exception as e:
+        logger.error(f"Get session error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/collab/my-sessions")
+async def get_my_sessions(user: dict = Depends(get_current_user)):
+    """Get user's collaborative sessions"""
+    try:
+        sessions = await db.collab_sessions.find({
+            "participants": user["id"]
+        }, {"_id": 0}).sort("last_activity", -1).to_list(50)
+        
+        return {"sessions": sessions}
+    except Exception as e:
+        logger.error(f"Get sessions error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/collab/complete/{session_id}")
+async def complete_collaboration(session_id: str, user: dict = Depends(get_current_user)):
+    """Mark collaboration as complete and generate reports"""
+    try:
+        session = await db.collab_sessions.find_one({"id": session_id})
+        
+        if not session or user["id"] not in session["participants"]:
+            raise HTTPException(status_code=403, detail="Not authorized")
+        
+        await CollaborativeSession.complete_session(db, session_id)
+        
+        return {"success": True, "message": "Reports generated"}
+    except Exception as e:
+        logger.error(f"Complete session error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/collab/report/{session_id}")
+async def get_collaboration_report(session_id: str, user: dict = Depends(get_current_user)):
+    """Get user's collaboration report"""
+    try:
+        report = await db.collab_reports.find_one({
+            "session_id": session_id,
+            "user_id": user["id"]
+        }, {"_id": 0})
+        
+        if not report:
+            raise HTTPException(status_code=404, detail="Report not found")
+        
+        return {"report": report}
+    except Exception as e:
+        logger.error(f"Get report error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
             "requires_attention": len(parent_risks) > 0
         }
     

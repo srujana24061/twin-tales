@@ -427,12 +427,12 @@ class StoryPersonalizer:
         return suggestions[:5]  # Return top 5
 
 
-class TwinteeChat:
+class TwinneeChat:
     """TWINNEE Chatbot with OpenAI"""
     
     def __init__(self):
         self.client = openai_client
-        self.system_prompt = TWINTEE_SYSTEM_PROMPT
+        self.system_prompt = TWINNEE_SYSTEM_PROMPT
     
     async def get_response(
         self, 

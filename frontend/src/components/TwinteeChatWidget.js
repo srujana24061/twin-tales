@@ -169,7 +169,11 @@ export function TwinteeChatWidget() {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3" style={{ background: 'var(--bg-secondary)' }}>
+            <div className="flex-1 overflow-y-auto p-4 space-y-3" 
+              style={{ 
+                background: 'linear-gradient(135deg, #667eea15 0%, #764ba215 50%, #f093fb10 100%)',
+                backdropFilter: 'blur(10px)'
+              }}>
               {isLoading ? (
                 <div className="flex items-center justify-center h-full">
                   <Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--primary)' }} />
@@ -218,7 +222,10 @@ export function TwinteeChatWidget() {
             </div>
 
             {/* Input */}
-            <div className="p-3 border-t" style={{ background: 'var(--bg-primary)', borderColor: 'var(--glass-border)' }}>
+            <div className="p-3 border-t" style={{ 
+              background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)', 
+              borderColor: '#667eea50' 
+            }}>
               <div className="flex gap-2">
                 <Textarea
                   value={inputMessage}

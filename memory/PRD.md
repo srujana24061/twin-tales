@@ -1,43 +1,142 @@
-# Twinnee AI - PRD
+# TWINNEE - AI Digital Twin Companion for Children
 
-## Architecture
-Frontend: React 19 + TailwindCSS + Shadcn + Framer Motion | Backend: FastAPI + MongoDB + imageio-ffmpeg
-AI: OpenAI GPT (text), **Gemini Nano Banana** (images + video frames) | Storage: AWS S3 | Auth: JWT | Email: Amazon SES
+## Product Overview
+TWINNEE is an AI-powered "digital twin" companion for children, designed to promote healthy habits, creativity, and emotional balance through conversational interaction.
 
-## Complete Feature Set
-1. Landing page, JWT auth, Dashboard with stats + story suggestion cards (click → auto-populate form)
-2. Character Builder with photo upload (S3)
-3. Story Setup (tone, visual style, length, theme, characters, topic) — pre-fills from dashboard suggestion state
-4. AI Story Generation → scenes with text/prompts
-5. **Scene Grid Editor** — grid view, Image/Video toggle per card, generate/upload/regenerate per scene
-6. **Image Generation** — Gemini Nano Banana (`gemini-3-pro-image-preview`) via Emergent LLM Key
-7. **Video Generation** — Nano Banana generates 4 animated frames → imageio-ffmpeg stitches MP4 slideshow
-8. Audio Narration (ElevenLabs TTS)
-9. PDF Export (reportlab)
-10. Batch Generate All Videos button with job polling
-11. In-app notification bell + Amazon SES email on completion
-12. Healthy Engagement: AI Wellbeing Check-in, Session Timer, PIN-protected Parent Dashboard
-13. Parent Dashboard: analytics, session cap, parent email for notifications
-14. Multi-theme UI switcher
+## Core Features
 
-## Video Generation Pipeline
-- Nano Banana generates 4 frame variants (establishing, close-up, action, resolution)
-- Existing scene image used as frame 0 if available
-- imageio-ffmpeg stitches frames into MP4 at 1fps, 4s per frame
-- Uploaded to S3, video_url stored on scene document
-- Job polling in SceneGridEditor frontend (3s interval)
+### 1. AI Digital Twin (TWINNEE)
+- Conversational AI chatbot that acts as a friendly companion
+- Interactive storytelling and daily check-ins
+- Gentle behavior pattern tracking (screen time, learning, creativity, mood)
+- "Digital Twin Score" system (Learning, Creativity, Discipline, etc.)
+- Advanced features: behavioral risk detection, decision engine, pattern learning
 
-## Scene Grid Editor
-- Grid layout, per-card Image/Video toggle pill
-- Image tab: generated/uploaded image, generate/regen/upload buttons
-- Video tab: video player (if ready), generate/upload buttons, spinner when generating
-- Auto-switches to Video tab when video becomes available
-- data-testid on all interactive elements
+### 2. Parent Dashboard
+- PIN-protected area for parents
+- View behavior scores and interaction reports
+- Manage settings and approve friend requests
 
-## Pending / Roadmap
-- P1: S3 presigned URL direct uploads (currently proxied)
-- P2: Phone number field in registration UI (backend schema has it)
-- P2: FFmpeg full-story video export
-- P2: Video Editor page (reorder scenes)
-- P3: Ad Studio page
-- P3: UX Polish (micro-animations)
+### 3. Story Creation Platform
+- AI-generated personalized stories
+- Character builder
+- Scene editor with video creation capabilities
+
+### 4. Social Collaboration (In Progress)
+- Friend system with parent approval
+- Turn-based collaborative story writing
+- TWINNEE AI mediator during collaboration
+- Interaction reports for parents
+
+## Technical Architecture
+
+```
+/app
+├── backend/
+│   ├── server.py          # Main FastAPI app
+│   ├── twinnee.py         # AI chatbot, scoring logic
+│   ├── social.py          # Friends & collaboration
+│   ├── services.py        # External services (S3, TTS, etc.)
+│   └── .env               # Environment variables
+└── frontend/
+    ├── src/
+    │   ├── pages/
+    │   │   ├── LandingPage.js      # New landing page design
+    │   │   ├── DashboardPage.js    # Main user dashboard
+    │   │   ├── ParentDashboardPage.js
+    │   │   ├── FriendsPage.js
+    │   │   └── CollaborationPage.js
+    │   └── components/
+    │       ├── TwinneeChatWidget.js  # Floating chat widget
+    │       └── ui/                    # Shadcn components
+    └── .env
+```
+
+## What's Been Implemented
+
+### December 2025
+- [x] Complete TWINTEE → TWINNEE rename across entire codebase
+- [x] New landing page design with gradient text and mascot
+- [x] Fixed TwinneeChatWidget component naming
+- [x] Fixed server.py syntax errors (missing except blocks)
+- [x] Fixed TwinneeChat class name in twinnee.py
+- [x] Chat widget functional with OpenAI integration
+- [x] Dashboard working with TWINNEE branding
+
+### Previous Implementation
+- [x] TWINNEE AI Chatbot with OpenAI
+- [x] Behavior scoring system
+- [x] Parent Dashboard with scores display
+- [x] Story creation and editing
+- [x] Video editor with media library
+- [x] Social collaboration backend (friends, sessions)
+
+## API Endpoints
+
+### Authentication
+- POST `/api/auth/register` - User registration
+- POST `/api/auth/login` - User login
+- GET `/api/auth/me` - Get current user
+
+### Chat
+- POST `/api/chat/message` - Send message to TWINNEE
+- GET `/api/chat/history` - Get conversation history
+
+### Behavior
+- GET `/api/behavior/scores` - Get user behavior scores
+- POST `/api/behavior/activity` - Log activity
+- GET `/api/twinnee/patterns` - Get learned patterns
+- GET `/api/twinnee/risk-check` - Check behavioral risks
+
+### Social
+- POST `/api/friends/request` - Send friend request
+- GET `/api/friends/requests` - Get pending requests
+- POST `/api/friends/respond` - Accept/decline request
+- GET `/api/friends/list` - Get friends list
+- POST `/api/collab/create` - Create collaboration session
+- POST `/api/collab/contribute` - Add contribution
+
+## Database Collections
+- users
+- stories
+- scenes
+- characters
+- conversations
+- behavior_logs
+- user_scores
+- user_patterns
+- friendships
+- friend_requests
+- collab_sessions
+- collab_reports
+
+## 3rd Party Integrations
+- **OpenAI** - TWINNEE chatbot (GPT-4o-mini)
+- **AWS S3** - Media storage
+- **Gemini Nano Banana** - Image generation (Emergent LLM Key)
+- **Amazon SES** - Email notifications
+
+## Pending/Upcoming Tasks
+
+### P1 - High Priority
+- [ ] Complete Friends page UI (search, add, manage friends)
+- [ ] Parent approval flow for friend requests
+- [ ] Turn-based collaborative story writing UI
+
+### P2 - Medium Priority
+- [ ] TWINNEE AI mediator in collaboration
+- [ ] Collaboration reports page
+- [ ] Update auth page branding (still shows StoryCraft)
+
+### P3 - Low Priority
+- [ ] Notification system completion
+- [ ] MiniMax video API fix
+- [ ] Ad Studio page
+
+## Known Issues
+- S3 delete permission may be missing (IAM config)
+- MiniMax API "invalid params" error (payload issue)
+
+## Test Credentials
+- Email: video_test_1771703962@test.com
+- Password: TestPass123!

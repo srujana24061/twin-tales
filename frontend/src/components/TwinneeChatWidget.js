@@ -121,15 +121,28 @@ export function TwinneeChatWidget() {
       <AnimatePresence>
         {!isOpen && (
           <motion.button
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
+            initial={{ scale: 0, rotate: -180 }}
+            animate={{ scale: 1, rotate: 0 }}
             exit={{ scale: 0 }}
-            className="fixed bottom-6 right-6 z-50 rounded-full p-4 shadow-2xl transition-all hover:scale-110"
-            style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
+            transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+            className="fixed bottom-6 right-6 z-50 rounded-full shadow-2xl hover:scale-110 transition-transform"
+            style={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              width: '60px',
+              height: '60px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 0
+            }}
             onClick={() => setIsOpen(true)}
             data-testid="open-chat-btn"
           >
-            <MessageCircle className="w-6 h-6 text-white" />
+            <img
+              src="/twinnee-logo.png"
+              alt="TWINNEE"
+              style={{ width: '44px', height: '44px', objectFit: 'contain' }}
+            />
             <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-green-400 animate-pulse" />
           </motion.button>
         )}

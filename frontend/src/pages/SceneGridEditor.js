@@ -304,10 +304,22 @@ export const SceneGridEditor = () => {
               onGenerateVideo={() => generateSceneVideo(scene.id)}
               onUploadImage={(file) => uploadMedia(scene.id, file, 'image')}
               onUploadVideo={(file) => uploadMedia(scene.id, file, 'video')}
+              onOpenDoodle={() => setDoodleModalScene(scene)}
             />
           ))}
         </div>
       </div>
+
+      {/* Doodle Canvas Modal */}
+      {doodleModalScene && (
+        <DoodleCanvasModal
+          isOpen={true}
+          onClose={() => setDoodleModalScene(null)}
+          sceneId={doodleModalScene.id}
+          sceneTitle={doodleModalScene.title}
+          onImageGenerated={handleDoodleImageGenerated}
+        />
+      )}
     </div>
   );
 };

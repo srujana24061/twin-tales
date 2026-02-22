@@ -2556,6 +2556,92 @@ async def get_behavior_scores(user: dict = Depends(get_current_user)):
                 "last_updated": datetime.now(timezone.utc).isoformat()
             }
         
+
+
+
+@api_router.get("/twintee/story-suggestions")
+async def get_story_suggestions(user: dict = Depends(get_current_user)):
+    """Get personalized story suggestions based on behavior"""
+    try:
+        from twintee import StoryPersonalizer, PatternLearner
+        
+        # Get user scores
+        scores_doc = await db.user_scores.find_one({"user_id": user["id"]}, {"_id": 0})
+        scores = scores_doc.get('scores', {}) if scores_doc else {}
+        
+        # Get patterns
+        patterns = await PatternLearner.get_patterns(db, user["id"])
+        
+        # Get user interests (could be from profile)
+        user_doc = await db.users.find_one({"id": user["id"]}, {"_id": 0})
+        interests = user_doc.get('interests', [])
+        
+        # Get suggestions
+        suggestions = StoryPersonalizer.get_story_suggestions(scores, patterns, interests)
+        
+        return {"suggestions": suggestions, "patterns": patterns}
+    
+    except Exception as e:
+        logger.error(f"Story suggestions error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/twintee/patterns")
+async def get_user_patterns(user: dict = Depends(get_current_user)):
+    """Get learned patterns for user (for parent dashboard)"""
+    try:
+        from twintee import PatternLearner
+        
+        patterns = await PatternLearner.get_patterns(db, user["id"], days=30)
+        
+        return {
+            "patterns": patterns,
+            "insights": {
+                "most_active_time": patterns['peak_activity_times'][0] if patterns['peak_activity_times'] else None,
+                "top_interests": [c[0] for c in patterns['favorite_content'][:3]] if patterns['favorite_content'] else [],
+                "avg_attention_span": round(patterns['average_attention_span'], 1) if patterns['average_attention_span'] else 0
+            }
+        }
+    
+    except Exception as e:
+        logger.error(f"Patterns error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/twintee/risk-check")
+async def check_behavioral_risks(user: dict = Depends(get_current_user)):
+    """Check for behavioral risks (for parent dashboard)"""
+    try:
+        from twintee import BehavioralRiskDetector, get_user_behavior_context
+        
+        # Get context
+        context = await get_user_behavior_context(db, user["id"])
+        
+        # Get activities
+        week_ago = datetime.now(timezone.utc) - timedelta(days=7)
+        activities = await db.behavior_logs.find(
+            {"user_id": user["id"], "timestamp": {"$gte": week_ago}}
+        ).to_list(1000)
+        
+        # Detect risks
+        risk_detector = BehavioralRiskDetector()
+        risks = risk_detector.detect_risks(context, activities)
+        
+        # Filter to only show parent-flagged risks
+        parent_risks = [r for r in risks if r.get('parent_alert')]
+        
+        return {
+            "risks": parent_risks,
+            "total_risks": len(risks),
+            "requires_attention": len(parent_risks) > 0
+        }
+    
+    except Exception as e:
+        logger.error(f"Risk check error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
         return scores_doc
     
     except Exception as e:

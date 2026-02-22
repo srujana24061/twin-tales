@@ -2428,9 +2428,9 @@ async def shutdown_db_client():
 
 # ==================== TWINNEE AI CHATBOT ====================
 
-from twintee import TwinteeChat, get_user_behavior_context, update_behavior_scores
+from twinnee import TwinneeChat, get_user_behavior_context, update_behavior_scores
 
-twintee_chat = TwinteeChat()
+twinnee_chat = TwinneeChat()
 
 class ChatMessage(BaseModel):
     message: str

@@ -3,12 +3,13 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   ArrowLeft, Edit2, Save, Image as ImageIcon, Video, Upload, 
-  Sparkles, Loader2, CheckCircle, Play, X, RefreshCw, Download, Film
+  Sparkles, Loader2, CheckCircle, Play, X, RefreshCw, Download, Film, Pencil
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import api from '@/lib/api';
+import { DoodleCanvasModal } from '@/components/DoodleCanvasModal';
 
 export const SceneGridEditor = () => {
   const { storyId } = useParams();

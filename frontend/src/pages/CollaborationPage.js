@@ -169,7 +169,7 @@ export const CollaborationPage = () => {
         >
           <div className="space-y-4">
             {session.story.content.map((item, idx) => {
-              const isTwinnee = item.contributor === 'twintee';
+              const isTwinnee = item.contributor === 'twinnee';
               const isCurrentUser = item.contributor === currentUserId;
               const contributor = isTwinnee 
                 ? 'TWINNEE' 

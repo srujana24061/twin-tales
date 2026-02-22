@@ -21,101 +21,94 @@ TWINNEE is an AI-powered "digital twin" companion for children, designed to prom
 - AI-generated personalized stories
 - Character builder
 - Scene editor with video creation capabilities
-- **NEW: Doodle-to-Image** - Draw sketches that AI converts to polished illustrations
+- **Doodle-to-Image** - Draw sketches that AI converts to polished 3D illustrations
 
-### 4. Social Collaboration (In Progress)
-- Friend system with parent approval
-- Turn-based collaborative story writing
-- TWINNEE AI mediator during collaboration
-- Interaction reports for parents
+### 4. Social Collaboration (NEW - COMPLETE!)
+- **Friend System**: Search users, send/receive friend requests, accept/decline
+- **Collaborative Story Chat**: Real-time chat space with friends
+- **Turn-Based Story Writing**: Each user takes turns contributing to the story
+- **TWINNEE AI Mediator**: Introduces collaborations and guides the story
+- **Chat + Story Views**: Toggle between chat messages and story content
 
 ## Technical Architecture
 
 ```
 /app
 ├── backend/
-│   ├── server.py          # Main FastAPI app
+│   ├── server.py          # Main FastAPI app (routes at end)
 │   ├── twinnee.py         # AI chatbot, scoring logic
 │   ├── social.py          # Friends & collaboration
-│   ├── services.py        # External services (S3, TTS, etc.)
 │   └── .env               # Environment variables
 └── frontend/
     ├── src/
     │   ├── pages/
-    │   │   ├── LandingPage.js      # New landing page design
-    │   │   ├── DashboardPage.js    # Main user dashboard
-    │   │   ├── SceneGridEditor.js  # Scene editor with doodle feature
-    │   │   └── ...
+    │   │   ├── LandingPage.js
+    │   │   ├── DashboardPage.js
+    │   │   ├── FriendsPage.js      # Friend management
+    │   │   ├── CollabChatPage.js   # NEW: Collaborative chat space
+    │   │   └── SceneGridEditor.js
     │   └── components/
-    │       ├── TwinneeChatWidget.js  # Floating chat widget
-    │       ├── DoodleCanvasModal.js  # NEW: Drawing canvas for scenes
-    │       └── ui/                    # Shadcn components
+    │       ├── TwinneeChatWidget.js
+    │       ├── DoodleCanvasModal.js
+    │       └── ui/
     └── .env
 ```
 
 ## What's Been Implemented
 
 ### December 2025 (Latest Session)
-- [x] Complete TWINTEE → TWINNEE rename across entire codebase
-- [x] New landing page design with gradient text and mascot
-- [x] Fixed TwinneeChatWidget component naming
-- [x] Fixed server.py syntax errors
-- [x] Chat widget functional with OpenAI integration
-- [x] **NEW: Doodle-to-Image Feature**
-  - Drawing canvas modal with brush tools and color palette
-  - Backend endpoint `/api/scenes/{scene_id}/doodle-to-image`
-  - Gemini Nano Banana integration for sketch-to-image conversion
-  - S3 storage for both doodles and generated images
-  - Scene database update with generated image URL
-
-### Previous Implementation
-- [x] TWINNEE AI Chatbot with OpenAI
-- [x] Behavior scoring system
-- [x] Parent Dashboard with scores display
-- [x] Story creation and editing
-- [x] Video editor with media library
+- [x] Complete TWINTEE → TWINNEE rename
+- [x] New landing page with gradient text and mascot
+- [x] Doodle-to-Image feature for scenes (3D colored smooth conversion)
+- [x] **Friend Request System**
+  - Search users by name/email
+  - Send friend requests
+  - View incoming/outgoing requests
+  - Accept/decline requests
+  - Friends list with "Create Story Together" button
+- [x] **Collaborative Story Chat Page**
+  - Real-time chat between friends
+  - Turn-based story contributions
+  - Chat view and Story view toggle
+  - Turn indicator (your turn / waiting)
+  - TWINNEE intro message
+  - Chat messages vs story contributions differentiation
 
 ## API Endpoints
 
-### Doodle-to-Image (NEW)
-- POST `/api/scenes/{scene_id}/doodle-to-image`
-  - Request: `{ doodle_base64: string, scene_title?: string }`
-  - Response: `{ success: bool, image_url: string, doodle_url: string }`
-  - Uses Gemini Nano Banana to convert hand-drawn sketches to polished illustrations
+### Friends
+- GET `/api/friends/list` - Get friends list
+- GET `/api/friends/requests` - Get pending requests (incoming/outgoing)
+- GET `/api/friends/search?query=` - Search users
+- POST `/api/friends/request` - Send friend request
+- POST `/api/friends/respond` - Accept/decline request
 
-### Authentication
-- POST `/api/auth/register` - User registration
-- POST `/api/auth/login` - User login
+### Collaboration
+- POST `/api/collab/create` - Start collaboration session
+- GET `/api/collab/session/{id}` - Get session details
+- GET `/api/collab/my-sessions` - Get user's active sessions
+- POST `/api/collab/chat` - Send chat message
+- GET `/api/collab/chat/{id}` - Get chat messages
 
-### Chat
-- POST `/api/chat/message` - Send message to TWINNEE
-
-### Scenes
-- POST `/api/scenes/{scene_id}/generate-image` - AI image generation
-- POST `/api/scenes/{scene_id}/generate-video` - AI video generation
+### Doodle-to-Image
+- POST `/api/scenes/{scene_id}/doodle-to-image` - Convert doodle to 3D image
 
 ## 3rd Party Integrations
 - **OpenAI** - TWINNEE chatbot (GPT-4o-mini)
 - **Gemini Nano Banana** - Image generation (Emergent LLM Key)
 - **AWS S3** - Media storage
-- **Amazon SES** - Email notifications
 
-## Pending/Upcoming Tasks
+## Test Credentials
+- User 1: video_test_1771703962@test.com / TestPass123!
+- User 2: friend_test@test.com / TestPass123!
 
-### P1 - High Priority
-- [ ] Complete Friends page UI
-- [ ] Parent approval flow for friend requests
-- [ ] Turn-based collaborative story writing UI
+## Pending Tasks
 
 ### P2 - Medium Priority
 - [ ] Update auth page branding (still shows StoryCraft)
-- [ ] TWINNEE AI mediator in collaboration
-- [ ] Collaboration reports page
+- [ ] Parent approval workflow for friend requests (for child safety)
+- [ ] Collaboration reports for parents
 
 ### P3 - Low Priority
 - [ ] Notification system completion
 - [ ] MiniMax video API fix
-
-## Test Credentials
-- Email: video_test_1771703962@test.com
-- Password: TestPass123!

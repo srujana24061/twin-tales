@@ -144,9 +144,9 @@ export function TwinteeChatWidget() {
             exit={{ opacity: 0, y: 100 }}
             className="fixed bottom-6 right-6 z-50 w-96 h-[600px] rounded-2xl shadow-2xl flex flex-col overflow-hidden"
             style={{ 
-              background: 'linear-gradient(180deg, #1a1a2e 0%, #16213e 100%)',
+              background: 'linear-gradient(135deg, #f8f9ff 0%, #fff5fc 100%)',
               border: '2px solid #667eea50',
-              boxShadow: '0 0 60px rgba(102, 126, 234, 0.4)'
+              boxShadow: '0 0 60px rgba(102, 126, 234, 0.3)'
             }}
             data-testid="chat-panel"
           >
@@ -175,8 +175,7 @@ export function TwinteeChatWidget() {
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3" 
               style={{ 
-                background: 'linear-gradient(135deg, #667eea15 0%, #764ba215 50%, #f093fb10 100%)',
-                backdropFilter: 'blur(10px)'
+                background: 'linear-gradient(135deg, #ffffff 0%, #fef9ff 100%)',
               }}>
               {isLoading ? (
                 <div className="flex items-center justify-center h-full">
@@ -199,8 +198,8 @@ export function TwinteeChatWidget() {
                       style={{
                         background: msg.type === 'user'
                           ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                          : 'var(--bg-tertiary)',
-                        color: msg.type === 'user' ? 'white' : 'var(--text-primary)',
+                          : '#f3f4f6',
+                        color: msg.type === 'user' ? 'white' : '#1f2937',
                       }}
                     >
                       <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
@@ -212,11 +211,11 @@ export function TwinteeChatWidget() {
               {isSending && (
                 <div className="flex justify-start">
                   <div className="px-3 py-2 rounded-2xl rounded-bl-sm"
-                    style={{ background: 'var(--bg-tertiary)' }}>
+                    style={{ background: '#f3f4f6' }}>
                     <div className="flex gap-1">
-                      <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                      <span className="w-2 h-2 rounded-full bg-gray-500 animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <span className="w-2 h-2 rounded-full bg-gray-500 animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <span className="w-2 h-2 rounded-full bg-gray-500 animate-bounce" style={{ animationDelay: '300ms' }} />
                     </div>
                   </div>
                 </div>
@@ -261,7 +260,7 @@ export function TwinteeChatWidget() {
                   )}
                 </Button>
               </div>
-              <p className="text-[10px] text-center mt-2" style={{ color: '#a0a0b0' }}>
+              <p className="text-[10px] text-center mt-2" style={{ color: '#9ca3af' }}>
                 TWINTEE is here to help and support you! 💜
               </p>
             </div>

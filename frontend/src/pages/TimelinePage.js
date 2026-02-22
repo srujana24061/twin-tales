@@ -293,21 +293,21 @@ export const TimelinePage = () => {
                   <p className="text-sm text-gray-500">No suggestions right now</p>
                 ) : (
                   suggestedUsers.map(user => (
-                    <div key={user.id} className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center"
+                    <div key={user.id} className="flex items-center gap-3 py-1">
+                      <div className="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center"
                         style={{ background: '#e4e6eb' }}>
-                        <span className="font-bold text-gray-600">
+                        <span className="font-bold text-gray-600 text-sm">
                           {(user.name || 'U')[0].toUpperCase()}
                         </span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm text-gray-800 truncate">{user.name}</p>
+                        <p className="font-semibold text-sm text-gray-800 truncate">{user.name}</p>
                         <p className="text-xs text-gray-500 truncate">{user.email}</p>
                       </div>
                       <Button
                         size="sm"
                         onClick={() => connectWithUser(user.id)}
-                        className="rounded-lg text-xs"
+                        className="rounded-full text-xs flex-shrink-0 px-3 h-7"
                         style={{ background: '#8B5CF6' }}
                         data-testid={`connect-${user.id}`}
                       >

@@ -192,13 +192,13 @@ class CollaborativeSession:
         )
         
         # TWINNEE introduces the collaboration
-        twintee_intro = f"Hey friends! 🎉 Let's create an amazing story about '{story_topic}' together! I'll be here to help. Who wants to start?"
+        twinnee_intro = f"Hey friends! 🎉 Let's create an amazing story about '{story_topic}' together! I'll be here to help. Who wants to start?"
         
         await db.collab_sessions.update_one(
             {"id": session_doc["id"]},
             {"$push": {"story.content": {
-                "contributor": "twintee",
-                "text": twintee_intro,
+                "contributor": "twinnee",
+                "text": twinnee_intro,
                 "timestamp": datetime.now(timezone.utc),
                 "turn": 0
             }}}
@@ -254,15 +254,15 @@ class CollaborativeSession:
         
         # TWINNEE mediator response (every 2-3 turns)
         if turn_num % 2 == 0 or turn_num % 3 == 0:
-            twintee_response = await TwinteeMediator.provide_guidance(
+            twinnee_response = await TwinneeMediator.provide_guidance(
                 db, session, contribution
             )
             
             await db.collab_sessions.update_one(
                 {"id": session_id},
                 {"$push": {"story.content": {
-                    "contributor": "twintee",
-                    "text": twintee_response,
+                    "contributor": "twinnee",
+                    "text": twinnee_response,
                     "timestamp": datetime.now(timezone.utc),
                     "turn": turn_num
                 }}}
@@ -325,7 +325,7 @@ class InteractionLogger:
         return logs
 
 
-class TwinteeMediator:
+class TwinneeMediator:
     """TWINNEE acts as gentle guide and active participant"""
     
     @staticmethod
@@ -333,13 +333,13 @@ class TwinteeMediator:
         """
         Provide gentle guidance based on collaboration progress
         """
-        from twintee import TwinteeChat
+        from twinnee import TwinneeChat
         
         turn_count = session["turn_count"]
         content = session["story"]["content"]
         
         # Analyze collaboration
-        user_contributions = [c for c in content if c["contributor"] != "twintee"]
+        user_contributions = [c for c in content if c["contributor"] != "twinnee"]
         
         # Build context for TWINNEE
         context = f"""You are mediating a collaborative story between two kids.

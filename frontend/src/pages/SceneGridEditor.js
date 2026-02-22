@@ -336,7 +336,8 @@ const SceneCard = ({
   onGenerateImage,
   onGenerateVideo,
   onUploadImage,
-  onUploadVideo
+  onUploadVideo,
+  onOpenDoodle
 }) => {
   const [editText, setEditText] = useState(scene.scene_text || '');
   const [mediaView, setMediaView] = useState('image'); // 'image' | 'video'

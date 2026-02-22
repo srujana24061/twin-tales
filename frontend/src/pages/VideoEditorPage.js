@@ -4,12 +4,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Film, ArrowLeft, Download, Play, Pause, Square, SkipBack, SkipForward,
   Volume2, VolumeX, Music, Image as ImageIcon, Scissors, Trash2,
-  Plus, Loader2, ChevronRight, ZoomIn, ZoomOut, Upload
+  Plus, Loader2, ChevronRight, ZoomIn, ZoomOut, Upload, ChevronLeft
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { toast } from 'sonner';
 import { VideoClipEditor } from '@/components/VideoClipEditor';
+import { MediaLibrary } from '@/components/MediaLibrary';
 import { useSequentialPlayback } from '@/hooks/useSequentialPlayback';
 import { useVideoExport } from '@/hooks/useVideoExport';
 import api from '@/lib/api';
@@ -57,6 +58,7 @@ export const VideoEditorPage = () => {
   const [exportingFull, setExportingFull] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
   const [exportedUrl, setExportedUrl] = useState(null);
+  const [showMediaLibrary, setShowMediaLibrary] = useState(true);
 
   const timelineRef = useRef(null);
   const audioInputRef = useRef(null);
@@ -135,6 +137,85 @@ export const VideoEditorPage = () => {
 
   const addVideoTrack = () => setVideoTracks(prev => [...prev, []]);
   const addAudioTrack = () => setAudioTracks(prev => [...prev, []]);
+
+  /* ---- Handle media from library ---- */
+  const handleMediaFromLibrary = (mediaItem) => {
+    const newClip = {
+      id: mediaItem.id,
+      name: mediaItem.name,
+      videoUrl: mediaItem.type === 'video' ? mediaItem.url : null,
+      imageUrl: mediaItem.type === 'image' ? mediaItem.url : null,
+      startTime: totalDuration,
+      duration: mediaItem.duration || 5,
+      playbackDuration: mediaItem.duration || 5,
+      trimStart: 0,
+      trimEnd: mediaItem.duration || 5,
+    };
+    
+    // Add to first video track
+    setVideoTracks(prev => {
+      const next = [...prev];
+      if (next.length === 0) next.push([]);
+      next[0] = [...next[0], newClip];
+      return next;
+    });
+    
+    toast.success(`Added ${mediaItem.name} to timeline`);
+  };
+
+  /* ---- Handle drop on timeline ---- */
+  const handleTimelineDrop = (e, trackIdx) => {
+    e.preventDefault();
+    
+    // Check if it's from media library
+    try {
+      const mediaData = e.dataTransfer.getData('application/json');
+      if (mediaData) {
+        const mediaItem = JSON.parse(mediaData);
+        const rect = e.currentTarget.getBoundingClientRect();
+        const dropX = e.clientX - rect.left;
+        const startTime = Math.max(0, dropX / pxPerSec);
+        
+        const newClip = {
+          id: `${mediaItem.id}-${Date.now()}`,
+          name: mediaItem.name,
+          videoUrl: mediaItem.type === 'video' ? mediaItem.url : null,
+          imageUrl: mediaItem.type === 'image' ? mediaItem.url : null,
+          startTime,
+          duration: mediaItem.duration || 5,
+          playbackDuration: mediaItem.duration || 5,
+          trimStart: 0,
+          trimEnd: mediaItem.duration || 5,
+        };
+        
+        setVideoTracks(prev => prev.map((track, i) =>
+          i === trackIdx ? [...track, newClip] : track
+        ));
+        
+        toast.success(`Added ${mediaItem.name} to timeline`);
+        return;
+      }
+    } catch (err) {
+      // Not from media library, handle as clip reorder
+    }
+    
+    // Existing clip reorder logic
+    const clipId = e.dataTransfer.getData('text/clip-id');
+    const fromTrack = parseInt(e.dataTransfer.getData('text/track-idx'));
+    if (!clipId || isNaN(fromTrack)) return;
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    const newStart = Math.max(0, (e.clientX - rect.left) / pxPerSec);
+    
+    setVideoTracks(prev => {
+      const next = prev.map(t => [...t]);
+      const clip = next[fromTrack].find(c => c.id === clipId);
+      if (!clip) return prev;
+      next[fromTrack] = next[fromTrack].filter(c => c.id !== clipId);
+      next[trackIdx] = [...next[trackIdx], { ...clip, startTime: newStart }];
+      return next;
+    });
+  };
 
   /* ---- Drag & drop audio onto audio track ---- */
   const handleAudioDrop = (e, trackIdx) => {

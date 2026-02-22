@@ -187,8 +187,9 @@ export const LandingPage = () => {
                 src={TWINNEE_LOGO}
                 alt="TWINNEE - Your AI Companion"
                 className="w-full max-w-lg drop-shadow-2xl"
-                animate={{ y: [0, -15, 0] }}
-                transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+                initial={{ rotate: -180, scale: 0, opacity: 0 }}
+                animate={{ rotate: 0, scale: 1, opacity: 1 }}
+                transition={{ type: 'spring', stiffness: 180, damping: 18, delay: 0.3 }}
                 data-testid="hero-mascot-image"
               />
               

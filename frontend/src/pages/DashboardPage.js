@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import api from '@/lib/api';
 import { WellbeingCheckin } from '@/components/wellbeing/WellbeingCheckin';
 import { ParentAuthModal } from '@/components/wellbeing/ParentAuthModal';
+import { TwinteeChatWidget } from '@/components/TwinteeChatWidget';
 
 const CHECKIN_SEEN_KEY = 'storycraft_checkin_date';
 

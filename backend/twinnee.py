@@ -434,11 +434,11 @@ class StoryPersonalizer:
 
 
 class TwinneeChat:
-    """TWINNEE Chatbot with OpenAI"""
+    """TWINNEE Chatbot with emergentintegrations"""
     
     def __init__(self):
-        self.client = openai_client
         self.system_prompt = TWINNEE_SYSTEM_PROMPT
+        self._key = os.environ.get('EMERGENT_LLM_KEY') or os.environ.get('OPENAI_API_KEY')
     
     async def get_response(
         self, 
@@ -447,29 +447,20 @@ class TwinneeChat:
         user_context: Dict = None
     ) -> str:
         """
-        Get chatbot response from OpenAI
-        
-        Args:
-            user_message: The user's message
-            conversation_history: List of previous messages
-            user_context: User behavior context (scores, activities)
-        
-        Returns:
-            Chatbot response text
+        Get chatbot response using emergentintegrations
         """
-        
+        if not self._key:
+            return "I need a moment! Please check back soon. 😊"
+
         # Build context-aware system prompt
         context_prompt = self.system_prompt
         
         if user_context:
             scores = user_context.get('scores', {})
             screen_time = user_context.get('screen_time_today', 0)
-            
-            # Add context to prompt
             context_prompt += "\n\nCURRENT CONTEXT:"
             context_prompt += f"\n- Child's name: {user_context.get('child_name', 'friend')}"
             context_prompt += f"\n- Screen time today: {screen_time} minutes"
-            
             if scores:
                 if scores.get('creativity', 0) < 40:
                     context_prompt += "\n- Note: Encourage creative activities"
@@ -477,29 +468,30 @@ class TwinneeChat:
                     context_prompt += "\n- Note: Gently remind about completing tasks"
                 if scores.get('emotional', 0) < 50:
                     context_prompt += "\n- Note: Be extra supportive and uplifting"
-        
-        # Build messages for OpenAI
-        messages = [{"role": "system", "content": context_prompt}]
-        
-        # Add conversation history (last 10 messages)
-        if conversation_history:
-            for conv in conversation_history[-10:]:
-                messages.append({"role": "user", "content": conv.get('user_message', '')})
-                messages.append({"role": "assistant", "content": conv.get('bot_response', '')})
-        
-        # Add current message
-        messages.append({"role": "user", "content": user_message})
+            # Safety nudge from Responsible AI
+            if user_context.get('safety_nudge'):
+                context_prompt += f"\n- IMPORTANT: Weave this gentle message naturally into your response: {user_context['safety_nudge']}"
         
         try:
-            response = self.client.chat.completions.create(
-                model="gpt-4o-mini",  # Fast and cost-effective
-                messages=messages,
-                max_tokens=150,  # Keep responses short
-                temperature=0.8,  # Slightly creative
-            )
-            
-            return response.choices[0].message.content.strip()
-        
+            from emergentintegrations.llm.chat import LlmChat, UserMessage
+            # Use unique session per conversation (last 5 history messages as context)
+            session_key = hash(user_message[:20]) % 99999
+            chat = LlmChat(
+                api_key=self._key,
+                session_id=f"twinnee_{user_context.get('child_name','u') if user_context else 'u'}_{session_key}",
+                system_message=context_prompt
+            ).with_model("openai", "gpt-4o-mini")
+
+            # Add conversation history
+            if conversation_history:
+                for conv in conversation_history[-5:]:
+                    if conv.get('user_message') and conv.get('bot_response'):
+                        chat.add_message("user", conv['user_message'])
+                        chat.add_message("assistant", conv['bot_response'])
+
+            response = await chat.send_message(UserMessage(text=user_message))
+            return response.strip() if response else "I'm here with you! 😊"
+
         except Exception:
             return "Oops! I'm having a little trouble right now. Can you try again? 😊"
 

@@ -117,16 +117,16 @@ Severity guide:
 - CRITICAL: Suicidal ideation, self-harm, abuse disclosure — immediate parent action required"""
 
     try:
-        if not openai_client:
-            raise RuntimeError("OpenAI client not configured")
-        response = openai_client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=500,
-            temperature=0.3,
-            response_format={"type": "json_object"}
-        )
-        result = json.loads(response.choices[0].message.content)
+        if not EMERGENT_LLM_KEY:
+            raise RuntimeError("LLM key not configured")
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        chat = LlmChat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=f"safety_{hash(message) % 100000}",
+            system_message="You are a responsible AI safety analyzer for a children's app. Always respond with valid JSON only."
+        ).with_model("openai", "gpt-4o-mini")
+        response = await chat.send_message(UserMessage(text=prompt))
+        result = json.loads(response)
         # Ensure required fields
         result.setdefault("severity", pre_severity)
         result.setdefault("categories", [])

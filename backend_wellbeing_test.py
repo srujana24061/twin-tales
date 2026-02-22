@@ -8,7 +8,7 @@ import json
 from datetime import datetime, timezone, timedelta
 
 # Configuration
-BASE_URL = "https://collab-stories.preview.emergentagent.com"
+BASE_URL = "https://twin-timeline.preview.emergentagent.com"
 API_BASE = f"{BASE_URL}/api"
 
 # Test user credentials as specified in review request

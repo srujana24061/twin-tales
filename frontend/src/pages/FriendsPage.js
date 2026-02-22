@@ -306,25 +306,25 @@ export const FriendsPage = () => {
             <div className="grid sm:grid-cols-2 gap-4">
               {friends.map(friend => (
                 <div key={friend.id} className="p-4 rounded-2xl border"
-                  style={{ background: 'var(--bg-tertiary)', borderColor: 'var(--glass-border)' }}>
+                  style={{ background: 'white', borderColor: 'var(--glass-border)' }}>
                   <div className="flex items-start justify-between mb-3">
                     <div>
-                      <p className="font-bold" style={{ color: 'var(--text-primary)' }}>
+                      <p className="font-bold" style={{ color: '#1a1a2e' }}>
                         {friend.name || 'Friend'}
                       </p>
-                      <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                      <p className="text-xs" style={{ color: '#64748B' }}>
                         {friend.email}
                       </p>
                     </div>
                     <div className="w-10 h-10 rounded-full flex items-center justify-center"
-                      style={{ background: 'var(--primary-light)' }}>
-                      <Users className="w-5 h-5" style={{ color: 'var(--primary)' }} />
+                      style={{ background: '#f3f0ff' }}>
+                      <Users className="w-5 h-5" style={{ color: '#8B5CF6' }} />
                     </div>
                   </div>
                   <Button
-                    className="w-full"
+                    className="w-full rounded-xl"
                     onClick={() => startCollaboration(friend.id, friend.name)}
-                    style={{ background: 'var(--primary)', color: 'white' }}
+                    style={{ background: '#8B5CF6', color: 'white' }}
                     data-testid={`create-story-${friend.id}`}
                   >
                     <BookOpen className="w-4 h-4 mr-2" />

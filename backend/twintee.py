@@ -4,8 +4,10 @@ Behavior tracking, scoring, and conversational AI for children
 """
 
 import os
+import random
 from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Optional
+from uuid import uuid4
 from openai import OpenAI
 
 # Initialize OpenAI client

@@ -40,7 +40,14 @@ export const LandingPage = () => {
             
             {/* Logo */}
             <div className="flex items-center gap-2" data-testid="landing-logo">
-              <img src="/twinnee-logo.png" alt="TWINNEE" className="w-9 h-9 object-contain" />
+              <motion.img
+                src="/twinnee-logo.png"
+                alt="TWINNEE"
+                className="w-9 h-9 object-contain"
+                initial={{ rotate: -180, scale: 0 }}
+                animate={{ rotate: 0, scale: 1 }}
+                transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+              />
               <span className="font-heading font-black text-xl tracking-tight" style={{ color: '#1a1a2e' }}>
                 Twinnee
               </span>

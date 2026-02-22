@@ -3062,3 +3062,8 @@ async def get_collaboration_report(session_id: str, user: dict = Depends(get_cur
     except Exception as e:
         logger.error(f"Get report error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== APP SETUP ====================
+# Include router AFTER all routes are defined
+app.include_router(api_router)

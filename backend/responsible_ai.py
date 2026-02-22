@@ -207,16 +207,16 @@ Generate a parent-friendly JSON report:
 Be warm, constructive, and specific. Avoid clinical jargon. Write like a caring school counselor."""
 
     try:
-        if not openai_client:
-            raise RuntimeError("OpenAI client not configured")
-        response = openai_client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=800,
-            temperature=0.4,
-            response_format={"type": "json_object"}
-        )
-        return json.loads(response.choices[0].message.content)
+        if not EMERGENT_LLM_KEY:
+            raise RuntimeError("LLM key not configured")
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        chat = LlmChat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=f"analysis_{hash(child_name + str(len(conversations))) % 100000}",
+            system_message="You are a child psychologist AI assistant. Always respond with valid JSON only."
+        ).with_model("openai", "gpt-4o-mini")
+        response = await chat.send_message(UserMessage(text=prompt))
+        return json.loads(response)
     except Exception as e:
         logger.error(f"Analysis report error: {e}")
         return {

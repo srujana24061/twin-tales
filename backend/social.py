@@ -1,5 +1,5 @@
 """
-TWINTEE Social Collaboration System
+TWINNEE Social Collaboration System
 Friend system, collaborative story creation, and interaction analysis
 """
 
@@ -191,7 +191,7 @@ class CollaborativeSession:
             {"topic": story_topic}
         )
         
-        # TWINTEE introduces the collaboration
+        # TWINNEE introduces the collaboration
         twintee_intro = f"Hey friends! 🎉 Let's create an amazing story about '{story_topic}' together! I'll be here to help. Who wants to start?"
         
         await db.collab_sessions.update_one(
@@ -252,7 +252,7 @@ class CollaborativeSession:
             {"text": contribution, "turn": turn_num}
         )
         
-        # TWINTEE mediator response (every 2-3 turns)
+        # TWINNEE mediator response (every 2-3 turns)
         if turn_num % 2 == 0 or turn_num % 3 == 0:
             twintee_response = await TwinteeMediator.provide_guidance(
                 db, session, contribution
@@ -326,7 +326,7 @@ class InteractionLogger:
 
 
 class TwinteeMediator:
-    """TWINTEE acts as gentle guide and active participant"""
+    """TWINNEE acts as gentle guide and active participant"""
     
     @staticmethod
     async def provide_guidance(db, session: Dict, latest_contribution: str) -> str:

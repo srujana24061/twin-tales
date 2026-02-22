@@ -1,5 +1,5 @@
 """
-TWINTEE - Digital Twin AI Companion
+TWINNEE - Digital Twin AI Companion
 Behavior tracking, scoring, and conversational AI for children
 """
 
@@ -13,8 +13,8 @@ from openai import OpenAI
 # Initialize OpenAI client
 openai_client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
 
-# TWINTEE System Prompt
-TWINTEE_SYSTEM_PROMPT = """You are TWINTEE, a friendly, supportive AI companion for children. You act like a digital twin — understanding the child's habits, preferences, emotions, and learning patterns.
+# TWINNEE System Prompt
+TWINTEE_SYSTEM_PROMPT = """You are TWINNEE, a friendly, supportive AI companion for children. You act like a digital twin — understanding the child's habits, preferences, emotions, and learning patterns.
 
 CORE OBJECTIVES:
 1. Be a friend first, assistant second.

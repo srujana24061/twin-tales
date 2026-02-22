@@ -128,10 +128,12 @@ export const DashboardPage = () => {
         >
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-10">
-            <div>
-              <h1 className="font-heading font-extrabold text-3xl sm:text-4xl tracking-tight" data-testid="dashboard-greeting">
-                Hello, <span className="gradient-text">{user.name || 'Storyteller'}</span>
-              </h1>
+            <div className="flex items-center gap-4">
+              <img src="/twinnee-logo.png" alt="TWINNEE" className="w-14 h-14 object-contain drop-shadow-md" />
+              <div>
+                <h1 className="font-heading font-extrabold text-3xl sm:text-4xl tracking-tight" data-testid="dashboard-greeting">
+                  Hello, <span className="gradient-text">{user.name || 'Storyteller'}</span>
+                </h1>
               {moodSummary ? (
                 <p className="mt-1 text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>
                   {moodSummary}

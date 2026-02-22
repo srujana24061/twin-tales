@@ -2491,10 +2491,6 @@ async def get_notifications_v2(user: dict = Depends(get_current_user)):
     return notifications
 
 
-# ==================== APP SETUP ====================
-
-app.include_router(api_router)
-
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,

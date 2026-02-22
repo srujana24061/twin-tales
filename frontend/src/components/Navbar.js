@@ -47,9 +47,7 @@ export const Navbar = () => {
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/timeline', label: 'Timeline', icon: Rss },
     { path: '/friends', label: 'Friends', icon: Users },
-    { path: '/characters', label: 'Characters', icon: Users },
     { path: '/stories/new', label: 'New Story', icon: PlusCircle },
-    { path: '/tasks', label: 'Tasks', icon: Clock },
   ];
 
   const isActive = (path) => location.pathname === path;

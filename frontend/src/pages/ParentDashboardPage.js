@@ -248,6 +248,9 @@ export default function ParentDashboardPage() {
           ))}
         </div>
 
+        {/* TWINTEE Behavior Scores */}
+        <BehaviorScoresSection />
+
         {/* Mood trend */}
         <div className="glass-panel rounded-3xl p-6 mb-6" data-testid="mood-trend-chart">
           <h3 className="font-bold text-base mb-5 flex items-center gap-2" style={{ color: 'hsl(var(--foreground))' }}>

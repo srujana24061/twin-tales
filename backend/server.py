@@ -2523,52 +2523,109 @@ class ActivityLog(BaseModel):
 
 @api_router.post("/chat/message")
 async def send_chat_message(body: ChatMessage, user: dict = Depends(get_current_user)):
-    """Send message to TWINNEE chatbot"""
+    """Send message to TWINNEE chatbot with Responsible AI safety filter"""
     try:
+        from responsible_ai import analyze_message_safety
+        from parent_notifications import send_red_flag_alert
+
         user_id = user["id"]
-        
+        child_name = user.get("name", "your child")
+
         # Get conversation history
         conversations = await db.conversations.find(
             {"user_id": user_id}
         ).sort("timestamp", -1).limit(10).to_list(10)
-        
-        # Get user behavior context
+        history = list(reversed(conversations))
+
+        # ── 1. Responsible AI safety check ──
+        safety = await analyze_message_safety(body.message, child_name, history)
+        severity = safety.get("severity", "SAFE")
+
+        # ── 2. Get user behavior context ──
         context = await get_user_behavior_context(db, user_id)
-        
-        # Get chatbot response
+
+        # ── 3. Build modified TWINNEE response with gentle nudge if needed ──
+        enhanced_message = body.message
+        if safety.get("child_nudge") and severity in ("LOW", "MEDIUM", "HIGH", "CRITICAL"):
+            # Append nudge instruction to context so TWINNEE weaves it in
+            context["safety_nudge"] = safety["child_nudge"]
+            context["safety_severity"] = severity
+
         bot_response = await twinnee_chat.get_response(
-            body.message,
-            conversation_history=list(reversed(conversations)),
+            enhanced_message,
+            conversation_history=history,
             user_context=context
         )
-        
-        # Save conversation
+
+        # For HIGH/CRITICAL: prepend a warm caring line to TWINNEE's response
+        if severity in ("HIGH", "CRITICAL"):
+            bot_response = f"{safety.get('child_nudge', 'I hear you, and I care about you so much!')} {bot_response}"
+
+        # ── 4. Save conversation + safety flag ──
         conversation_doc = {
             "id": str(uuid.uuid4()),
             "user_id": user_id,
             "user_message": body.message,
             "bot_response": bot_response,
+            "safety_severity": severity,
+            "safety_categories": safety.get("categories", []),
             "timestamp": datetime.now(timezone.utc)
         }
         await db.conversations.insert_one(conversation_doc)
-        
-        # Log screen time activity
+
+        # ── 5. Store red flag if MEDIUM+ ──
+        if severity in ("MEDIUM", "HIGH", "CRITICAL"):
+            await db.red_flags.insert_one({
+                "id": str(uuid.uuid4()),
+                "user_id": user_id,
+                "severity": severity,
+                "categories": safety.get("categories", []),
+                "summary": safety.get("summary", ""),
+                "child_message": body.message,
+                "parent_alerted": False,
+                "timestamp": datetime.now(timezone.utc)
+            })
+
+        # ── 6. Notify parent for HIGH/CRITICAL (async, don't block response) ──
+        if severity in ("HIGH", "CRITICAL") and safety.get("parent_alert"):
+            settings = await db.user_settings.find_one({"user_id": user_id}, {"_id": 0})
+            parent_email = settings.get("parent_email") if settings else None
+            parent_phone = settings.get("parent_phone") if settings else None
+            if parent_email or parent_phone:
+                try:
+                    await send_red_flag_alert(
+                        child_name=child_name,
+                        severity=severity,
+                        summary=safety.get("summary", "Concerning content detected"),
+                        action_steps=safety.get("parent_action_steps", []),
+                        child_message=body.message,
+                        parent_email=parent_email,
+                        parent_phone=parent_phone
+                    )
+                    await db.red_flags.update_one(
+                        {"user_id": user_id, "child_message": body.message},
+                        {"$set": {"parent_alerted": True}}
+                    )
+                except Exception as ne:
+                    logger.error(f"Parent notification failed: {ne}")
+
+        # ── 7. Log screen time ──
         await db.behavior_logs.insert_one({
             "id": str(uuid.uuid4()),
             "user_id": user_id,
             "activity_type": "screen_time",
-            "duration_minutes": 1,  # Each chat session = 1 minute
+            "duration_minutes": 1,
             "timestamp": datetime.now(timezone.utc)
         })
-        
-        # Update scores asynchronously
+
         await update_behavior_scores(db, user_id)
-        
+
         return {
             "message": bot_response,
-            "timestamp": conversation_doc["timestamp"].isoformat()
+            "timestamp": conversation_doc["timestamp"].isoformat(),
+            "safety_flag": severity if severity != "SAFE" else None
         }
-    
+
     except Exception as e:
         logger.error(f"Chat error: {e}")
         raise HTTPException(status_code=500, detail=str(e))

@@ -49,7 +49,9 @@ function App() {
             <Route path="/collab/chat/:sessionId" element={<ProtectedRoute><CollabChatPage /></ProtectedRoute>} />
             <Route path="/collab/:sessionId" element={<ProtectedRoute><CollaborationPage /></ProtectedRoute>} />
             <Route path="/collab/report/:sessionId" element={<ProtectedRoute><CollaborationReportPage /></ProtectedRoute>} />
+            <Route path="/timeline" element={<ProtectedRoute><TimelinePage /></ProtectedRoute>} />
           </Routes>
+          <FriendChatWidget />
         </BrowserRouter>
         <Toaster position="top-right" richColors />
       </div>

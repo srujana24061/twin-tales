@@ -420,7 +420,7 @@ class StoryPersonalizer:
             suggestions.append({
                 'type': 'pattern_based',
                 'title': f'More {top_content}',
-                'description': f'Similar to stories you enjoyed before',
+                'description': 'Similar to stories you enjoyed before',
                 'reason': 'Based on what you like! 🌟'
             })
         

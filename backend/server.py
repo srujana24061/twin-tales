@@ -2259,15 +2259,9 @@ async def convert_doodle_to_image(scene_id: str, request: DoodleToImageRequest, 
         doodle_url = await s3_service.upload(doodle_key, doodle_bytes, 'image/png')
         logger.info(f"Doodle uploaded to S3: {doodle_url}")
         
-        # Step 2: Convert doodle to polished image using Nano Banana
-        scene_text = scene.get("scene_text", "") or scene.get("image_prompt", "")
-        scene_title = request.scene_title or scene.get("title", "")
-        
-        # Create a prompt that uses the doodle as reference
-        conversion_prompt = f"""Transform this hand-drawn sketch/doodle into a beautiful, polished illustration.
-Scene context: {scene_title}. {scene_text[:200]}
-Style: High quality children's book illustration, vibrant colors, clean lines, professional art style.
-Keep the composition and main elements from the sketch but make it look professionally illustrated."""
+        # Step 2: Convert doodle to 3D colored smooth image using Nano Banana
+        # Simple prompt without scene context - just transform the sketch
+        conversion_prompt = "Transform this hand-drawn sketch into a 3D colored smooth image. Keep the exact same composition, shapes and elements from the drawing. Make it vibrant, polished and professionally rendered with smooth gradients and clean edges."
         
         # Use Nano Banana with the doodle as reference image
         from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
@@ -2279,7 +2273,7 @@ Keep the composition and main elements from the sketch but make it look professi
         chat = LlmChat(
             api_key=api_key,
             session_id=f"doodle-{scene_id}-{uuid.uuid4().hex[:8]}",
-            system_message="You are an expert illustrator that transforms rough sketches into polished artwork."
+            system_message="You are an image transformer that converts sketches to 3D rendered images."
         )
         chat.with_model("gemini", "gemini-3-pro-image-preview").with_params(modalities=["image", "text"])
         

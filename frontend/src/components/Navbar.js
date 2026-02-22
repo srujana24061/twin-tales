@@ -62,10 +62,11 @@ export const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <Link to="/dashboard" className="flex items-center gap-2" data-testid="nav-logo">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
-              <Brain className="w-6 h-6 text-white" />
-            </div>
+            <img
+              src="/twinnee-logo.png"
+              alt="TWINNEE"
+              className="w-10 h-10 object-contain"
+            />
             <span className="font-heading font-extrabold text-xl tracking-tight" 
               style={{ 
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',

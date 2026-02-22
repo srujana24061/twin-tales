@@ -53,7 +53,7 @@ export function TwinteeChatWidget() {
       if (formattedMessages.length === 0) {
         setMessages([{
           type: 'bot',
-          text: "Hey there! 👋 I'm TWINTEE, your friendly companion! What would you like to do today? We could create a story together, or just chat!",
+          text: "Hey there! 👋 I'm TWINNEE, your friendly companion! What would you like to do today? We could create a story together, or just chat!",
           timestamp: new Date().toISOString()
         }]);
       }
@@ -62,7 +62,7 @@ export function TwinteeChatWidget() {
       // Show welcome message on error
       setMessages([{
         type: 'bot',
-        text: "Hey there! 👋 I'm TWINTEE, your friendly companion! What would you like to do today?",
+        text: "Hey there! 👋 I'm TWINNEE, your friendly companion! What would you like to do today?",
         timestamp: new Date().toISOString()
       }]);
     } finally {
@@ -159,7 +159,7 @@ export function TwinteeChatWidget() {
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-white" />
                 <div>
-                  <h3 className="font-bold text-white text-sm">TWINTEE</h3>
+                  <h3 className="font-bold text-white text-sm">TWINNEE</h3>
                   <p className="text-xs text-white/80">Your AI Companion</p>
                 </div>
               </div>
@@ -261,7 +261,7 @@ export function TwinteeChatWidget() {
                 </Button>
               </div>
               <p className="text-[10px] text-center mt-2" style={{ color: '#9ca3af' }}>
-                TWINTEE is here to help and support you! 💜
+                TWINNEE is here to help and support you! 💜
               </p>
             </div>
           </motion.div>

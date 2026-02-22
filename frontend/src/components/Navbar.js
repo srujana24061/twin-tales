@@ -73,7 +73,7 @@ export const Navbar = () => {
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent'
               }}>
-              TWINTEE
+              TWINNEE
             </span>
           </Link>
 

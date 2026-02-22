@@ -8,7 +8,7 @@ import axios from 'axios';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
-// TWINTEE Behavior Scores Component
+// TWINNEE Behavior Scores Component
 const BehaviorScoresSection = () => {
   const [scores, setScores] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -78,7 +78,7 @@ const BehaviorScoresSection = () => {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="font-heading font-bold text-lg flex items-center gap-2" style={{ color: 'hsl(var(--foreground))' }}>
-            <span className="text-2xl">🎯</span> TWINTEE Behavior Insights
+            <span className="text-2xl">🎯</span> TWINNEE Behavior Insights
           </h2>
           <p className="text-xs mt-1" style={{ color: 'hsl(var(--muted-foreground))' }}>
             AI-powered understanding of your child's patterns (last 7 days)
@@ -150,7 +150,7 @@ const BehaviorScoresSection = () => {
       <div className="flex items-center gap-2 px-4 py-3 rounded-xl" style={{ background: 'hsl(var(--muted))/50' }}>
         <AlertCircle className="w-4 h-4 shrink-0" style={{ color: 'hsl(var(--primary))' }} />
         <p className="text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>
-          <strong>Note:</strong> TWINTEE uses gentle AI analysis to understand patterns. Scores guide supportive conversations, not judgments. Screen time this week: {Math.round(scores.screen_time_week || 0)} minutes.
+          <strong>Note:</strong> TWINNEE uses gentle AI analysis to understand patterns. Scores guide supportive conversations, not judgments. Screen time this week: {Math.round(scores.screen_time_week || 0)} minutes.
         </p>
       </div>
     </motion.div>
@@ -397,7 +397,7 @@ export default function ParentDashboardPage() {
           ))}
         </div>
 
-        {/* TWINTEE Behavior Scores */}
+        {/* TWINNEE Behavior Scores */}
         <BehaviorScoresSection />
 
         {/* Mood trend */}

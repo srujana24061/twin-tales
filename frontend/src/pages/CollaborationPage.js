@@ -172,7 +172,7 @@ export const CollaborationPage = () => {
               const isTwintee = item.contributor === 'twintee';
               const isCurrentUser = item.contributor === currentUserId;
               const contributor = isTwintee 
-                ? 'TWINTEE' 
+                ? 'TWINNEE' 
                 : isCurrentUser 
                   ? 'You' 
                   : otherUser?.name || 'Friend';

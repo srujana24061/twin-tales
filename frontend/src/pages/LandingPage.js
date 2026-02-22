@@ -46,7 +46,7 @@ export const LandingPage = () => {
               <Brain className="w-5 h-5 text-white" />
             </div>
             <span className="font-heading font-extrabold text-xl tracking-tight">
-              TWINTEE
+              TWINNEE
             </span>
           </div>
           <div className="flex items-center gap-3">
@@ -94,12 +94,12 @@ export const LandingPage = () => {
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-medium mb-6"
                 style={{ background: 'linear-gradient(135deg, #667eea20 0%, #764ba220 100%)', color: '#667eea' }}>
                 <Star className="w-4 h-4" />
-                Meet TWINTEE — Your Child's Smart Companion
+                Meet TWINNEE — Your Child's Smart Companion
               </motion.div>
               
               <motion.h1 custom={1} variants={fadeUp} 
                 className="font-heading font-extrabold text-4xl sm:text-5xl lg:text-7xl tracking-tight leading-[1.1] mb-6">
-                TWINTEE
+                TWINNEE
                 <br />
                 <span style={{ 
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
@@ -160,7 +160,7 @@ export const LandingPage = () => {
         </div>
       </section>
 
-      {/* What is TWINTEE */}
+      {/* What is TWINNEE */}
       <section className="py-20 relative z-10">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
@@ -170,10 +170,10 @@ export const LandingPage = () => {
             className="text-center mb-16"
           >
             <h2 className="font-heading font-extrabold text-3xl sm:text-4xl lg:text-5xl mb-4">
-              💬 What is <span style={{ color: '#667eea' }}>TWINTEE</span>?
+              💬 What is <span style={{ color: '#667eea' }}>TWINNEE</span>?
             </h2>
             <p className="text-lg max-w-2xl mx-auto" style={{ color: 'var(--text-secondary)' }}>
-              TWINTEE is an intelligent AI companion that talks like a friend, thinks like a guide, and grows with your child.
+              TWINNEE is an intelligent AI companion that talks like a friend, thinks like a guide, and grows with your child.
             </p>
           </motion.div>
 
@@ -230,7 +230,7 @@ export const LandingPage = () => {
                 🧒 A Friend, <span style={{ color: '#667eea' }}>Not Just a Bot</span>
               </h2>
               <p className="text-lg mb-6" style={{ color: 'var(--text-secondary)' }}>
-                TWINTEE greets your child with a simple:
+                TWINNEE greets your child with a simple:
               </p>
               <div className="glass-panel rounded-3xl p-6 mb-6" style={{ background: 'linear-gradient(135deg, #667eea10 0%, #764ba210 100%)' }}>
                 <p className="text-xl font-medium italic" style={{ color: '#667eea' }}>
@@ -257,7 +257,7 @@ export const LandingPage = () => {
                   <div className="flex-1 rounded-2xl rounded-tl-sm p-4"
                     style={{ background: 'linear-gradient(135deg, #667eea20 0%, #764ba220 100%)' }}>
                     <p className="text-sm" style={{ color: 'var(--text-primary)' }}>
-                      Hey there! 👋 I'm TWINTEE! Want to create a fun story together or chat about your day?
+                      Hey there! 👋 I'm TWINNEE! Want to create a fun story together or chat about your day?
                     </p>
                   </div>
                 </div>
@@ -304,7 +304,7 @@ export const LandingPage = () => {
               📖 Powered by <span style={{ color: '#667eea' }}>Stories</span>
             </h2>
             <p className="text-lg max-w-2xl mx-auto" style={{ color: 'var(--text-secondary)' }}>
-              Children learn best through stories—and TWINTEE makes them part of the story.
+              Children learn best through stories—and TWINNEE makes them part of the story.
             </p>
           </motion.div>
 
@@ -357,7 +357,7 @@ export const LandingPage = () => {
               📊 Smart <span style={{ color: '#667eea' }}>Behavior Insights</span>
             </h2>
             <p className="text-lg max-w-2xl mx-auto" style={{ color: 'var(--text-secondary)' }}>
-              TWINTEE quietly observes and understands patterns:
+              TWINNEE quietly observes and understands patterns:
             </p>
           </motion.div>
 
@@ -406,7 +406,7 @@ export const LandingPage = () => {
         </div>
       </section>
 
-      {/* Why Parents Love TWINTEE */}
+      {/* Why Parents Love TWINNEE */}
       <section className="py-20 relative z-10">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
@@ -460,7 +460,7 @@ export const LandingPage = () => {
         </div>
       </section>
 
-      {/* Why Kids Love TWINTEE */}
+      {/* Why Kids Love TWINNEE */}
       <section className="py-20 relative z-10">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
@@ -471,7 +471,7 @@ export const LandingPage = () => {
             style={{ background: 'linear-gradient(135deg, #667eea10 0%, #764ba210 100%)' }}
           >
             <h2 className="font-heading font-extrabold text-3xl sm:text-4xl mb-8">
-              🌈 Why Kids Love <span style={{ color: '#667eea' }}>TWINTEE</span>
+              🌈 Why Kids Love <span style={{ color: '#667eea' }}>TWINNEE</span>
             </h2>
             <div className="grid sm:grid-cols-2 gap-6">
               {[
@@ -584,13 +584,13 @@ export const LandingPage = () => {
                 style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
                 <Brain className="w-5 h-5 text-white" />
               </div>
-              <span className="font-heading font-extrabold text-lg">TWINTEE</span>
+              <span className="font-heading font-extrabold text-lg">TWINNEE</span>
             </div>
             <p className="text-sm italic" style={{ color: 'var(--text-secondary)' }}>
               Growing with your child, one conversation at a time. 💜
             </p>
             <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-              © 2025 TWINTEE. All rights reserved.
+              © 2025 TWINNEE. All rights reserved.
             </div>
           </div>
         </div>

@@ -21,6 +21,7 @@ TWINNEE is an AI-powered "digital twin" companion for children, designed to prom
 - AI-generated personalized stories
 - Character builder
 - Scene editor with video creation capabilities
+- **NEW: Doodle-to-Image** - Draw sketches that AI converts to polished illustrations
 
 ### 4. Social Collaboration (In Progress)
 - Friend system with parent approval
@@ -43,25 +44,29 @@ TWINNEE is an AI-powered "digital twin" companion for children, designed to prom
     │   ├── pages/
     │   │   ├── LandingPage.js      # New landing page design
     │   │   ├── DashboardPage.js    # Main user dashboard
-    │   │   ├── ParentDashboardPage.js
-    │   │   ├── FriendsPage.js
-    │   │   └── CollaborationPage.js
+    │   │   ├── SceneGridEditor.js  # Scene editor with doodle feature
+    │   │   └── ...
     │   └── components/
     │       ├── TwinneeChatWidget.js  # Floating chat widget
+    │       ├── DoodleCanvasModal.js  # NEW: Drawing canvas for scenes
     │       └── ui/                    # Shadcn components
     └── .env
 ```
 
 ## What's Been Implemented
 
-### December 2025
+### December 2025 (Latest Session)
 - [x] Complete TWINTEE → TWINNEE rename across entire codebase
 - [x] New landing page design with gradient text and mascot
 - [x] Fixed TwinneeChatWidget component naming
-- [x] Fixed server.py syntax errors (missing except blocks)
-- [x] Fixed TwinneeChat class name in twinnee.py
+- [x] Fixed server.py syntax errors
 - [x] Chat widget functional with OpenAI integration
-- [x] Dashboard working with TWINNEE branding
+- [x] **NEW: Doodle-to-Image Feature**
+  - Drawing canvas modal with brush tools and color palette
+  - Backend endpoint `/api/scenes/{scene_id}/doodle-to-image`
+  - Gemini Nano Banana integration for sketch-to-image conversion
+  - S3 storage for both doodles and generated images
+  - Scene database update with generated image URL
 
 ### Previous Implementation
 - [x] TWINNEE AI Chatbot with OpenAI
@@ -69,73 +74,47 @@ TWINNEE is an AI-powered "digital twin" companion for children, designed to prom
 - [x] Parent Dashboard with scores display
 - [x] Story creation and editing
 - [x] Video editor with media library
-- [x] Social collaboration backend (friends, sessions)
 
 ## API Endpoints
+
+### Doodle-to-Image (NEW)
+- POST `/api/scenes/{scene_id}/doodle-to-image`
+  - Request: `{ doodle_base64: string, scene_title?: string }`
+  - Response: `{ success: bool, image_url: string, doodle_url: string }`
+  - Uses Gemini Nano Banana to convert hand-drawn sketches to polished illustrations
 
 ### Authentication
 - POST `/api/auth/register` - User registration
 - POST `/api/auth/login` - User login
-- GET `/api/auth/me` - Get current user
 
 ### Chat
 - POST `/api/chat/message` - Send message to TWINNEE
-- GET `/api/chat/history` - Get conversation history
 
-### Behavior
-- GET `/api/behavior/scores` - Get user behavior scores
-- POST `/api/behavior/activity` - Log activity
-- GET `/api/twinnee/patterns` - Get learned patterns
-- GET `/api/twinnee/risk-check` - Check behavioral risks
-
-### Social
-- POST `/api/friends/request` - Send friend request
-- GET `/api/friends/requests` - Get pending requests
-- POST `/api/friends/respond` - Accept/decline request
-- GET `/api/friends/list` - Get friends list
-- POST `/api/collab/create` - Create collaboration session
-- POST `/api/collab/contribute` - Add contribution
-
-## Database Collections
-- users
-- stories
-- scenes
-- characters
-- conversations
-- behavior_logs
-- user_scores
-- user_patterns
-- friendships
-- friend_requests
-- collab_sessions
-- collab_reports
+### Scenes
+- POST `/api/scenes/{scene_id}/generate-image` - AI image generation
+- POST `/api/scenes/{scene_id}/generate-video` - AI video generation
 
 ## 3rd Party Integrations
 - **OpenAI** - TWINNEE chatbot (GPT-4o-mini)
-- **AWS S3** - Media storage
 - **Gemini Nano Banana** - Image generation (Emergent LLM Key)
+- **AWS S3** - Media storage
 - **Amazon SES** - Email notifications
 
 ## Pending/Upcoming Tasks
 
 ### P1 - High Priority
-- [ ] Complete Friends page UI (search, add, manage friends)
+- [ ] Complete Friends page UI
 - [ ] Parent approval flow for friend requests
 - [ ] Turn-based collaborative story writing UI
 
 ### P2 - Medium Priority
+- [ ] Update auth page branding (still shows StoryCraft)
 - [ ] TWINNEE AI mediator in collaboration
 - [ ] Collaboration reports page
-- [ ] Update auth page branding (still shows StoryCraft)
 
 ### P3 - Low Priority
 - [ ] Notification system completion
 - [ ] MiniMax video API fix
-- [ ] Ad Studio page
-
-## Known Issues
-- S3 delete permission may be missing (IAM config)
-- MiniMax API "invalid params" error (payload issue)
 
 ## Test Credentials
 - Email: video_test_1771703962@test.com

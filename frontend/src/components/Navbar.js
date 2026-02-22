@@ -64,19 +64,14 @@ export const Navbar = () => {
           <Link to="/dashboard" className="flex items-center gap-2" data-testid="nav-logo">
             <motion.img
               src="/twinnee-logo.png"
-              alt="TWINNEE"
+              alt="Twinnee"
               className="w-10 h-10 object-contain"
               initial={{ rotate: -180, scale: 0 }}
               animate={{ rotate: 0, scale: 1 }}
               transition={{ type: 'spring', stiffness: 260, damping: 20, delay: 0.1 }}
             />
-            <span className="font-heading font-extrabold text-xl tracking-tight" 
-              style={{ 
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent'
-              }}>
-              TWINNEE
+            <span className="font-heading font-black text-xl tracking-tight" style={{ color: '#1a1a2e' }}>
+              Twinnee
             </span>
           </Link>
 

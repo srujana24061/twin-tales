@@ -11,6 +11,9 @@ import { StoryGenerationPage } from "@/pages/StoryGenerationPage";
 import { SceneEditorPage } from "@/pages/SceneEditorPage";
 import { SceneGridEditor } from "@/pages/SceneGridEditor";
 import { VideoEditorPage } from "@/pages/VideoEditorPage";
+import { FriendsPage } from "@/pages/FriendsPage";
+import { CollaborationPage } from "@/pages/CollaborationPage";
+import { CollaborationReportPage } from "@/pages/CollaborationReportPage";
 import { AdStudioPage } from "@/pages/AdStudioPage";
 import { TaskHistoryPage } from "@/pages/TaskHistoryPage";
 import { DoodleToStoryPage } from "@/pages/DoodleToStoryPage";
@@ -38,6 +41,9 @@ function App() {
             <Route path="/stories/:storyId/ads" element={<ProtectedRoute><AdStudioPage /></ProtectedRoute>} />
             <Route path="/tasks" element={<ProtectedRoute><TaskHistoryPage /></ProtectedRoute>} />
             <Route path="/parent-dashboard" element={<ProtectedRoute><ParentDashboardPage /></ProtectedRoute>} />
+            <Route path="/friends" element={<ProtectedRoute><FriendsPage /></ProtectedRoute>} />
+            <Route path="/collab/:sessionId" element={<ProtectedRoute><CollaborationPage /></ProtectedRoute>} />
+            <Route path="/collab/report/:sessionId" element={<ProtectedRoute><CollaborationReportPage /></ProtectedRoute>} />
           </Routes>
         </BrowserRouter>
         <Toaster position="top-right" richColors />

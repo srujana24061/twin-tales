@@ -2785,7 +2785,151 @@ async def check_behavioral_risks(user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# ==================== SOCIAL COLLABORATION ====================
+# ==================== PARENT INTELLIGENCE CENTRE ====================
+
+@api_router.get("/parent/child-analysis")
+async def get_child_analysis(user: dict = Depends(get_current_user)):
+    """
+    AI-powered analysis of child's recent conversations + behavior.
+    Returns emotional status, next steps for parents, red flags summary.
+    """
+    try:
+        from responsible_ai import generate_child_analysis_report
+        user_id = user["id"]
+        child_name = user.get("name", "your child")
+
+        # Get last 30 conversations
+        week_ago = datetime.now(timezone.utc) - timedelta(days=7)
+        conversations = await db.conversations.find(
+            {"user_id": user_id, "timestamp": {"$gte": week_ago}},
+            {"_id": 0}
+        ).sort("timestamp", -1).limit(30).to_list(30)
+
+        # Get current scores
+        scores_doc = await db.user_scores.find_one({"user_id": user_id}, {"_id": 0})
+        scores = scores_doc.get("scores", {}) if scores_doc else {}
+
+        # Get recent red flags
+        red_flags = await db.red_flags.find(
+            {"user_id": user_id, "timestamp": {"$gte": week_ago}},
+            {"_id": 0}
+        ).sort("timestamp", -1).to_list(20)
+
+        for f in red_flags:
+            if isinstance(f.get("timestamp"), datetime):
+                f["timestamp"] = f["timestamp"].isoformat()
+
+        analysis = await generate_child_analysis_report(
+            child_name=child_name,
+            conversations=list(reversed(conversations)),
+            scores=scores,
+            red_flags=red_flags
+        )
+
+        return {
+            "analysis": analysis,
+            "red_flags": red_flags,
+            "red_flag_count": len(red_flags),
+            "has_critical": any(f.get("severity") == "CRITICAL" for f in red_flags),
+            "has_high": any(f.get("severity") == "HIGH" for f in red_flags),
+        }
+    except Exception as e:
+        logger.error(f"Child analysis error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/parent/red-flags")
+async def get_red_flags(user: dict = Depends(get_current_user)):
+    """Get all red flag incidents for this user."""
+    try:
+        user_id = user["id"]
+        flags = await db.red_flags.find(
+            {"user_id": user_id},
+            {"_id": 0}
+        ).sort("timestamp", -1).limit(50).to_list(50)
+        for f in flags:
+            if isinstance(f.get("timestamp"), datetime):
+                f["timestamp"] = f["timestamp"].isoformat()
+        return {"red_flags": flags, "total": len(flags)}
+    except Exception as e:
+        logger.error(f"Red flags error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class WeeklyReportBody(BaseModel):
+    force: bool = False
+
+
+@api_router.post("/parent/send-weekly-report")
+async def send_weekly_report(body: WeeklyReportBody, user: dict = Depends(get_current_user)):
+    """Generate and send weekly behavior report via email + WhatsApp."""
+    try:
+        from responsible_ai import generate_weekly_report
+        from parent_notifications import send_weekly_report_notification
+
+        user_id = user["id"]
+        child_name = user.get("name", "your child")
+
+        settings = await db.user_settings.find_one({"user_id": user_id}, {"_id": 0})
+        parent_email = settings.get("parent_email") if settings else None
+        parent_phone = settings.get("parent_phone") if settings else None
+
+        if not parent_email and not parent_phone:
+            raise HTTPException(
+                status_code=400,
+                detail="No parent email or phone configured. Add them in Settings first."
+            )
+
+        # Gather data
+        week_ago = datetime.now(timezone.utc) - timedelta(days=7)
+        conversations = await db.conversations.find(
+            {"user_id": user_id, "timestamp": {"$gte": week_ago}},
+            {"_id": 0}
+        ).sort("timestamp", 1).limit(50).to_list(50)
+
+        scores_doc = await db.user_scores.find_one({"user_id": user_id}, {"_id": 0})
+        scores = scores_doc.get("scores", {}) if scores_doc else {}
+
+        red_flags = await db.red_flags.find(
+            {"user_id": user_id, "timestamp": {"$gte": week_ago}},
+            {"_id": 0}
+        ).to_list(20)
+        for f in red_flags:
+            if isinstance(f.get("timestamp"), datetime):
+                f["timestamp"] = f["timestamp"].isoformat()
+
+        behavior_logs = await db.behavior_logs.find(
+            {"user_id": user_id, "timestamp": {"$gte": week_ago}},
+            {"_id": 0}
+        ).to_list(200)
+
+        # Generate the report text
+        report_text = await generate_weekly_report(
+            child_name=child_name,
+            conversations=conversations,
+            scores=scores,
+            red_flags=red_flags,
+            behavior_logs=behavior_logs
+        )
+
+        result = await send_weekly_report_notification(
+            child_name=child_name,
+            report_text=report_text,
+            parent_email=parent_email,
+            parent_phone=parent_phone,
+            scores=scores
+        )
+
+        return {"success": True, "sent_to": result, "report_preview": report_text[:300]}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Weekly report error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 
 from social import FriendSystem, CollaborativeSession, InteractionLogger, InteractionAnalyzer
 

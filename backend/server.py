@@ -2641,7 +2641,15 @@ async def check_behavioral_risks(user: dict = Depends(get_current_user)):
         return {
             "risks": parent_risks,
             "total_risks": len(risks),
-
+            "context_summary": {
+                "screen_time_today": context.get("screen_time_today", 0),
+                "emotional_score": context.get("scores", {}).get("emotional", 75)
+            }
+        }
+    
+    except Exception as e:
+        logger.error(f"Risk check error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ==================== SOCIAL COLLABORATION ====================

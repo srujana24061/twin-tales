@@ -184,7 +184,7 @@ export const LandingPage = () => {
               className="relative flex items-center justify-center"
             >
               <motion.img
-                src={TWINNEE_MASCOT}
+                src={TWINNEE_LOGO}
                 alt="TWINNEE - Your AI Companion"
                 className="w-full max-w-lg drop-shadow-2xl"
                 animate={{ y: [0, -15, 0] }}

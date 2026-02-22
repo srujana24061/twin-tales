@@ -474,20 +474,13 @@ class TwinneeChat:
         
         try:
             from emergentintegrations.llm.chat import LlmChat, UserMessage
-            # Use unique session per conversation (last 5 history messages as context)
-            session_key = hash(user_message[:20]) % 99999
+            # Use user-specific session so history accumulates naturally
+            child_key = user_context.get('child_name', 'user') if user_context else 'user'
             chat = LlmChat(
                 api_key=self._key,
-                session_id=f"twinnee_{user_context.get('child_name','u') if user_context else 'u'}_{session_key}",
+                session_id=f"twinnee_{child_key}",
                 system_message=context_prompt
             ).with_model("openai", "gpt-4o-mini")
-
-            # Add conversation history
-            if conversation_history:
-                for conv in conversation_history[-5:]:
-                    if conv.get('user_message') and conv.get('bot_response'):
-                        chat.add_message("user", conv['user_message'])
-                        chat.add_message("assistant", conv['bot_response'])
 
             response = await chat.send_message(UserMessage(text=user_message))
             return response.strip() if response else "I'm here with you! 😊"

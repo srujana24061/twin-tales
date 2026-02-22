@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Brain, Users, PlusCircle, Clock, LayoutDashboard, LogOut, Menu, X, Bell, Rss } from 'lucide-react';
+import { Users, PlusCircle, Clock, LayoutDashboard, LogOut, Menu, X, Bell, Rss, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { SessionTimer } from '@/components/wellbeing/SessionTimer';

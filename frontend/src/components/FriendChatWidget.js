@@ -69,7 +69,7 @@ export const FriendChatWidget = () => {
   const loadMessages = async () => {
     if (!activeChat) return;
     try {
-      const { data } = await api.get(`/chat/direct/${activeChat.oderId}`);
+      const { data } = await api.get(`/chat/direct/${activeChat.id}`);
       setMessages(data.messages || []);
     } catch (err) {
       // Chat might not exist yet, that's ok

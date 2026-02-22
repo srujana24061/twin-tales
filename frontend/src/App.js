@@ -20,6 +20,8 @@ import { TaskHistoryPage } from "@/pages/TaskHistoryPage";
 import { DoodleToStoryPage } from "@/pages/DoodleToStoryPage";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import ParentDashboardPage from "@/pages/ParentDashboardPage";
+import { TimelinePage } from "@/pages/TimelinePage";
+import { FriendChatWidget } from "@/components/FriendChatWidget";
 
 function App() {
   return (

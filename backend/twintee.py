@@ -66,7 +66,7 @@ IMPORTANT:
 
 
 class BehaviorScorer:
-    """Calculate behavior scores for TWINTEE"""
+    """Calculate behavior scores for TWINNEE"""
     
     @staticmethod
     def calculate_learning_score(activities: List[Dict]) -> float:
@@ -428,7 +428,7 @@ class StoryPersonalizer:
 
 
 class TwinteeChat:
-    """TWINTEE Chatbot with OpenAI"""
+    """TWINNEE Chatbot with OpenAI"""
     
     def __init__(self):
         self.client = openai_client

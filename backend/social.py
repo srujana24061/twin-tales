@@ -341,7 +341,7 @@ class TwinteeMediator:
         # Analyze collaboration
         user_contributions = [c for c in content if c["contributor"] != "twintee"]
         
-        # Build context for TWINTEE
+        # Build context for TWINNEE
         context = f"""You are mediating a collaborative story between two kids.
         
 Story topic: {session['story']['topic']}

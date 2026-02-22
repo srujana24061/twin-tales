@@ -225,7 +225,7 @@ class TwinteeChat:
             screen_time = user_context.get('screen_time_today', 0)
             
             # Add context to prompt
-            context_prompt += f"\n\nCURRENT CONTEXT:"
+            context_prompt += "\n\nCURRENT CONTEXT:"
             context_prompt += f"\n- Child's name: {user_context.get('child_name', 'friend')}"
             context_prompt += f"\n- Screen time today: {screen_time} minutes"
             
@@ -259,7 +259,7 @@ class TwinteeChat:
             
             return response.choices[0].message.content.strip()
         
-        except Exception as e:
+        except Exception:
             return "Oops! I'm having a little trouble right now. Can you try again? 😊"
 
 

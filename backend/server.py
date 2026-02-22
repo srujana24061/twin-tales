@@ -2425,3 +2425,141 @@ app.add_middleware(
 async def shutdown_db_client():
     client.close()
 
+
+# ==================== TWINTEE AI CHATBOT ====================
+
+from twintee import TwinteeChat, get_user_behavior_context, update_behavior_scores
+
+twintee_chat = TwinteeChat()
+
+class ChatMessage(BaseModel):
+    message: str
+
+class ActivityLog(BaseModel):
+    activity_type: str  # 'learning', 'creative', 'story_created', 'task', 'screen_time', 'physical', 'social'
+    duration_minutes: Optional[int] = 0
+    completed: Optional[bool] = False
+    choices_count: Optional[int] = 0
+    metadata: Optional[dict] = {}
+
+
+@api_router.post("/chat/message")
+async def send_chat_message(body: ChatMessage, user: dict = Depends(get_current_user)):
+    """Send message to TWINTEE chatbot"""
+    try:
+        user_id = user["id"]
+        
+        # Get conversation history
+        conversations = await db.conversations.find(
+            {"user_id": user_id}
+        ).sort("timestamp", -1).limit(10).to_list(10)
+        
+        # Get user behavior context
+        context = await get_user_behavior_context(db, user_id)
+        
+        # Get chatbot response
+        bot_response = await twintee_chat.get_response(
+            body.message,
+            conversation_history=list(reversed(conversations)),
+            user_context=context
+        )
+        
+        # Save conversation
+        conversation_doc = {
+            "id": str(uuid.uuid4()),
+            "user_id": user_id,
+            "user_message": body.message,
+            "bot_response": bot_response,
+            "timestamp": datetime.now(timezone.utc)
+        }
+        await db.conversations.insert_one(conversation_doc)
+        
+        # Log screen time activity
+        await db.behavior_logs.insert_one({
+            "id": str(uuid.uuid4()),
+            "user_id": user_id,
+            "activity_type": "screen_time",
+            "duration_minutes": 1,  # Each chat session = 1 minute
+            "timestamp": datetime.now(timezone.utc)
+        })
+        
+        # Update scores asynchronously
+        await update_behavior_scores(db, user_id)
+        
+        return {
+            "message": bot_response,
+            "timestamp": conversation_doc["timestamp"].isoformat()
+        }
+    
+    except Exception as e:
+        logger.error(f"Chat error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/chat/history")
+async def get_chat_history(limit: int = 20, user: dict = Depends(get_current_user)):
+    """Get chat conversation history"""
+    conversations = await db.conversations.find(
+        {"user_id": user["id"]},
+        {"_id": 0}
+    ).sort("timestamp", -1).limit(limit).to_list(limit)
+    
+    return {"conversations": list(reversed(conversations))}
+
+
+@api_router.post("/behavior/log-activity")
+async def log_activity(body: ActivityLog, user: dict = Depends(get_current_user)):
+    """Log user behavior activity"""
+    try:
+        activity_doc = {
+            "id": str(uuid.uuid4()),
+            "user_id": user["id"],
+            "activity_type": body.activity_type,
+            "duration_minutes": body.duration_minutes,
+            "completed": body.completed,
+            "choices_count": body.choices_count,
+            "metadata": body.metadata,
+            "timestamp": datetime.now(timezone.utc)
+        }
+        await db.behavior_logs.insert_one(activity_doc)
+        
+        # Update scores
+        await update_behavior_scores(db, user["id"])
+        
+        return {"status": "logged", "activity_id": activity_doc["id"]}
+    
+    except Exception as e:
+        logger.error(f"Activity log error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/behavior/scores")
+async def get_behavior_scores(user: dict = Depends(get_current_user)):
+    """Get user's behavior scores (for parent dashboard)"""
+    try:
+        # Update scores first
+        scores = await update_behavior_scores(db, user["id"])
+        
+        # Get score document
+        scores_doc = await db.user_scores.find_one({"user_id": user["id"]}, {"_id": 0})
+        
+        if not scores_doc:
+            return {
+                "scores": {
+                    "learning": 50, "creativity": 50, "discipline": 50,
+                    "emotional": 75, "physical": 50, "social": 60,
+                    "overall": 55
+                },
+                "screen_time_week": 0,
+                "last_updated": datetime.now(timezone.utc).isoformat()
+            }
+        
+        return scores_doc
+    
+    except Exception as e:
+        logger.error(f"Get scores error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+

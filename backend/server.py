@@ -2924,9 +2924,112 @@ async def get_my_sessions(user: dict = Depends(get_current_user)):
             "participants": user["id"]
         }, {"_id": 0}).sort("last_activity", -1).to_list(50)
         
+        # Add participant names to each session
+        for session in sessions:
+            participants_data = []
+            for p_id in session.get("participants", []):
+                p_user = await db.users.find_one({"id": p_id}, {"_id": 0, "password": 0})
+                if p_user:
+                    participants_data.append({
+                        "id": p_user["id"],
+                        "name": p_user.get("name", "User")
+                    })
+            session["participants_data"] = participants_data
+        
         return {"sessions": sessions}
     except Exception as e:
         logger.error(f"Get sessions error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class CollabChatBody(BaseModel):
+    session_id: str
+    message: str
+    is_story_contribution: bool = False
+
+
+@api_router.post("/collab/chat")
+async def send_collab_chat_message(body: CollabChatBody, user: dict = Depends(get_current_user)):
+    """Send a chat message in collaborative session"""
+    try:
+        session = await db.collab_sessions.find_one({"id": body.session_id})
+        
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        if user["id"] not in session["participants"]:
+            raise HTTPException(status_code=403, detail="Not authorized")
+        
+        # Create chat message
+        chat_msg = {
+            "id": str(uuid.uuid4()),
+            "sender_id": user["id"],
+            "sender_name": user.get("name", "User"),
+            "message": body.message,
+            "is_story_contribution": body.is_story_contribution,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        
+        # Add to session chat history
+        await db.collab_sessions.update_one(
+            {"id": body.session_id},
+            {
+                "$push": {"chat_messages": chat_msg},
+                "$set": {"last_activity": datetime.now(timezone.utc)}
+            }
+        )
+        
+        # If it's a story contribution, also add to story content
+        if body.is_story_contribution:
+            turn_num = session.get("turn_count", 0) + 1
+            story_contribution = {
+                "contributor": user["id"],
+                "contributor_name": user.get("name", "User"),
+                "text": body.message,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "turn": turn_num
+            }
+            
+            # Switch turns
+            other_user = [u for u in session["participants"] if u != user["id"]][0]
+            
+            await db.collab_sessions.update_one(
+                {"id": body.session_id},
+                {
+                    "$push": {"story.content": story_contribution},
+                    "$set": {
+                        "current_turn": other_user,
+                        "turn_count": turn_num
+                    }
+                }
+            )
+        
+        return {"success": True, "message": chat_msg}
+    except Exception as e:
+        logger.error(f"Chat message error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/collab/chat/{session_id}")
+async def get_collab_chat_messages(session_id: str, user: dict = Depends(get_current_user)):
+    """Get chat messages for a collaborative session"""
+    try:
+        session = await db.collab_sessions.find_one({"id": session_id}, {"_id": 0})
+        
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        if user["id"] not in session["participants"]:
+            raise HTTPException(status_code=403, detail="Not authorized")
+        
+        return {
+            "messages": session.get("chat_messages", []),
+            "story_content": session.get("story", {}).get("content", []),
+            "current_turn": session.get("current_turn"),
+            "turn_count": session.get("turn_count", 0)
+        }
+    except Exception as e:
+        logger.error(f"Get chat error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

@@ -121,6 +121,8 @@ Severity guide:
 - CRITICAL: Suicidal ideation, self-harm, abuse disclosure — immediate parent action required"""
 
     try:
+        if not openai_client:
+            raise RuntimeError("OpenAI client not configured")
         response = openai_client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],

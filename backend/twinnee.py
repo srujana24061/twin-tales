@@ -9,9 +9,15 @@ from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Optional
 from uuid import uuid4
 from openai import OpenAI
+import os
 
-# Initialize OpenAI client
-openai_client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+# Initialize OpenAI client with EMERGENT_LLM_KEY as fallback
+_api_key = os.environ.get('OPENAI_API_KEY') or os.environ.get('EMERGENT_LLM_KEY')
+_base_url = None
+if not os.environ.get('OPENAI_API_KEY') and os.environ.get('EMERGENT_LLM_KEY'):
+    _base_url = "https://api.openai.com/v1"  # Emergent key works with standard OpenAI endpoint
+
+openai_client = OpenAI(api_key=_api_key) if _api_key else None
 
 # TWINNEE System Prompt
 TWINNEE_SYSTEM_PROMPT = """You are TWINNEE, a friendly, supportive AI companion for children. You act like a digital twin — understanding the child's habits, preferences, emotions, and learning patterns.

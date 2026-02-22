@@ -143,7 +143,11 @@ export function TwinteeChatWidget() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 100 }}
             className="fixed bottom-6 right-6 z-50 w-96 h-[600px] rounded-2xl shadow-2xl flex flex-col overflow-hidden"
-            style={{ background: 'var(--bg-primary)', border: '2px solid var(--glass-border)' }}
+            style={{ 
+              background: 'linear-gradient(180deg, #1a1a2e 0%, #16213e 100%)',
+              border: '2px solid #667eea50',
+              boxShadow: '0 0 60px rgba(102, 126, 234, 0.4)'
+            }}
             data-testid="chat-panel"
           >
             {/* Header */}
@@ -235,9 +239,9 @@ export function TwinteeChatWidget() {
                   rows={2}
                   className="flex-1 resize-none text-sm rounded-xl"
                   style={{
-                    background: 'var(--bg-secondary)',
-                    borderColor: 'var(--glass-border)',
-                    color: 'var(--text-primary)'
+                    background: '#0f1419',
+                    borderColor: '#667eea40',
+                    color: '#ffffff'
                   }}
                   disabled={isSending}
                   data-testid="chat-input"
@@ -257,7 +261,7 @@ export function TwinteeChatWidget() {
                   )}
                 </Button>
               </div>
-              <p className="text-[10px] text-center mt-2" style={{ color: 'var(--text-tertiary)' }}>
+              <p className="text-[10px] text-center mt-2" style={{ color: '#a0a0b0' }}>
                 TWINTEE is here to help and support you! 💜
               </p>
             </div>

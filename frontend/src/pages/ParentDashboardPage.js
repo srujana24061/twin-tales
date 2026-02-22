@@ -1,12 +1,161 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, BarChart2, Heart, BookOpen, Shield, Clock, AlertCircle, Settings, Save } from 'lucide-react';
+import { ArrowLeft, BarChart2, Heart, BookOpen, Shield, Clock, AlertCircle, Settings, Save, Brain, Palette, Target, Smile, Activity, Users as UsersIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import axios from 'axios';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
+
+// TWINTEE Behavior Scores Component
+const BehaviorScoresSection = () => {
+  const [scores, setScores] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const token = localStorage.getItem('storycraft_token');
+
+  useEffect(() => {
+    loadScores();
+  }, []);
+
+  const loadScores = async () => {
+    try {
+      const { data } = await axios.get(`${API_URL}/api/behavior/scores`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setScores(data);
+    } catch (err) {
+      console.error('Failed to load behavior scores:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="glass-panel rounded-3xl p-6 mb-8">
+        <div className="animate-pulse">
+          <div className="h-6 bg-gray-200 rounded w-1/3 mb-4" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            {[1,2,3,4,5,6].map(i => (
+              <div key={i} className="h-24 bg-gray-200 rounded-2xl" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!scores) return null;
+
+  const scoreCategories = [
+    { key: 'learning', label: 'Learning', icon: Brain, color: '#6366F1', description: 'Tasks & Education' },
+    { key: 'creativity', label: 'Creativity', icon: Palette, color: '#EC4899', description: 'Stories & Ideas' },
+    { key: 'discipline', label: 'Discipline', icon: Target, color: '#F59E0B', description: 'Focus & Habits' },
+    { key: 'emotional', label: 'Emotional', icon: Smile, color: '#10B981', description: 'Mood & Wellbeing' },
+    { key: 'physical', label: 'Physical', icon: Activity, color: '#EF4444', description: 'Activity Level' },
+    { key: 'social', label: 'Social', icon: UsersIcon, color: '#8B5CF6', description: 'Interactions' },
+  ];
+
+  const getScoreColor = (score) => {
+    if (score >= 75) return '#10B981'; // Green
+    if (score >= 50) return '#F59E0B'; // Yellow
+    return '#EF4444'; // Red
+  };
+
+  const getScoreLabel = (score) => {
+    if (score >= 75) return 'Great!';
+    if (score >= 50) return 'Good';
+    return 'Needs Support';
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="glass-panel rounded-3xl p-6 mb-8"
+    >
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="font-heading font-bold text-lg flex items-center gap-2" style={{ color: 'hsl(var(--foreground))' }}>
+            <span className="text-2xl">🎯</span> TWINTEE Behavior Insights
+          </h2>
+          <p className="text-xs mt-1" style={{ color: 'hsl(var(--muted-foreground))' }}>
+            AI-powered understanding of your child's patterns (last 7 days)
+          </p>
+        </div>
+        <div className="text-center">
+          <p className="text-xs mb-1" style={{ color: 'hsl(var(--muted-foreground))' }}>Overall Score</p>
+          <p className="font-heading font-extrabold text-3xl" style={{ color: getScoreColor(scores.scores.overall) }}>
+            {Math.round(scores.scores.overall)}
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
+        {scoreCategories.map((cat, i) => {
+          const score = scores.scores[cat.key] || 0;
+          return (
+            <motion.div
+              key={cat.key}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: i * 0.05 }}
+              className="rounded-2xl p-4 border"
+              style={{
+                background: `${cat.color}10`,
+                borderColor: `${cat.color}30`,
+              }}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center"
+                  style={{ background: cat.color + '20' }}>
+                  <cat.icon className="w-4 h-4" style={{ color: cat.color }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold truncate" style={{ color: 'hsl(var(--foreground))' }}>
+                    {cat.label}
+                  </p>
+                  <p className="text-[10px]" style={{ color: 'hsl(var(--muted-foreground))' }}>
+                    {cat.description}
+                  </p>
+                </div>
+              </div>
+              
+              {/* Progress bar */}
+              <div className="h-2 rounded-full overflow-hidden mb-2" style={{ background: 'hsl(var(--muted))' }}>
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${score}%` }}
+                  transition={{ delay: 0.2 + i * 0.05, duration: 0.8 }}
+                  className="h-full rounded-full"
+                  style={{ background: cat.color }}
+                />
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-bold" style={{ color: cat.color }}>
+                  {Math.round(score)}
+                </span>
+                <span className="text-[10px] font-medium px-2 py-0.5 rounded-full"
+                  style={{ background: getScoreColor(score) + '20', color: getScoreColor(score) }}>
+                  {getScoreLabel(score)}
+                </span>
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      <div className="flex items-center gap-2 px-4 py-3 rounded-xl" style={{ background: 'hsl(var(--muted))/50' }}>
+        <AlertCircle className="w-4 h-4 shrink-0" style={{ color: 'hsl(var(--primary))' }} />
+        <p className="text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>
+          <strong>Note:</strong> TWINTEE uses gentle AI analysis to understand patterns. Scores guide supportive conversations, not judgments. Screen time this week: {Math.round(scores.screen_time_week || 0)} minutes.
+        </p>
+      </div>
+    </motion.div>
+  );
+};
 
 const CONCERN_LABELS = {
   low_confidence: 'Low Confidence',

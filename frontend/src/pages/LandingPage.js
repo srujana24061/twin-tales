@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 
 // Twinnee Hero Mascot Image
-const TWINNEE_MASCOT = "https://static.prod-images.emergentagent.com/jobs/3214eb36-a249-411c-9436-6f71311272ad/images/c98a111708157abc4e46269e2b6290ff8e66de9ab8ea80682e9b3afe7c6719ff.png";
+const TWINNEE_MASCOT = "https://static.prod-images.emergentagent.com/jobs/3214eb36-a249-411c-9436-6f71311272ad/images/a88b23514f7d48a9670de18550e4270fc33ce53343bb1ed6db6549e075452a72.png";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },

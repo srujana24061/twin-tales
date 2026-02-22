@@ -54,7 +54,7 @@ class FriendSystem:
             "id": str(uuid4()),
             "user_id": to_user_id,
             "type": "friend_request",
-            "message": f"New friend request waiting for parent approval",
+            "message": "New friend request waiting for parent approval",
             "data": {"request_id": request_doc["id"]},
             "timestamp": datetime.now(timezone.utc),
             "read": False

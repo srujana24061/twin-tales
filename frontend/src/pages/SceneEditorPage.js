@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 import api from '@/lib/api';
 import { ReflectionModal } from '@/components/wellbeing/ReflectionModal';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
 
 const pollJob = (jobId, onProgress, onComplete, onFail) => {
   const interval = setInterval(async () => {

@@ -25,7 +25,8 @@ import jwt
 from io import BytesIO
 import numpy as np
 from PIL import Image
-import imageio
+import imageio  # type: ignore[import-not-found]
+from openai import OpenAI
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -352,10 +353,10 @@ async def convert_image_style(
         body = await request.json()
         image_url = body.get("image_url")
         style = body.get("style", "cartoon")
-        
+
         if not image_url:
             raise HTTPException(status_code=400, detail="image_url required")
-        
+
         # Convert relative URLs to absolute
         if image_url.startswith("/api/media/"):
             # For media assets, we need to get the actual URL
@@ -368,10 +369,10 @@ async def convert_image_style(
             elif asset and asset.get("data"):
                 # Base64 data - convert to data URL
                 image_url = f"data:image/{asset.get('format', 'png')};base64,{asset['data']}"
-        
+
         logger.info(f"Converting image to {style} style")
         result = await image_gen_service.convert_image_style(image_url, style)
-        
+
         return {
             "status": "completed",
             "style": style,
@@ -396,20 +397,20 @@ async def save_styled_character_image(
         styled_image_b64 = body.get("styled_image_b64")
         style = body.get("style", "cartoon")
         use_styled = body.get("use_styled", False)
-        
+
         if not styled_image_b64:
             raise HTTPException(status_code=400, detail="styled_image_b64 required")
-        
+
         char = await db.characters.find_one({"id": char_id, "owner_id": user["id"]})
         if not char:
             raise HTTPException(status_code=404, detail="Character not found")
-        
+
         # Decode base64 and upload to S3
         try:
             img_bytes = base64.b64decode(styled_image_b64)
             s3_key = f"users/{user['id']}/characters/{char_id}/styled_{style}.png"
             s3_url = await s3_service.upload(s3_key, img_bytes, 'image/png')
-            
+
             # Create media asset
             asset_id = str(uuid.uuid4())
             await db.media_assets.insert_one({
@@ -424,7 +425,7 @@ async def save_styled_character_image(
                 "is_styled": True,
                 "created_at": datetime.now(timezone.utc).isoformat()
             })
-            
+
             # Update character with styled image URL - use S3 URL directly
             await db.characters.update_one(
                 {"id": char_id},
@@ -436,13 +437,13 @@ async def save_styled_character_image(
                     "use_styled": use_styled
                 }}
             )
-            
+
             updated = await db.characters.find_one({"id": char_id}, {"_id": 0})
             return updated
         except Exception as e:
             logger.error(f"Failed to save styled image: {e}")
             raise HTTPException(status_code=500, detail=f"Failed to save image: {str(e)}")
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -466,113 +467,113 @@ async def migrate_media_urls_to_s3(user: dict = Depends(get_current_user)):
             "jobs_updated": 0,
             "errors": []
         }
-        
+
         # Helper function to get S3 URL from /api/media/ URL
         async def get_s3_url(media_url):
             if not media_url or not media_url.startswith("/api/media/"):
                 return media_url
-            
+
             asset_id = media_url.split("/")[-1]
             asset = await db.media_assets.find_one({"id": asset_id}, {"_id": 0})
             if asset and asset.get("s3_url"):
                 return asset["s3_url"]
             return media_url  # Return original if not found
-        
+
         # 1. Update Scenes
         logger.info("Migrating scenes...")
         scenes = await db.scenes.find({}, {"_id": 0}).to_list(10000)
         for scene in scenes:
             updates = {}
-            
+
             if scene.get("image_url", "").startswith("/api/media/"):
                 s3_url = await get_s3_url(scene["image_url"])
                 if s3_url != scene["image_url"]:
                     updates["image_url"] = s3_url
-            
+
             if scene.get("video_url", "").startswith("/api/media/"):
                 s3_url = await get_s3_url(scene["video_url"])
                 if s3_url != scene["video_url"]:
                     updates["video_url"] = s3_url
-            
+
             if scene.get("audio_url", "").startswith("/api/media/"):
                 s3_url = await get_s3_url(scene["audio_url"])
                 if s3_url != scene["audio_url"]:
                     updates["audio_url"] = s3_url
-            
+
             if updates:
                 await db.scenes.update_one(
                     {"id": scene["id"]},
                     {"$set": updates}
                 )
                 migration_stats["scenes_updated"] += 1
-        
+
         # 2. Update Characters
         logger.info("Migrating characters...")
         characters = await db.characters.find({}, {"_id": 0}).to_list(10000)
         for char in characters:
             updates = {}
-            
+
             if char.get("reference_image", "").startswith("/api/media/"):
                 s3_url = await get_s3_url(char["reference_image"])
                 if s3_url != char["reference_image"]:
                     updates["reference_image"] = s3_url
-            
+
             if char.get("styled_photo_url", "").startswith("/api/media/"):
                 s3_url = await get_s3_url(char["styled_photo_url"])
                 if s3_url != char["styled_photo_url"]:
                     updates["styled_photo_url"] = s3_url
-            
+
             if updates:
                 await db.characters.update_one(
                     {"id": char["id"]},
                     {"$set": updates}
                 )
                 migration_stats["characters_updated"] += 1
-        
+
         # 3. Update Stories
         logger.info("Migrating stories...")
         stories = await db.stories.find({}, {"_id": 0}).to_list(10000)
         for story in stories:
             updates = {}
-            
+
             if story.get("music_url", "").startswith("/api/media/"):
                 s3_url = await get_s3_url(story["music_url"])
                 if s3_url != story["music_url"]:
                     updates["music_url"] = s3_url
-            
+
             if updates:
                 await db.stories.update_one(
                     {"id": story["id"]},
                     {"$set": updates}
                 )
                 migration_stats["stories_updated"] += 1
-        
+
         # 4. Update Jobs
         logger.info("Migrating jobs...")
         jobs = await db.generation_jobs.find({}, {"_id": 0}).to_list(10000)
         for job in jobs:
             updates = {}
-            
+
             if job.get("result_url", "").startswith("/api/media/"):
                 s3_url = await get_s3_url(job["result_url"])
                 if s3_url != job["result_url"]:
                     updates["result_url"] = s3_url
-            
+
             if updates:
                 await db.generation_jobs.update_one(
                     {"id": job["id"]},
                     {"$set": updates}
                 )
                 migration_stats["jobs_updated"] += 1
-        
+
         logger.info(f"Migration complete: {migration_stats}")
-        
+
         return {
             "success": True,
             "message": "Media URLs migrated to S3",
             "stats": migration_stats
         }
-        
+
     except Exception as e:
         logger.error(f"Migration error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -591,10 +592,10 @@ async def convert_doodle_to_character(request: Request, user: dict = Depends(get
         image_base64 = body.get("image_base64")
         style = body.get("style", "3d_cartoon")
         role = body.get("role", "hero")
-        
+
         if not image_base64:
             raise HTTPException(status_code=400, detail="image_base64 required")
-        
+
         # Style-specific prompts
         style_prompts = {
             "3d_cartoon": "Convert this sketch into a high-quality 3D cartoon character with smooth skin, rounded features, and Disney-Pixar style. Use subsurface scattering for realistic skin, rounded mesh topology, and vibrant colors. Make it child-friendly and appealing.",
@@ -602,7 +603,7 @@ async def convert_doodle_to_character(request: Request, user: dict = Depends(get
             "realistic": "Convert this sketch into a photorealistic 3D character with detailed textures, natural lighting, and lifelike proportions. Add realistic skin tones, fabric details, and subtle imperfections.",
             "pixar": "Transform this doodle into a Pixar-style 3D character with glossy textures, exaggerated proportions, large expressive eyes, and vibrant colors. Add depth, rim lighting, and a polished CGI appearance."
         }
-        
+
         # Role-specific additions
         role_additions = {
             "hero": "Make them look brave, confident, and heroic with a friendly smile.",
@@ -610,19 +611,19 @@ async def convert_doodle_to_character(request: Request, user: dict = Depends(get
             "animal": "Create an adorable, friendly animal character with big eyes and cute features.",
             "magical": "Add magical, fantastical elements like glowing effects or mystical details."
         }
-        
+
         prompt = f"{style_prompts.get(style, style_prompts['3d_cartoon'])} {role_additions.get(role, '')}"
-        
+
         logger.info(f"Converting doodle with style={style}, role={role}")
-        
+
         # Call Gemini API directly
         gemini_api_key = os.environ.get('EMERGENT_LLM_KEY')
         if not gemini_api_key:
             raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY not configured")
-        
+
         # Prepare Gemini API request
         gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key={gemini_api_key}"
-        
+
         payload = {
             "contents": [{
                 "parts": [
@@ -639,7 +640,7 @@ async def convert_doodle_to_character(request: Request, user: dict = Depends(get
                 "response_modalities": ["IMAGE"]
             }
         }
-        
+
         # Make request to Gemini API
         response = await asyncio.to_thread(
             http_requests.post,
@@ -648,25 +649,25 @@ async def convert_doodle_to_character(request: Request, user: dict = Depends(get
             headers={"Content-Type": "application/json"},
             timeout=60
         )
-        
+
         if response.status_code != 200:
             logger.error(f"Gemini API error: {response.status_code} - {response.text}")
             raise HTTPException(status_code=500, detail=f"Gemini API error: {response.status_code}")
-        
+
         result = response.json()
-        
+
         # Extract the generated image
         if "candidates" in result and len(result["candidates"]) > 0:
             parts = result["candidates"][0].get("content", {}).get("parts", [])
             for part in parts:
                 if "inline_data" in part:
                     generated_image_b64 = part["inline_data"]["data"]
-                    
+
                     # Decode and upload to S3
                     img_bytes = base64.b64decode(generated_image_b64)
                     s3_key = f"users/{user['id']}/doodles/character_{uuid.uuid4().hex[:8]}.png"
                     s3_url = await s3_service.upload(s3_key, img_bytes, 'image/png')
-                    
+
                     # Create media asset
                     asset_id = str(uuid.uuid4())
                     await db.media_assets.insert_one({
@@ -681,18 +682,18 @@ async def convert_doodle_to_character(request: Request, user: dict = Depends(get
                         "doodle_role": role,
                         "created_at": datetime.now(timezone.utc).isoformat()
                     })
-                    
+
                     logger.info(f"Doodle converted successfully, saved to S3: {s3_key}")
-                    
+
                     return {
                         "success": True,
                         "converted_image_url": s3_url,
                         "s3_url": s3_url,
                         "asset_id": asset_id
                     }
-        
+
         raise HTTPException(status_code=500, detail="No image generated by Gemini")
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -712,11 +713,11 @@ async def fix_story_statuses(user: dict = Depends(get_current_user)):
         # Find all stories for this user
         stories = await db.stories.find({"owner_id": user["id"]}, {"_id": 0}).to_list(1000)
         fixed_count = 0
-        
+
         for story in stories:
             # Count scenes for this story
             scene_count = await db.scenes.count_documents({"story_id": story["id"]})
-            
+
             # If story has scenes but is not marked as generated, fix it
             if scene_count > 0 and story.get("status") not in ["generated", "completed"]:
                 await db.stories.update_one(
@@ -728,7 +729,7 @@ async def fix_story_statuses(user: dict = Depends(get_current_user)):
                 )
                 fixed_count += 1
                 logger.info(f"Fixed status for story {story['id']} ({story.get('title')}) with {scene_count} scenes")
-        
+
         return {
             "success": True,
             "fixed_count": fixed_count,
@@ -923,16 +924,30 @@ Requirements:
 Return ONLY valid JSON:
 {{"title": "{story['title']}", "scenes": [{{"scene_number": 1, "scene_title": "Title", "scene_text": "5-7 sentences of story", "narration_text": "Warm narration for reading aloud", "dialogue_text": "Character dialogue", "image_prompt": "Detailed {story['visual_style']} illustration of [scene description with character appearances, setting, colors, mood, lighting]", "video_prompt": "Cinematic animation description", "duration_seconds": 8}}]}}"""
 
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
-        chat = LlmChat(
-            api_key=EMERGENT_LLM_KEY,
-            session_id=f"story-gen-{story_id}-{uuid.uuid4().hex[:8]}",
-            system_message="You are a children's story writer. Return ONLY valid JSON. No markdown."
-        ).with_model("openai", "gpt-5.2")
+        if not EMERGENT_LLM_KEY:
+            raise RuntimeError("LLM key not configured")
 
-        logger.info(f"Generating story text for {story_id}")
-        response = await chat.send_message(UserMessage(text=prompt))
-        story_data = parse_json_response(response)
+        logger.info(f"Generating story text for {story_id} with OpenAI")
+        client = OpenAI(api_key=EMERGENT_LLM_KEY)
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a children's story writer. Return ONLY valid JSON. No markdown.",
+                },
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.4,
+        )
+        msg = completion.choices[0].message
+        if isinstance(msg.content, str):
+            response_text = msg.content
+        else:
+            response_text = "".join(
+                part.text for part in msg.content if getattr(part, "type", "") == "text"
+            )
+        story_data = parse_json_response(response_text)
 
         await db.generation_jobs.update_one(
             {"id": job_id},
@@ -1053,15 +1068,11 @@ Return ONLY valid JSON:
 async def run_safety_checks(story_id: str, job_id: str):
     try:
         scenes = await db.scenes.find({"story_id": story_id}, {"_id": 0}).to_list(100)
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
 
         for scene in scenes:
             try:
-                chat = LlmChat(
-                    api_key=EMERGENT_LLM_KEY,
-                    session_id=f"safety-{scene['id']}-{uuid.uuid4().hex[:8]}",
-                    system_message="You are a child safety content moderator. Analyze content for children ages 3-10. Return ONLY JSON."
-                ).with_model("openai", "gpt-5.2")
+                if not EMERGENT_LLM_KEY:
+                    raise RuntimeError("LLM key not configured")
 
                 check_prompt = f"""Analyze this children's story content:
 Scene Text: {scene['scene_text']}
@@ -1070,8 +1081,26 @@ Image Prompt: {scene['image_prompt']}
 Check for: violence, adult themes, stereotypes, age-inappropriate language.
 Return JSON: {{"safe": true, "issues": [], "severity": "none"}}"""
 
-                resp = await chat.send_message(UserMessage(text=check_prompt))
-                result = parse_json_response(resp)
+                client = OpenAI(api_key=EMERGENT_LLM_KEY)
+                completion = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "You are a child safety content moderator. Analyze content for children ages 3-10. Return ONLY JSON.",
+                        },
+                        {"role": "user", "content": check_prompt},
+                    ],
+                    temperature=0.1,
+                )
+                msg = completion.choices[0].message
+                if isinstance(msg.content, str):
+                    resp_text = msg.content
+                else:
+                    resp_text = "".join(
+                        part.text for part in msg.content if getattr(part, "type", "") == "text"
+                    )
+                result = parse_json_response(resp_text)
 
                 is_safe = result.get("safe", True)
                 issues = result.get("issues", [])
@@ -1466,11 +1495,11 @@ async def run_video_generation(story_id: str, job_id: str):
                 # Build frontend video URL
                 frontend_url = os.environ.get('REACT_APP_BACKEND_URL', '').replace('/api', '')
                 video_url = f"{frontend_url}/stories/{story_id}/edit"
-                
+
                 # Get parent email from user settings
                 settings = await db.user_settings.find_one({"user_id": user_id}, {"_id": 0})
                 parent_email = settings.get("parent_email") if settings else None
-                
+
                 await notify_video_complete(
                     user_email=user.get("email"),
                     parent_email=parent_email,
@@ -1794,12 +1823,9 @@ async def run_ad_generation(story_id: str, job_id: str, platform: str, style: st
         scene_summaries = "\n".join([f"Scene {s['scene_number']}: {s.get('scene_title','')} - {s.get('scene_text','')[:100]}" for s in scenes])
         platform_config = PLATFORM_CONFIGS.get(platform, PLATFORM_CONFIGS["instagram"])
 
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
-        chat = LlmChat(
-            api_key=EMERGENT_LLM_KEY,
-            session_id=f"ad-{story_id}-{uuid.uuid4().hex[:8]}",
-            system_message="You are an expert social media marketing copywriter for children's content. Return ONLY valid JSON."
-        ).with_model("openai", "gpt-5.2")
+        if not EMERGENT_LLM_KEY:
+            raise RuntimeError("LLM key not configured")
+
 
         prompt = f"""Create a {platform_config['label']} promotional post for this children's story.
 
@@ -1821,8 +1847,26 @@ Return JSON:
             {"$set": {"progress": 30, "updated_at": datetime.now(timezone.utc).isoformat()}}
         )
 
-        response = await chat.send_message(UserMessage(text=prompt))
-        ad_data = parse_json_response(response)
+        client = OpenAI(api_key=EMERGENT_LLM_KEY)
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are an expert social media marketing copywriter for children's content. Return ONLY valid JSON.",
+                },
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.5,
+        )
+        msg = completion.choices[0].message
+        if isinstance(msg.content, str):
+            resp_text = msg.content
+        else:
+            resp_text = "".join(
+                part.text for part in msg.content if getattr(part, "type", "") == "text"
+            )
+        ad_data = parse_json_response(resp_text)
 
         await db.generation_jobs.update_one(
             {"id": job_id},
@@ -2251,49 +2295,83 @@ async def convert_doodle_to_image(scene_id: str, request: DoodleToImageRequest, 
     scene = await db.scenes.find_one({"id": scene_id}, {"_id": 0})
     if not scene:
         raise HTTPException(status_code=404, detail="Scene not found")
-    
+
     try:
         # Step 1: Decode and save the doodle to S3
         doodle_bytes = base64.b64decode(request.doodle_base64)
         doodle_key = f"scenes/{scene_id}/doodle_{uuid.uuid4().hex[:8]}.png"
         doodle_url = await s3_service.upload(doodle_key, doodle_bytes, 'image/png')
         logger.info(f"Doodle uploaded to S3: {doodle_url}")
-        
-        # Step 2: Convert doodle to 3D colored smooth image using Nano Banana
-        # Simple prompt without scene context - just transform the sketch
-        conversion_prompt = "Transform this hand-drawn sketch into a 3D colored smooth image. Keep the exact same composition, shapes and elements from the drawing. Make it vibrant, polished and professionally rendered with smooth gradients and clean edges."
-        
-        # Use Nano Banana with the doodle as reference image
-        from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
-        
-        api_key = os.environ.get('EMERGENT_LLM_KEY')
-        if not api_key:
+
+        # Step 2: Convert doodle to 3D colored smooth image using Gemini API directly
+        conversion_prompt = (
+            "Transform this hand-drawn sketch into a 3D colored smooth image. "
+            "Keep the exact same composition, shapes and elements from the drawing. "
+            "Make it vibrant, polished and professionally rendered with smooth gradients and clean edges."
+        )
+
+        gemini_api_key = os.environ.get("EMERGENT_LLM_KEY")
+        if not gemini_api_key:
             raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY not configured")
-        
-        chat = LlmChat(
-            api_key=api_key,
-            session_id=f"doodle-{scene_id}-{uuid.uuid4().hex[:8]}",
-            system_message="You are an image transformer that converts sketches to 3D rendered images."
+
+        gemini_url = (
+            "https://generativelanguage.googleapis.com/v1beta/models/"
+            "gemini-2.5-flash-image:generateContent"
+            f"?key={gemini_api_key}"
         )
-        chat.with_model("gemini", "gemini-3-pro-image-preview").with_params(modalities=["image", "text"])
-        
-        # Create message with doodle as reference image
-        msg = UserMessage(
-            text=conversion_prompt,
-            file_contents=[ImageContent(request.doodle_base64)]
+
+        payload = {
+            "contents": [
+                {
+                    "parts": [
+                        {"text": conversion_prompt},
+                        {
+                            "inlineData": {
+                                "mimeType": "image/png",
+                                "data": request.doodle_base64,
+                            }
+                        },
+                    ]
+                }
+            ],
+            "generationConfig": {
+                "responseMimeType": "image/png",
+                "responseSchema": {"type": "IMAGE"},
+            },
+        }
+
+        response = await asyncio.to_thread(
+            http_requests.post,
+            gemini_url,
+            json=payload,
+            headers={"Content-Type": "application/json"},
+            timeout=120,
         )
-        
-        text_response, images = await chat.send_message_multimodal_response(msg)
-        
-        if not images:
-            raise Exception("No image generated by Nano Banana")
-        
+
+        if response.status_code != 200:
+            logger.error(f"Gemini doodle API error: {response.status_code} {response.text}")
+            raise HTTPException(status_code=500, detail="Gemini doodle API error")
+
+        result = response.json()
+        generated_b64 = None
+        for cand in result.get("candidates", []):
+            for part in cand.get("content", {}).get("parts", []):
+                inline = part.get("inlineData")
+                if inline and inline.get("data"):
+                    generated_b64 = inline["data"]
+                    break
+            if generated_b64:
+                break
+
+        if not generated_b64:
+            raise Exception("No image generated by Gemini for doodle")
+
         # Step 3: Save the generated image to S3
-        generated_img_bytes = base64.b64decode(images[0]['data'])
+        generated_img_bytes = base64.b64decode(generated_b64)
         generated_key = f"scenes/{scene_id}/generated_{uuid.uuid4().hex[:8]}.png"
         generated_url = await s3_service.upload(generated_key, generated_img_bytes, 'image/png')
         logger.info(f"Generated image uploaded to S3: {generated_url}")
-        
+
         # Step 4: Update scene with the new image URL
         await db.scenes.update_one(
             {"id": scene_id},
@@ -2303,13 +2381,13 @@ async def convert_doodle_to_image(scene_id: str, request: DoodleToImageRequest, 
                 "image_source": "doodle_conversion"
             }}
         )
-        
+
         return {
             "success": True,
             "image_url": generated_url,
             "doodle_url": doodle_url
         }
-        
+
     except Exception as e:
         logger.error(f"Doodle to image conversion failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -2491,10 +2569,16 @@ async def get_notifications_v2(user: dict = Depends(get_current_user)):
     return notifications
 
 
+cors_origins_raw = os.environ.get("CORS_ORIGINS")
+cors_origins = [o.strip() for o in cors_origins_raw.split(",") if o.strip()] if cors_origins_raw else [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_origins=cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -2638,7 +2722,7 @@ async def get_chat_history(limit: int = 20, user: dict = Depends(get_current_use
         {"user_id": user["id"]},
         {"_id": 0}
     ).sort("timestamp", -1).limit(limit).to_list(limit)
-    
+
     return {"conversations": list(reversed(conversations))}
 
 
@@ -2657,12 +2741,12 @@ async def log_activity(body: ActivityLog, user: dict = Depends(get_current_user)
             "timestamp": datetime.now(timezone.utc)
         }
         await db.behavior_logs.insert_one(activity_doc)
-        
+
         # Update scores
         await update_behavior_scores(db, user["id"])
-        
+
         return {"status": "logged", "activity_id": activity_doc["id"]}
-    
+
     except Exception as e:
         logger.error(f"Activity log error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -2674,10 +2758,10 @@ async def get_behavior_scores(user: dict = Depends(get_current_user)):
     try:
         # Update scores first
         scores = await update_behavior_scores(db, user["id"])
-        
+
         # Get score document
         scores_doc = await db.user_scores.find_one({"user_id": user["id"]}, {"_id": 0})
-        
+
         if not scores_doc:
             return {
                 "scores": {
@@ -2688,13 +2772,13 @@ async def get_behavior_scores(user: dict = Depends(get_current_user)):
                 "screen_time_week": 0,
                 "last_updated": datetime.now(timezone.utc).isoformat()
             }
-        
+
         return {
             "scores": scores_doc.get("scores", {}),
             "screen_time_week": scores_doc.get("screen_time_week", 0),
             "last_updated": scores_doc.get("last_updated", datetime.now(timezone.utc)).isoformat() if scores_doc.get("last_updated") else datetime.now(timezone.utc).isoformat()
         }
-    
+
     except Exception as e:
         logger.error(f"Behavior scores error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -2705,23 +2789,23 @@ async def get_story_suggestions(user: dict = Depends(get_current_user)):
     """Get personalized story suggestions based on behavior"""
     try:
         from twinnee import StoryPersonalizer, PatternLearner
-        
+
         # Get user scores
         scores_doc = await db.user_scores.find_one({"user_id": user["id"]}, {"_id": 0})
         scores = scores_doc.get('scores', {}) if scores_doc else {}
-        
+
         # Get patterns
         patterns = await PatternLearner.get_patterns(db, user["id"])
-        
+
         # Get user interests (could be from profile)
         user_doc = await db.users.find_one({"id": user["id"]}, {"_id": 0})
         interests = user_doc.get('interests', [])
-        
+
         # Get suggestions
         suggestions = StoryPersonalizer.get_story_suggestions(scores, patterns, interests)
-        
+
         return {"suggestions": suggestions, "patterns": patterns}
-    
+
     except Exception as e:
         logger.error(f"Story suggestions error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -2732,9 +2816,9 @@ async def get_user_patterns(user: dict = Depends(get_current_user)):
     """Get learned patterns for user (for parent dashboard)"""
     try:
         from twinnee import PatternLearner
-        
+
         patterns = await PatternLearner.get_patterns(db, user["id"], days=30)
-        
+
         return {
             "patterns": patterns,
             "insights": {
@@ -2743,7 +2827,7 @@ async def get_user_patterns(user: dict = Depends(get_current_user)):
                 "avg_attention_span": round(patterns['average_attention_span'], 1) if patterns['average_attention_span'] else 0
             }
         }
-    
+
     except Exception as e:
         logger.error(f"Patterns error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -2754,23 +2838,23 @@ async def check_behavioral_risks(user: dict = Depends(get_current_user)):
     """Check for behavioral risks (for parent dashboard)"""
     try:
         from twinnee import BehavioralRiskDetector, get_user_behavior_context
-        
+
         # Get context
         context = await get_user_behavior_context(db, user["id"])
-        
+
         # Get activities
         week_ago = datetime.now(timezone.utc) - timedelta(days=7)
         activities = await db.behavior_logs.find(
             {"user_id": user["id"], "timestamp": {"$gte": week_ago}}
         ).to_list(1000)
-        
+
         # Detect risks
         risk_detector = BehavioralRiskDetector()
         risks = risk_detector.detect_risks(context, activities)
-        
+
         # Filter to only show parent-flagged risks
         parent_risks = [r for r in risks if r.get('parent_alert')]
-        
+
         return {
             "risks": parent_risks,
             "total_risks": len(risks),
@@ -2779,7 +2863,7 @@ async def check_behavioral_risks(user: dict = Depends(get_current_user)):
                 "emotional_score": context.get("scores", {}).get("emotional", 75)
             }
         }
-    
+
     except Exception as e:
         logger.error(f"Risk check error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -2968,7 +3052,7 @@ async def respond_friend_request(body: FriendResponseBody, user: dict = Depends(
         request = await db.friend_requests.find_one({"id": body.request_id})
         if not request or request["to_user_id"] != user["id"]:
             raise HTTPException(status_code=403, detail="Not authorized")
-        
+
         success = await FriendSystem.respond_to_request(db, body.request_id, body.action)
         return {"success": success}
     except Exception as e:
@@ -2996,18 +3080,18 @@ async def get_friend_requests(user: dict = Depends(get_current_user)):
             "to_user_id": user["id"],
             "status": "pending"
         }, {"_id": 0}).to_list(50)
-        
+
         # Outgoing requests
         outgoing = await db.friend_requests.find({
             "from_user_id": user["id"],
             "status": "pending"
         }, {"_id": 0}).to_list(50)
-        
+
         # Get user details for incoming requests
         for req in incoming:
             from_user = await db.users.find_one({"id": req["from_user_id"]}, {"_id": 0, "password": 0})
             req["from_user"] = from_user
-        
+
         return {
             "incoming": incoming,
             "outgoing": outgoing
@@ -3023,7 +3107,7 @@ async def search_users(query: str, user: dict = Depends(get_current_user)):
     try:
         if not query or len(query) < 2:
             return {"users": []}
-        
+
         users = await FriendSystem.search_users(db, query, user["id"])
         return {"users": users}
     except Exception as e:
@@ -3042,14 +3126,14 @@ async def create_collaboration(body: CollabCreateBody, user: dict = Depends(get_
                 {"user1_id": body.friend_id, "user2_id": user["id"]}
             ]
         })
-        
+
         if not friendship:
             raise HTTPException(status_code=403, detail="Not friends")
-        
+
         session = await CollaborativeSession.create_session(
             db, user["id"], body.friend_id, body.topic
         )
-        
+
         # Update friendship collaboration count
         await db.friendships.update_one(
             {"id": friendship["id"]},
@@ -3058,7 +3142,7 @@ async def create_collaboration(body: CollabCreateBody, user: dict = Depends(get_
                 "$set": {"last_collaboration": datetime.now(timezone.utc)}
             }
         )
-        
+
         return {"session": session}
     except Exception as e:
         logger.error(f"Create collab error: {e}")
@@ -3072,10 +3156,10 @@ async def contribute_to_collab(body: CollabContributeBody, user: dict = Depends(
         result = await CollaborativeSession.take_turn(
             db, body.session_id, user["id"], body.contribution
         )
-        
+
         if "error" in result:
             raise HTTPException(status_code=400, detail=result["error"])
-        
+
         return result
     except Exception as e:
         logger.error(f"Contribute error: {e}")
@@ -3087,14 +3171,14 @@ async def get_collaboration_session(session_id: str, user: dict = Depends(get_cu
     """Get collaborative session details"""
     try:
         session = await CollaborativeSession.get_session(db, session_id)
-        
+
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
-        
+
         # Verify user is participant
         if user["id"] not in session["participants"]:
             raise HTTPException(status_code=403, detail="Not authorized")
-        
+
         # Get participant details
         participants_data = []
         for p_id in session["participants"]:
@@ -3104,9 +3188,9 @@ async def get_collaboration_session(session_id: str, user: dict = Depends(get_cu
                     "id": p_user["id"],
                     "name": p_user.get("name", "User")
                 })
-        
+
         session["participants_data"] = participants_data
-        
+
         return {"session": session}
     except Exception as e:
         logger.error(f"Get session error: {e}")
@@ -3120,7 +3204,7 @@ async def get_my_sessions(user: dict = Depends(get_current_user)):
         sessions = await db.collab_sessions.find({
             "participants": user["id"]
         }, {"_id": 0}).sort("last_activity", -1).to_list(50)
-        
+
         # Add participant names to each session
         for session in sessions:
             participants_data = []
@@ -3132,7 +3216,7 @@ async def get_my_sessions(user: dict = Depends(get_current_user)):
                         "name": p_user.get("name", "User")
                     })
             session["participants_data"] = participants_data
-        
+
         return {"sessions": sessions}
     except Exception as e:
         logger.error(f"Get sessions error: {e}")
@@ -3150,13 +3234,13 @@ async def send_collab_chat_message(body: CollabChatBody, user: dict = Depends(ge
     """Send a chat message in collaborative session"""
     try:
         session = await db.collab_sessions.find_one({"id": body.session_id})
-        
+
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
-        
+
         if user["id"] not in session["participants"]:
             raise HTTPException(status_code=403, detail="Not authorized")
-        
+
         # Create chat message
         chat_msg = {
             "id": str(uuid.uuid4()),
@@ -3166,7 +3250,7 @@ async def send_collab_chat_message(body: CollabChatBody, user: dict = Depends(ge
             "is_story_contribution": body.is_story_contribution,
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
-        
+
         # Add to session chat history
         await db.collab_sessions.update_one(
             {"id": body.session_id},
@@ -3175,7 +3259,7 @@ async def send_collab_chat_message(body: CollabChatBody, user: dict = Depends(ge
                 "$set": {"last_activity": datetime.now(timezone.utc)}
             }
         )
-        
+
         # If it's a story contribution, also add to story content
         if body.is_story_contribution:
             turn_num = session.get("turn_count", 0) + 1
@@ -3186,10 +3270,10 @@ async def send_collab_chat_message(body: CollabChatBody, user: dict = Depends(ge
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "turn": turn_num
             }
-            
+
             # Switch turns
             other_user = [u for u in session["participants"] if u != user["id"]][0]
-            
+
             await db.collab_sessions.update_one(
                 {"id": body.session_id},
                 {
@@ -3200,7 +3284,7 @@ async def send_collab_chat_message(body: CollabChatBody, user: dict = Depends(ge
                     }
                 }
             )
-        
+
         return {"success": True, "message": chat_msg}
     except Exception as e:
         logger.error(f"Chat message error: {e}")
@@ -3212,13 +3296,13 @@ async def get_collab_chat_messages(session_id: str, user: dict = Depends(get_cur
     """Get chat messages for a collaborative session"""
     try:
         session = await db.collab_sessions.find_one({"id": session_id}, {"_id": 0})
-        
+
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
-        
+
         if user["id"] not in session["participants"]:
             raise HTTPException(status_code=403, detail="Not authorized")
-        
+
         return {
             "messages": session.get("chat_messages", []),
             "story_content": session.get("story", {}).get("content", []),
@@ -3235,12 +3319,12 @@ async def complete_collaboration(session_id: str, user: dict = Depends(get_curre
     """Mark collaboration as complete and generate reports"""
     try:
         session = await db.collab_sessions.find_one({"id": session_id})
-        
+
         if not session or user["id"] not in session["participants"]:
             raise HTTPException(status_code=403, detail="Not authorized")
-        
+
         await CollaborativeSession.complete_session(db, session_id)
-        
+
         return {"success": True, "message": "Reports generated"}
     except Exception as e:
         logger.error(f"Complete session error: {e}")
@@ -3255,10 +3339,10 @@ async def get_collaboration_report(session_id: str, user: dict = Depends(get_cur
             "session_id": session_id,
             "user_id": user["id"]
         }, {"_id": 0})
-        
+
         if not report:
             raise HTTPException(status_code=404, detail="Report not found")
-        
+
         return {"report": report}
     except Exception as e:
         logger.error(f"Get report error: {e}")
@@ -3277,21 +3361,21 @@ async def get_timeline_posts(user: dict = Depends(get_current_user)):
     """Get posts for timeline - all posts from users"""
     try:
         posts = await db.posts.find({}, {"_id": 0}).sort("created_at", -1).limit(50).to_list(50)
-        
+
         # Add author info and like status
         for post in posts:
             author = await db.users.find_one({"id": post.get("author_id")}, {"_id": 0, "password": 0})
             post["author_name"] = author.get("name", "User") if author else "User"
-            
+
             # Check if current user liked this post
             post["liked"] = user["id"] in post.get("liked_by", [])
             post["likes_count"] = len(post.get("liked_by", []))
             post["comments_count"] = len(post.get("comments", []))
-            
+
             # Convert datetime to ISO string
             if post.get("created_at"):
                 post["created_at"] = post["created_at"].isoformat() if hasattr(post["created_at"], 'isoformat') else post["created_at"]
-        
+
         return {"posts": posts}
     except Exception as e:
         logger.error(f"Get timeline posts error: {e}")
@@ -3304,13 +3388,13 @@ async def create_post(body: CreatePostBody, user: dict = Depends(get_current_use
     try:
         post_id = str(uuid.uuid4())
         image_url = None
-        
+
         # Upload image if provided
         if body.image:
             img_bytes = base64.b64decode(body.image)
             img_key = f"posts/{post_id}/{uuid.uuid4().hex[:8]}.png"
             image_url = await s3_service.upload(img_key, img_bytes, 'image/png')
-        
+
         post_doc = {
             "id": post_id,
             "author_id": user["id"],
@@ -3320,9 +3404,9 @@ async def create_post(body: CreatePostBody, user: dict = Depends(get_current_use
             "comments": [],
             "created_at": datetime.now(timezone.utc)
         }
-        
+
         await db.posts.insert_one(post_doc)
-        
+
         # Return without _id
         result = {k: v for k, v in post_doc.items() if k != "_id"}
         result["created_at"] = result["created_at"].isoformat()
@@ -3330,7 +3414,7 @@ async def create_post(body: CreatePostBody, user: dict = Depends(get_current_use
         result["likes_count"] = 0
         result["comments_count"] = 0
         result["liked"] = False
-        
+
         return {"post": result}
     except Exception as e:
         logger.error(f"Create post error: {e}")
@@ -3344,9 +3428,9 @@ async def like_post(post_id: str, user: dict = Depends(get_current_user)):
         post = await db.posts.find_one({"id": post_id})
         if not post:
             raise HTTPException(status_code=404, detail="Post not found")
-        
+
         liked_by = post.get("liked_by", [])
-        
+
         if user["id"] in liked_by:
             # Unlike
             await db.posts.update_one(
@@ -3374,29 +3458,29 @@ async def get_suggested_users(user: dict = Depends(get_current_user)):
         friendships = await db.friendships.find({
             "$or": [{"user1_id": user["id"]}, {"user2_id": user["id"]}]
         }).to_list(100)
-        
+
         friend_ids = set()
         for f in friendships:
             friend_ids.add(f["user1_id"])
             friend_ids.add(f["user2_id"])
         friend_ids.add(user["id"])  # Exclude self
-        
+
         # Get pending requests
         pending = await db.friend_requests.find({
             "$or": [{"from_user_id": user["id"]}, {"to_user_id": user["id"]}],
             "status": "pending"
         }).to_list(100)
-        
+
         for p in pending:
             friend_ids.add(p["from_user_id"])
             friend_ids.add(p["to_user_id"])
-        
+
         # Get users not in friends list
         suggested = await db.users.find(
             {"id": {"$nin": list(friend_ids)}},
             {"_id": 0, "password": 0}
         ).limit(5).to_list(5)
-        
+
         return {"users": suggested}
     except Exception as e:
         logger.error(f"Get suggested users error: {e}")
@@ -3415,7 +3499,7 @@ async def start_direct_chat(body: dict, user: dict = Depends(get_current_user)):
     """Start or get existing direct chat with a friend"""
     try:
         friend_id = body.get("friend_id")
-        
+
         # Check if chat exists
         chat = await db.direct_chats.find_one({
             "$or": [
@@ -3423,10 +3507,10 @@ async def start_direct_chat(body: dict, user: dict = Depends(get_current_user)):
                 {"user1_id": friend_id, "user2_id": user["id"]}
             ]
         })
-        
+
         if chat:
             return {"chat_id": chat["id"]}
-        
+
         # Create new chat
         chat_id = str(uuid.uuid4())
         chat_doc = {
@@ -3436,7 +3520,7 @@ async def start_direct_chat(body: dict, user: dict = Depends(get_current_user)):
             "messages": [],
             "created_at": datetime.now(timezone.utc)
         }
-        
+
         await db.direct_chats.insert_one(chat_doc)
         return {"chat_id": chat_id}
     except Exception as e:
@@ -3455,7 +3539,7 @@ async def send_direct_message(body: DirectMessageBody, user: dict = Depends(get_
                 {"user1_id": body.friend_id, "user2_id": user["id"]}
             ]
         })
-        
+
         if not chat:
             # Create chat if doesn't exist
             chat_id = str(uuid.uuid4())
@@ -3467,7 +3551,7 @@ async def send_direct_message(body: DirectMessageBody, user: dict = Depends(get_
                 "created_at": datetime.now(timezone.utc)
             }
             await db.direct_chats.insert_one(chat)
-        
+
         # Add message
         message = {
             "id": str(uuid.uuid4()),
@@ -3476,12 +3560,12 @@ async def send_direct_message(body: DirectMessageBody, user: dict = Depends(get_
             "message": body.message,
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
-        
+
         await db.direct_chats.update_one(
             {"id": chat["id"]},
             {"$push": {"messages": message}}
         )
-        
+
         return {"success": True, "message": message}
     except Exception as e:
         logger.error(f"Send direct message error: {e}")
@@ -3498,10 +3582,10 @@ async def get_direct_messages(friend_id: str, user: dict = Depends(get_current_u
                 {"user1_id": friend_id, "user2_id": user["id"]}
             ]
         }, {"_id": 0})
-        
+
         if not chat:
             return {"messages": []}
-        
+
         return {"messages": chat.get("messages", [])}
     except Exception as e:
         logger.error(f"Get direct messages error: {e}")

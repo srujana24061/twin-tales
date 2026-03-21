@@ -15,7 +15,7 @@ import { useSequentialPlayback } from '@/hooks/useSequentialPlayback';
 import { useVideoExport } from '@/hooks/useVideoExport';
 import api from '@/lib/api';
 
-const API_URL = process.env.REACT_APP_BACKEND_URL;
+const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
 const PX_PER_SEC = 80; // pixels per second at zoom=1
 
 const formatTime = (s) => {

@@ -73,62 +73,62 @@ IMPORTANT:
 
 class BehaviorScorer:
     """Calculate behavior scores for TWINNEE"""
-    
+
     @staticmethod
     def calculate_learning_score(activities: List[Dict]) -> float:
         """
         Learning Score = (Tasks Completed / Tasks Assigned) * 100 + Bonus for streak
         """
         learning_activities = [a for a in activities if a.get('activity_type') == 'learning']
-        
+
         if not learning_activities:
             return 50.0  # Default neutral score
-        
+
         completed = sum(1 for a in learning_activities if a.get('completed', False))
         total = len(learning_activities)
-        
+
         base_score = (completed / total) * 100 if total > 0 else 50.0
-        
+
         # Bonus for streak (consecutive days)
         streak_bonus = min(10, len(learning_activities) // 2)
-        
+
         return min(100, base_score + streak_bonus)
-    
+
     @staticmethod
     def calculate_creativity_score(activities: List[Dict]) -> float:
         """
         Creativity Score = (Stories Created + Choices Made + Original Inputs) weighted
         """
         creative_activities = [a for a in activities if a.get('activity_type') in ['story_created', 'creative']]
-        
+
         if not creative_activities:
             return 50.0
-        
+
         stories_created = sum(1 for a in creative_activities if a.get('activity_type') == 'story_created')
         choices_made = sum(a.get('choices_count', 0) for a in creative_activities)
-        
+
         score = (stories_created * 20) + (choices_made * 5)
         return min(100, max(0, score))
-    
+
     @staticmethod
     def calculate_discipline_score(activities: List[Dict], screen_time_minutes: int) -> float:
         """
         Discipline Score = 100 - (Overuse Penalty + Missed Task Penalty)
         """
         base_score = 100.0
-        
+
         # Screen time penalty (over 120 minutes = 2 hours)
         if screen_time_minutes > 120:
             overuse_penalty = min(30, (screen_time_minutes - 120) / 4)
             base_score -= overuse_penalty
-        
+
         # Missed tasks penalty
         missed_tasks = sum(1 for a in activities if a.get('activity_type') == 'task' and not a.get('completed'))
         missed_penalty = min(20, missed_tasks * 5)
         base_score -= missed_penalty
-        
+
         return max(0, base_score)
-    
+
     @staticmethod
     def calculate_emotional_score(conversations: List[Dict]) -> float:
         """
@@ -137,51 +137,51 @@ class BehaviorScorer:
         """
         if not conversations:
             return 75.0  # Default positive score
-        
+
         positive_keywords = ['happy', 'fun', 'love', 'good', 'great', 'awesome', 'excited', 'enjoy']
         negative_keywords = ['sad', 'bad', 'angry', 'hate', 'boring', 'tired', 'scared']
-        
+
         score = 75.0  # Start neutral-positive
-        
+
         for conv in conversations[-10:]:  # Last 10 conversations
             message = conv.get('user_message', '').lower()
-            
+
             for word in positive_keywords:
                 if word in message:
                     score += 2
-            
+
             for word in negative_keywords:
                 if word in message:
                     score -= 3
-        
+
         return min(100, max(0, score))
-    
+
     @staticmethod
     def calculate_physical_score(activities: List[Dict]) -> float:
         """
         Physical Activity Score = Activity logs + inactivity penalty
         """
         physical_activities = [a for a in activities if a.get('activity_type') == 'physical']
-        
+
         if not physical_activities:
             return 40.0  # Low score if no activity logged
-        
+
         score = 40.0 + (len(physical_activities) * 10)
         return min(100, score)
-    
+
     @staticmethod
     def calculate_social_score(activities: List[Dict]) -> float:
         """
         Social Score = Interaction quality (parents/peers) + collaboration
         """
         social_activities = [a for a in activities if a.get('activity_type') == 'social']
-        
+
         if not social_activities:
             return 60.0  # Default neutral
-        
+
         score = 60.0 + (len(social_activities) * 8)
         return min(100, score)
-    
+
     @staticmethod
     def calculate_overall_score(scores: Dict[str, float]) -> float:
         """
@@ -195,7 +195,7 @@ class BehaviorScorer:
             'physical': 0.15,
             'social': 0.10
         }
-        
+
         overall = sum(scores.get(key, 50) * weight for key, weight in weights.items())
         return round(overall, 1)
 
@@ -203,7 +203,7 @@ class BehaviorScorer:
 
 class BehavioralRiskDetector:
     """Detect behavioral patterns and risks"""
-    
+
     @staticmethod
     def detect_risks(user_context: Dict, activities: List[Dict]) -> List[Dict]:
         """
@@ -214,7 +214,7 @@ class BehavioralRiskDetector:
         risks = []
         screen_time = user_context.get('screen_time_today', 0)
         scores = user_context.get('scores', {})
-        
+
         # Screen time > limit (120 minutes = 2 hours)
         if screen_time > 120:
             risks.append({
@@ -223,7 +223,7 @@ class BehavioralRiskDetector:
                 'action': 'soft_reminder',
                 'message': "Looks like you've been on screen for a while 😄 Want to try a quick fun challenge or story?"
             })
-        
+
         # Repeated missed tasks
         missed_tasks = [a for a in activities if a.get('activity_type') == 'task' and not a.get('completed')]
         if len(missed_tasks) >= 3:
@@ -233,7 +233,7 @@ class BehavioralRiskDetector:
                 'action': 'motivation_prompt',
                 'message': "Hey, should we finish your pending mission together? 🎯"
             })
-        
+
         # Negative mood streak (emotional score < 50)
         if scores.get('emotional', 75) < 50:
             risks.append({
@@ -242,7 +242,7 @@ class BehavioralRiskDetector:
                 'action': 'emotional_support',
                 'message': "I'm here if you want to talk about anything. Want to create a fun story together? 🌟"
             })
-        
+
         # Low activity (physical score < 40)
         if scores.get('physical', 50) < 40:
             risks.append({
@@ -251,7 +251,7 @@ class BehavioralRiskDetector:
                 'action': 'suggest_movement',
                 'message': "How about a quick movement break? Maybe a fun dance or stretch? 💃"
             })
-        
+
         # Sudden behavior change (discipline or emotional drop > 20 points)
         # This would need historical comparison - simplified for now
         if scores.get('discipline', 100) < 40 or scores.get('emotional', 75) < 40:
@@ -262,9 +262,9 @@ class BehavioralRiskDetector:
                 'message': None,  # Silent flag
                 'parent_alert': True
             })
-        
+
         return risks
-    
+
     @staticmethod
     def should_trigger_nudge(risks: List[Dict], last_nudge_time: datetime = None) -> Dict:
         """
@@ -273,28 +273,28 @@ class BehavioralRiskDetector:
         """
         if not risks:
             return None
-        
+
         # Don't nudge more than once per hour
         if last_nudge_time:
             time_since_last = datetime.now(timezone.utc) - last_nudge_time
             if time_since_last.total_seconds() < 3600:  # 1 hour
                 return None
-        
+
         # Prioritize by severity
         high_severity = [r for r in risks if r.get('severity') == 'high']
         if high_severity:
             return high_severity[0]
-        
+
         medium_severity = [r for r in risks if r.get('severity') == 'medium']
         if medium_severity:
             return medium_severity[0]
-        
+
         return risks[0] if risks else None
 
 
 class PatternLearner:
     """Learn and track user patterns over time"""
-    
+
     @staticmethod
     async def track_pattern(db, user_id: str, pattern_type: str, value: any):
         """
@@ -310,25 +310,25 @@ class PatternLearner:
             "timestamp": datetime.now(timezone.utc)
         }
         await db.user_patterns.insert_one(pattern_doc)
-    
+
     @staticmethod
     async def get_patterns(db, user_id: str, days: int = 7) -> Dict:
         """
         Get learned patterns for user
         """
         since = datetime.now(timezone.utc) - timedelta(days=days)
-        
+
         patterns = await db.user_patterns.find(
             {"user_id": user_id, "timestamp": {"$gte": since}}
         ).to_list(1000)
-        
+
         result = {
             'peak_activity_times': [],
             'favorite_content': [],
             'average_attention_span': 0,
             'mood_cycles': []
         }
-        
+
         # Analyze patterns
         peak_times = [p for p in patterns if p.get('pattern_type') == 'peak_time']
         if peak_times:
@@ -338,7 +338,7 @@ class PatternLearner:
                 hour = p['timestamp'].hour
                 hour_counts[hour] = hour_counts.get(hour, 0) + 1
             result['peak_activity_times'] = sorted(hour_counts.items(), key=lambda x: x[1], reverse=True)[:3]
-        
+
         # Favorite content
         content_prefs = [p for p in patterns if p.get('pattern_type') == 'content_preference']
         if content_prefs:
@@ -347,33 +347,33 @@ class PatternLearner:
                 val = p['value']
                 content_counts[val] = content_counts.get(val, 0) + 1
             result['favorite_content'] = sorted(content_counts.items(), key=lambda x: x[1], reverse=True)[:5]
-        
+
         # Attention span
         attention = [p for p in patterns if p.get('pattern_type') == 'attention_span']
         if attention:
             result['average_attention_span'] = sum(p['value'] for p in attention) / len(attention)
-        
+
         # Mood cycles
         moods = [p for p in patterns if p.get('pattern_type') == 'mood']
         result['mood_cycles'] = moods[-10:]  # Last 10 mood entries
-        
+
         return result
 
 
 class StoryPersonalizer:
     """Personalize story suggestions based on behavior and patterns"""
-    
+
     @staticmethod
     def get_story_suggestions(scores: Dict, patterns: Dict, user_interests: List[str] = None) -> List[Dict]:
         """
         Generate personalized story suggestions
         """
         suggestions = []
-        
+
         creativity = scores.get('creativity', 50)
         discipline = scores.get('discipline', 100)
         emotional = scores.get('emotional', 75)
-        
+
         # Low creativity → guided story
         if creativity < 40:
             suggestions.append({
@@ -382,7 +382,7 @@ class StoryPersonalizer:
                 'description': 'Follow the hero through exciting choices!',
                 'reason': 'This story will spark your creativity! 🎨'
             })
-        
+
         # High creativity → open-ended story
         if creativity >= 70:
             suggestions.append({
@@ -391,7 +391,7 @@ class StoryPersonalizer:
                 'description': 'Build anything you can imagine!',
                 'reason': "You're so creative! Let your imagination run wild! ✨"
             })
-        
+
         # Low discipline → moral story
         if discipline < 40:
             suggestions.append({
@@ -400,7 +400,7 @@ class StoryPersonalizer:
                 'description': 'Learn about never giving up!',
                 'reason': 'A story about finishing what you start 🎯'
             })
-        
+
         # Low emotional → comforting story
         if emotional < 50:
             suggestions.append({
@@ -409,7 +409,7 @@ class StoryPersonalizer:
                 'description': 'A heartwarming tale of friendship',
                 'reason': 'This story will make you smile! 😊'
             })
-        
+
         # Based on interests
         if user_interests:
             for interest in user_interests[:2]:
@@ -419,7 +419,7 @@ class StoryPersonalizer:
                     'description': f'A story about your favorite: {interest}!',
                     'reason': f'You love {interest}! 💖'
                 })
-        
+
         # Based on favorite content patterns
         if patterns.get('favorite_content'):
             top_content = patterns['favorite_content'][0][0]
@@ -429,61 +429,83 @@ class StoryPersonalizer:
                 'description': 'Similar to stories you enjoyed before',
                 'reason': 'Based on what you like! 🌟'
             })
-        
+
         return suggestions[:5]  # Return top 5
 
 
 class TwinneeChat:
-    """TWINNEE Chatbot with emergentintegrations"""
-    
+    """TWINNEE Chatbot using OpenAI directly."""
+
     def __init__(self):
         self.system_prompt = TWINNEE_SYSTEM_PROMPT
-        self._key = os.environ.get('EMERGENT_LLM_KEY') or os.environ.get('OPENAI_API_KEY')
-    
+        self._key = os.environ.get("OPENAI_API_KEY")
+
     async def get_response(
-        self, 
-        user_message: str, 
+        self,
+        user_message: str,
         conversation_history: List[Dict] = None,
-        user_context: Dict = None
+        user_context: Dict = None,
     ) -> str:
         """
-        Get chatbot response using emergentintegrations
+        Get chatbot response using OpenAI gpt-4o-mini.
         """
         if not self._key:
             return "I need a moment! Please check back soon. 😊"
 
         # Build context-aware system prompt
         context_prompt = self.system_prompt
-        
+
         if user_context:
-            scores = user_context.get('scores', {})
-            screen_time = user_context.get('screen_time_today', 0)
+            scores = user_context.get("scores", {})
+            screen_time = user_context.get("screen_time_today", 0)
             context_prompt += "\n\nCURRENT CONTEXT:"
             context_prompt += f"\n- Child's name: {user_context.get('child_name', 'friend')}"
             context_prompt += f"\n- Screen time today: {screen_time} minutes"
             if scores:
-                if scores.get('creativity', 0) < 40:
+                if scores.get("creativity", 0) < 40:
                     context_prompt += "\n- Note: Encourage creative activities"
-                if scores.get('discipline', 0) < 40:
+                if scores.get("discipline", 0) < 40:
                     context_prompt += "\n- Note: Gently remind about completing tasks"
-                if scores.get('emotional', 0) < 50:
+                if scores.get("emotional", 0) < 50:
                     context_prompt += "\n- Note: Be extra supportive and uplifting"
             # Safety nudge from Responsible AI
-            if user_context.get('safety_nudge'):
-                context_prompt += f"\n- IMPORTANT: Weave this gentle message naturally into your response: {user_context['safety_nudge']}"
-        
-        try:
-            from emergentintegrations.llm.chat import LlmChat, UserMessage
-            # Use user-specific session so history accumulates naturally
-            child_key = user_context.get('child_name', 'user') if user_context else 'user'
-            chat = LlmChat(
-                api_key=self._key,
-                session_id=f"twinnee_{child_key}",
-                system_message=context_prompt
-            ).with_model("openai", "gpt-4o-mini")
+            if user_context.get("safety_nudge"):
+                context_prompt += (
+                    "\n- IMPORTANT: Weave this gentle message naturally into your response: "
+                    f"{user_context['safety_nudge']}"
+                )
 
-            response = await chat.send_message(UserMessage(text=user_message))
-            return response.strip() if response else "I'm here with you! 😊"
+        try:
+            from openai import OpenAI
+
+            messages = [
+                {"role": "system", "content": context_prompt},
+            ]
+
+            if conversation_history:
+                for turn in conversation_history:
+                    role = turn.get("role", "user")
+                    content = turn.get("content", "")
+                    messages.append({"role": role, "content": content})
+
+            messages.append({"role": "user", "content": user_message})
+
+            client = OpenAI(api_key=self._key)
+            completion = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=messages,
+                temperature=0.4,
+            )
+
+            msg = completion.choices[0].message
+            if isinstance(msg.content, str):
+                response_text = msg.content
+            else:
+                response_text = "".join(
+                    part.text for part in msg.content if getattr(part, "type", "") == "text"
+                )
+
+            return response_text.strip() if response_text else "I'm here with you! 😊"
 
         except Exception:
             return "Oops! I'm having a little trouble right now. Can you try again? 😊"
@@ -495,21 +517,21 @@ async def get_user_behavior_context(db, user_id: str) -> Dict:
     """
     # Get today's activities
     today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-    
+
     activities = await db.behavior_logs.find(
         {"user_id": user_id, "timestamp": {"$gte": today_start}}
     ).to_list(100)
-    
+
     # Get screen time
     screen_time = sum(a.get('duration_minutes', 0) for a in activities if a.get('activity_type') == 'screen_time')
-    
+
     # Get latest scores
     scores_doc = await db.user_scores.find_one({"user_id": user_id})
     scores = scores_doc.get('scores', {}) if scores_doc else {}
-    
+
     # Get user info
     user = await db.users.find_one({"id": user_id}, {"_id": 0})
-    
+
     return {
         "child_name": user.get('name', 'friend') if user else 'friend',
         "screen_time_today": screen_time,
@@ -524,19 +546,19 @@ async def update_behavior_scores(db, user_id: str):
     """
     # Get last 7 days of activities
     week_ago = datetime.now(timezone.utc) - timedelta(days=7)
-    
+
     activities = await db.behavior_logs.find(
         {"user_id": user_id, "timestamp": {"$gte": week_ago}}
     ).to_list(1000)
-    
+
     # Get conversations
     conversations = await db.conversations.find(
         {"user_id": user_id, "timestamp": {"$gte": week_ago}}
     ).to_list(100)
-    
+
     # Calculate screen time
     screen_time = sum(a.get('duration_minutes', 0) for a in activities if a.get('activity_type') == 'screen_time')
-    
+
     # Calculate scores
     scorer = BehaviorScorer()
     scores = {
@@ -547,9 +569,9 @@ async def update_behavior_scores(db, user_id: str):
         'physical': scorer.calculate_physical_score(activities),
         'social': scorer.calculate_social_score(activities)
     }
-    
+
     scores['overall'] = scorer.calculate_overall_score(scores)
-    
+
     # Update database
     await db.user_scores.update_one(
         {"user_id": user_id},
@@ -563,5 +585,5 @@ async def update_behavior_scores(db, user_id: str):
         },
         upsert=True
     )
-    
+
     return scores

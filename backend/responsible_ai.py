@@ -10,8 +10,11 @@ Responsible AI Module for TWINNEE
 import os
 import json
 import logging
+import asyncio
 from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Optional
+
+from openai import OpenAI
 
 logger = logging.getLogger(__name__)
 
@@ -119,14 +122,29 @@ Severity guide:
     try:
         if not EMERGENT_LLM_KEY:
             raise RuntimeError("LLM key not configured")
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
-        chat = LlmChat(
-            api_key=EMERGENT_LLM_KEY,
-            session_id=f"safety_{hash(message) % 100000}",
-            system_message="You are a responsible AI safety analyzer for a children's app. Always respond with valid JSON only."
-        ).with_model("openai", "gpt-4o-mini")
-        response = await chat.send_message(UserMessage(text=prompt))
-        result = json.loads(response)
+
+        client = OpenAI(api_key=EMERGENT_LLM_KEY)
+
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a responsible AI safety analyzer for a children's app. Always respond with valid JSON only.",
+                },
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.1,
+        )
+
+        msg = completion.choices[0].message
+        if isinstance(msg.content, str):
+            response_text = msg.content
+        else:
+            response_text = "".join(
+                part.text for part in msg.content if getattr(part, "type", "") == "text"
+            )
+        result = json.loads(response_text)
         # Ensure required fields
         result.setdefault("severity", pre_severity)
         result.setdefault("categories", [])
@@ -209,14 +227,30 @@ Be warm, constructive, and specific. Avoid clinical jargon. Write like a caring 
     try:
         if not EMERGENT_LLM_KEY:
             raise RuntimeError("LLM key not configured")
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
-        chat = LlmChat(
-            api_key=EMERGENT_LLM_KEY,
-            session_id=f"analysis_{hash(child_name + str(len(conversations))) % 100000}",
-            system_message="You are a child psychologist AI assistant. Always respond with valid JSON only."
-        ).with_model("openai", "gpt-4o-mini")
-        response = await chat.send_message(UserMessage(text=prompt))
-        return json.loads(response)
+
+        client = OpenAI(api_key=EMERGENT_LLM_KEY)
+
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a child psychologist AI assistant. Always respond with valid JSON only.",
+                },
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.3,
+        )
+
+        msg = completion.choices[0].message
+        if isinstance(msg.content, str):
+            response_text = msg.content
+        else:
+            response_text = "".join(
+                part.text for part in msg.content if getattr(part, "type", "") == "text"
+            )
+
+        return json.loads(response_text)
     except Exception as e:
         logger.error(f"Analysis report error: {e}")
         return {

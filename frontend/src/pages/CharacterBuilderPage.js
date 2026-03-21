@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import api from '@/lib/api';
 import { useImageStyleConversion } from '../hooks/useImageStyleConversion';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
 const roles = ['hero', 'friend', 'villain', 'animal', 'imaginary'];
 const traitOptions = ['brave', 'shy', 'funny', 'curious', 'kind', 'adventurous', 'smart', 'gentle', 'playful', 'creative'];
 const speakingStyles = ['funny', 'shy', 'brave', 'curious', 'cheerful', 'wise'];

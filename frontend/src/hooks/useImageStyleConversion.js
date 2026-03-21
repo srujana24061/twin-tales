@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
 
 /**
  * Hook for handling Gemini-powered image style conversion

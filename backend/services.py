@@ -6,7 +6,6 @@ import logging
 import base64
 import uuid
 import edge_tts
-from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
 
 logger = logging.getLogger(__name__)
 
@@ -123,8 +122,8 @@ class S3Service:
 class GeminiImageService:
     def __init__(self):
         self.api_key = os.environ.get('EMERGENT_LLM_KEY')
-        self.model_id = "gemini-3-pro-image-preview"
-        self.style_model_id = "gemini-2.5-flash-image"
+        self.model_id = "gemini-3.5-flash"
+        self.image_model_id = "gemini-2.0-flash-image"
 
     async def _encode_reference(self, image_ref: str) -> str:
         if image_ref.startswith("data:image/"):
@@ -135,85 +134,139 @@ class GeminiImageService:
         return base64.b64encode(resp.content).decode('utf-8')
 
     async def generate_image(self, prompt: str, aspect_ratio: str = "16:9", reference_images: list = None) -> list:
+        """
+        Generate images using the public Gemini HTTP API directly, without
+        relying on the emergentintegrations helper library.
+        Returns a list of ("base64", <base64_png>) tuples.
+        """
         if not self.api_key:
             raise Exception("EMERGENT_LLM_KEY missing")
 
-        chat = LlmChat(
-            api_key=self.api_key,
-            session_id=f"gemini-image-{uuid.uuid4().hex[:8]}",
-            system_message="You are a helpful AI assistant"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.image_model_id}:generateContent"
+        headers = {
+            "Content-Type": "application/json",
+            "x-goog-api-key": self.api_key,
+        }
+
+        final_prompt = f"{prompt}. Aspect ratio {aspect_ratio}. High quality children's illustration."
+        contents = [
+            {
+                "role": "user",
+                "parts": [{"text": final_prompt}],
+            }
+        ]
+
+        body = {
+            "contents": contents,
+            "generationConfig": {
+                "responseMimeType": "image/png",
+            },
+        }
+
+        resp = await asyncio.to_thread(
+            requests.post,
+            url,
+            headers=headers,
+            json=body,
+            timeout=120,
         )
-        chat.with_model("gemini", self.model_id).with_params(modalities=["image", "text"])
+        if resp.status_code != 200:
+            raise Exception(f"Gemini image API error: {resp.status_code} {resp.text}")
 
-        prompt_text = f"{prompt}. Aspect ratio {aspect_ratio}. High quality children's illustration."
-        file_contents = []
-        if reference_images:
-            for ref in reference_images[:2]:
-                try:
-                    img_b64 = await self._encode_reference(ref)
-                    file_contents.append(ImageContent(img_b64))
-                except Exception as e:
-                    logger.warning(f"Gemini reference image skipped: {e}")
+        data = resp.json()
+        images = []
+        for cand in data.get("candidates", []):
+            for part in cand.get("content", {}).get("parts", []):
+                # Gemini image responses typically encode bytes as base64 in an "inlineData" field
+                inline = part.get("inlineData")
+                if inline and inline.get("data"):
+                    images.append(("base64", inline["data"]))
 
-        msg = UserMessage(text=prompt_text, file_contents=file_contents if file_contents else None)
-        text, images = await chat.send_message_multimodal_response(msg)
         if not images:
             raise Exception("Gemini image generation returned no images")
-        return [("base64", img.get("data")) for img in images if img.get("data")]
+        return images
 
     async def convert_image_style(self, image_url: str, style: str = "cartoon") -> dict:
         """
-        Convert an image to different artistic styles using Gemini
-        Styles: anime, toy, realistic, cartoon, watercolor, sketch
+        Simple style-conversion wrapper around Gemini:
+        downloads the source image, sends it with a style prompt, and
+        returns a single base64 PNG image.
         """
         if not self.api_key:
             raise Exception("EMERGENT_LLM_KEY missing")
 
-        # Define style prompts
         STYLE_PROMPTS = {
             "anime": "Convert this image into a Studio Ghibli anime style with vibrant colors and expressive features.",
             "toy": "Transform this into a 3D plastic toy figurine with smooth surfaces and bright colors.",
-            "realistic": "Render this as a hyper-realistic 8k photograph with natural lighting and textures.",
-            "cartoon": "Turn this into a colorful 3D Disney-style cartoon animation with exaggerated features.",
-            "watercolor": "Convert this into a soft watercolor painting with gentle brush strokes and pastel colors.",
-            "sketch": "Transform this into a professional pencil sketch with detailed shading and line work.",
+            "realistic": "Render this as a hyper-realistic photograph with natural lighting and textures.",
+            "cartoon": "Turn this into a colorful 3D cartoon illustration suitable for children.",
+            "watercolor": "Convert this into a soft watercolor painting with gentle brush strokes.",
+            "sketch": "Transform this into a detailed pencil sketch with clear line work and shading.",
             "comic": "Convert this into a comic book illustration with bold outlines and halftone shading.",
-            "pixar": "Transform this into a Pixar-style 3D character with glossy textures and expressive eyes."
+            "pixar": "Transform this into a Pixar-style 3D character with expressive eyes and glossy textures.",
+        }
+        style_prompt = STYLE_PROMPTS.get(style, STYLE_PROMPTS["cartoon"])
+
+        # Download and encode the source image
+        img_b64 = await self._encode_reference(image_url)
+
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.image_model_id}:generateContent"
+        headers = {
+            "Content-Type": "application/json",
+            "x-goog-api-key": self.api_key,
         }
 
-        prompt = STYLE_PROMPTS.get(style, STYLE_PROMPTS["cartoon"])
-        
-        # Download the source image
-        img_b64 = await self._encode_reference(image_url)
-        
-        # Use Gemini for style conversion
-        chat = LlmChat(
-            api_key=self.api_key,
-            session_id=f"gemini-style-{uuid.uuid4().hex[:8]}",
-            system_message="You are an expert image style conversion AI."
-        )
-        chat.with_model("gemini", self.style_model_id).with_params(modalities=["image", "text"])
+        contents = [
+            {
+                "role": "user",
+                "parts": [
+                    {"text": style_prompt},
+                    {
+                        "inline_data": {
+                            "mime_type": "image/png",
+                            "data": img_b64,
+                        }
+                    },
+                ],
+            }
+        ]
 
-        msg = UserMessage(
-            text=prompt,
-            file_contents=[ImageContent(img_b64)]
+        body = {
+            "contents": contents,
+            "generationConfig": {
+                "responseMimeType": "image/png",
+            },
+        }
+
+        resp = await asyncio.to_thread(
+            requests.post,
+            url,
+            headers=headers,
+            json=body,
+            timeout=180,
         )
-        
-        text, images = await chat.send_message_multimodal_response(msg)
-        
-        if not images or len(images) == 0:
-            raise Exception("Gemini style conversion returned no images")
-        
-        # Return the converted image as base64
-        converted_image = images[0].get("data")
-        if not converted_image:
-            raise Exception("No image data in Gemini response")
-        
+        if resp.status_code != 200:
+            raise Exception(f"Gemini style API error: {resp.status_code} {resp.text}")
+
+        data = resp.json()
+        image_data = None
+        for cand in data.get("candidates", []):
+            for part in cand.get("content", {}).get("parts", []):
+                inline = part.get("inline_data") or part.get("inlineData")
+                if inline and inline.get("data"):
+                    image_data = inline["data"]
+                    break
+            if image_data:
+                break
+
+        if not image_data:
+            raise Exception("No image data in Gemini style conversion response")
+
         return {
             "status": "completed",
             "style": style,
-            "image_base64": converted_image,
-            "format": "png"
+            "image_base64": image_data,
+            "format": "png",
         }
 
 

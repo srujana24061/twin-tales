@@ -190,20 +190,33 @@ async def start_checkin(user: dict = Depends(get_current_user_wb)):
             "exchange_count": existing.get("exchange_count", 0)
         }
 
-    # New session — get Luna's first question
-    from emergentintegrations.llm.chat import LlmChat, UserMessage
+    # New session — get Luna's first question using OpenAI directly
+    if not EMERGENT_LLM_KEY:
+        raise HTTPException(status_code=500, detail="LLM key not configured")
+
+    from openai import OpenAI
+
     session_id = str(uuid.uuid4())
-    chat = LlmChat(
-        api_key=EMERGENT_LLM_KEY,
-        session_id=f"checkin-{session_id}",
-        system_message=LUNA_SYSTEM
-    ).with_model("openai", "gpt-5.2")
 
     child_name = user.get("name", "friend").split()[0]
-    opener = await chat.send_message(UserMessage(
-        text=f"The child's name is {child_name}. Start the conversation with your first warm question."
-    ))
-    first_q = opener.strip()
+    user_prompt = f"The child's name is {child_name}. Start the conversation with your first warm question."
+
+    client = OpenAI(api_key=EMERGENT_LLM_KEY)
+    completion = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": LUNA_SYSTEM},
+            {"role": "user", "content": user_prompt},
+        ],
+        temperature=0.4,
+    )
+    msg = completion.choices[0].message
+    if isinstance(msg.content, str):
+        first_q = msg.content.strip()
+    else:
+        first_q = "".join(
+            part.text for part in msg.content if getattr(part, "type", "") == "text"
+        ).strip()
 
     session_doc = {
         "id": session_id,
@@ -238,18 +251,33 @@ async def respond_to_checkin(data: CheckinMessage, user: dict = Depends(get_curr
     messages.append({"role": "child", "content": data.message})
     exchange_count += 1
 
-    from emergentintegrations.llm.chat import LlmChat, UserMessage
+    if not EMERGENT_LLM_KEY:
+        raise HTTPException(status_code=500, detail="LLM key not configured")
+
+    from openai import OpenAI
+
     # Reconstruct conversation context for LLM
-    context = "\n".join([f"{'Luna' if m['role']=='luna' else 'Child'}: {m['content']}" for m in messages])
-    chat = LlmChat(
-        api_key=EMERGENT_LLM_KEY,
-        session_id=f"checkin-{session['id']}",
-        system_message=LUNA_SYSTEM
-    ).with_model("openai", "gpt-5.2")
+    context = "\n".join(
+        [f"{'Luna' if m['role']=='luna' else 'Child'}: {m['content']}" for m in messages]
+    )
 
     prompt = f"Conversation so far:\n{context}\n\nThis was exchange #{exchange_count}. Continue as Luna."
-    luna_response = await chat.send_message(UserMessage(text=prompt))
-    luna_response = luna_response.strip()
+    client = OpenAI(api_key=EMERGENT_LLM_KEY)
+    completion = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": LUNA_SYSTEM},
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0.4,
+    )
+    msg = completion.choices[0].message
+    if isinstance(msg.content, str):
+        luna_response = msg.content.strip()
+    else:
+        luna_response = "".join(
+            part.text for part in msg.content if getattr(part, "type", "") == "text"
+        ).strip()
 
     # Check if this is the final analysis JSON
     if exchange_count >= 3 or ('{' in luna_response and '"done"' in luna_response):

@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+// In local dev, default to FastAPI on :8000 if env not set.
+// If BACKEND_URL is unset, axios would otherwise build URLs like "/undefined/api/...".
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
 
 const api = axios.create({
   baseURL: `${BACKEND_URL}/api`,

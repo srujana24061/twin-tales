@@ -45,8 +45,15 @@ celery_app = Celery("storycraft", broker=CELERY_BROKER_URL, backend=CELERY_RESUL
 celery_app.conf.update(task_always_eager=CELERY_TASK_ALWAYS_EAGER, task_eager_propagates=True)
 
 # Initialize external services
-from services import S3Service, MiniMaxService, ElevenLabsService, EdgeTTSService, GeminiImageService, FotorService
-from notifications import notify_video_complete
+from backend.services import (
+    S3Service,
+    MiniMaxService,
+    ElevenLabsService,
+    EdgeTTSService,
+    GeminiImageService,
+    FotorService,
+)
+from backend.notifications import notify_video_complete
 s3_service = S3Service()
 minimax_service = MiniMaxService()
 image_gen_service = GeminiImageService()
@@ -2214,7 +2221,7 @@ async def get_dashboard_stats(user: dict = Depends(get_current_user)):
 
 # ==================== WELLBEING MODULE ====================
 
-from wellbeing import wellbeing_router, inject_deps as wellbeing_inject
+from backend.wellbeing import wellbeing_router, inject_deps as wellbeing_inject
 wellbeing_inject(db, EMERGENT_LLM_KEY, JWT_SECRET, pwd_context, logger)
 api_router.include_router(wellbeing_router)
 
@@ -2590,7 +2597,7 @@ async def shutdown_db_client():
 
 # ==================== TWINNEE AI CHATBOT ====================
 
-from twinnee import TwinneeChat, get_user_behavior_context, update_behavior_scores
+from backend.twinnee import TwinneeChat, get_user_behavior_context, update_behavior_scores
 
 twinnee_chat = TwinneeChat()
 
@@ -2788,7 +2795,7 @@ async def get_behavior_scores(user: dict = Depends(get_current_user)):
 async def get_story_suggestions(user: dict = Depends(get_current_user)):
     """Get personalized story suggestions based on behavior"""
     try:
-        from twinnee import StoryPersonalizer, PatternLearner
+        from backend.twinnee import StoryPersonalizer, PatternLearner
 
         # Get user scores
         scores_doc = await db.user_scores.find_one({"user_id": user["id"]}, {"_id": 0})
@@ -2815,7 +2822,7 @@ async def get_story_suggestions(user: dict = Depends(get_current_user)):
 async def get_user_patterns(user: dict = Depends(get_current_user)):
     """Get learned patterns for user (for parent dashboard)"""
     try:
-        from twinnee import PatternLearner
+        from backend.twinnee import PatternLearner
 
         patterns = await PatternLearner.get_patterns(db, user["id"], days=30)
 
@@ -2837,7 +2844,7 @@ async def get_user_patterns(user: dict = Depends(get_current_user)):
 async def check_behavioral_risks(user: dict = Depends(get_current_user)):
     """Check for behavioral risks (for parent dashboard)"""
     try:
-        from twinnee import BehavioralRiskDetector, get_user_behavior_context
+        from backend.twinnee import BehavioralRiskDetector, get_user_behavior_context
 
         # Get context
         context = await get_user_behavior_context(db, user["id"])
@@ -3015,7 +3022,7 @@ async def send_weekly_report(body: WeeklyReportBody, user: dict = Depends(get_cu
 
 
 
-from social import FriendSystem, CollaborativeSession, InteractionLogger, InteractionAnalyzer
+from backend.social import FriendSystem, CollaborativeSession, InteractionLogger, InteractionAnalyzer
 
 class FriendRequestBody(BaseModel):
     to_user_id: str

@@ -364,7 +364,6 @@ class FotorService:
 class MiniMaxService:
     def __init__(self):
         self.api_key = os.environ.get('MINIMAX_API_KEY', '')
-        # Remove 'Bearer ' prefix if present (we'll add it in headers)
         if self.api_key.startswith('Bearer '):
             self.api_key = self.api_key[7:]
         self.base_url = "https://api.minimax.io/v1"
@@ -386,6 +385,7 @@ class MiniMaxService:
         }
         if reference_images:
             payload["images"] = reference_images[:3]
+
         response = await asyncio.to_thread(
             requests.post,
             f"{self.base_url}/image_generation",
@@ -393,43 +393,59 @@ class MiniMaxService:
             json=payload,
             timeout=120
         )
-        data = response.json()
-        status_code = data.get("base_resp", {}).get("status_code", -1)
+        try:
+            data = response.json()
+        except Exception as je:
+            logger.error(f"MiniMax image response is not JSON: {response.text[:500]}")
+            raise Exception(f"MiniMax returned invalid JSON: {str(je)}")
+
+        if not data or not isinstance(data, dict):
+            logger.error(f"MiniMax invalid response format: {data}")
+            raise Exception("MiniMax returned empty or non-dict response")
+
+        logger.info(f"MiniMax image response: {str(data)[:500]}")
+
+        base_resp = data.get("base_resp") or {}
+        status_code = base_resp.get("status_code", -1)
         if status_code != 0:
-            raise Exception(f"MiniMax image gen failed: {data.get('base_resp', {}).get('status_msg', 'unknown')}")
-        urls = data.get("data", {}).get("image_urls", [])
+            raise Exception(f"MiniMax image gen failed: {base_resp.get('status_msg', 'unknown')}")
+
+        data_payload = data.get("data") or {}
+        urls = data_payload.get("image_urls", [])
+        logger.info(f"MiniMax raw URLs: {urls}")
+
         if not urls:
-            b64_list = data.get("data", {}).get("image_base64", [])
-            return [("base64", b) for b in b64_list]
-        return [("url", u) for u in urls]
+            b64_list = data_payload.get("image_base64", [])
+            logger.info(f"MiniMax base64 count: {len(b64_list)}")
+            return [("base64", b) for b in b64_list if b and isinstance(b, str)]
+
+        normalized_urls = []
+        for u in urls:
+            if isinstance(u, dict):
+                url_val = u.get("url") or u.get("image_url") or u.get("uri")
+            else:
+                url_val = u
+            if url_val and isinstance(url_val, str) and url_val.strip():
+                normalized_urls.append(url_val)
+            else:
+                logger.warning(f"MiniMax: skipping invalid URL value: {u}")
+
+        if not normalized_urls:
+            raise Exception(f"MiniMax returned no valid image URLs. Raw: {str(data)[:300]}")
+
+        logger.info(f"MiniMax valid URLs count: {len(normalized_urls)}")
+        return [("url", u) for u in normalized_urls]
 
     async def generate_video(self, prompt: str, subject_references: list = None,
-                            first_frame_image: str = None,
-                            generation_type: str = "text-to-video") -> dict:
-        """Generate video using MiniMax Hailuo.
-        
-        Args:
-            prompt: Video description
-            subject_references: List of character image URLs for consistency
-            first_frame_image: Scene image URL for image-to-video mode
-            generation_type: 'text-to-video' or 'image-to-video'
-        """
-        # Simplified payload - start with basics
+                             first_frame_image: str = None,
+                             generation_type: str = "text-to-video") -> dict:
         payload = {
             "model": "video-01",
             "prompt": prompt[:2000]
         }
-
-        # Image-to-video: use scene image as first frame
         if generation_type == "image-to-video" and first_frame_image:
             payload["first_frame_image"] = first_frame_image
             logger.info("Using image-to-video mode with first_frame_image")
-
-        # Note: subject_references might not be supported in current API version
-        # Commenting out for now to fix "invalid params" error
-        # if subject_references:
-        #     payload["subject_reference"] = [{"image": url} for url in subject_references[:2]]
-        #     logger.info(f"Using {len(subject_references[:2])} character subject references")
 
         logger.info(f"MiniMax video gen: creating task ({generation_type}) with payload keys: {list(payload.keys())}")
         response = await asyncio.to_thread(
@@ -440,13 +456,12 @@ class MiniMaxService:
             timeout=60
         )
         data = response.json()
-        
-        # Better error logging
+
         if 'base_resp' in data and data['base_resp'].get('status_code') != 0:
             error_msg = data['base_resp'].get('status_msg', 'unknown')
             logger.error(f"MiniMax API error: {data}")
             raise Exception(f"MiniMax video API error: {error_msg}")
-        
+
         task_id = data.get("task_id")
         if not task_id:
             raise Exception(f"MiniMax video: no task_id: {data}")
@@ -529,12 +544,10 @@ class MiniMaxService:
         if not data or not isinstance(data, dict):
             raise Exception("MiniMax music: invalid response")
 
-        # Check for errors
         base_resp = data.get("base_resp") or {}
         if base_resp.get("status_code") and base_resp.get("status_code") != 0:
             raise Exception(f"MiniMax music failed: {base_resp.get('status_msg', 'unknown error')}")
 
-        # Direct audio response
         inner_data = data.get("data") or {}
         if isinstance(inner_data, dict) and inner_data.get("audio"):
             audio_hex = inner_data["audio"]

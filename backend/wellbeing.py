@@ -95,6 +95,8 @@ async def get_parent_user(request: Request):
 
 
 def parse_json(text):
+    if not text or not isinstance(text, str):
+        return {}
     text = text.strip()
     m = re.search(r'```(?:json)?\s*\n?(.*?)\n?```', text, re.DOTALL)
     if m:

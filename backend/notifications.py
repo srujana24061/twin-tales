@@ -6,7 +6,7 @@ import asyncio
 import logging
 from typing import Optional
 from twilio.rest import Client
-from backend.ses_notifications import send_video_complete_email_ses
+from ses_notifications import send_video_complete_email_ses
 
 logger = logging.getLogger(__name__)
 

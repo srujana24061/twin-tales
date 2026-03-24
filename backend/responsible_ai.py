@@ -47,6 +47,8 @@ BAD_LANGUAGE = [
 
 def keyword_prescreen(message: str) -> str:
     """Fast keyword-based pre-screen. Returns 'SAFE', 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'."""
+    if not message or not isinstance(message, str):
+        return "SAFE"
     msg_lower = message.lower()
     for kw in CRITICAL_KEYWORDS:
         if kw in msg_lower:

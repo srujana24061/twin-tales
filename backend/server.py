@@ -2263,7 +2263,15 @@ async def get_presigned_upload_url(filename: str, content_type: str, user: dict 
         )
         # GET presigned URL — used to view/play the file after upload
         presigned_get_url = s3_service.get_signed_url(s3_key, expires=604800)
-        return {"presigned_url": presigned_put_url, "s3_url": presigned_get_url, "s3_key": s3_key}
+        return {
+            # Preferred explicit field names
+            "upload_url": presigned_put_url,
+            "view_url": presigned_get_url,
+            "s3_key": s3_key,
+            # Backward compatibility for existing clients
+            "presigned_url": presigned_put_url,
+            "s3_url": presigned_get_url,
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -2328,9 +2336,11 @@ async def generate_scene_image_v2(scene_id: str, user: dict = Depends(get_curren
 
         if result_type == "base64":
             img_bytes = base64.b64decode(result_data)
-            image_url = await s3_service.upload(s3_key, img_bytes, 'image/png')
+            await s3_service.upload(s3_key, img_bytes, 'image/png')
+            image_url = s3_service.get_public_url(s3_key)
         elif result_type == "url":
-            image_url = await s3_service.upload_from_url(s3_key, result_data, 'image/png')
+            await s3_service.upload_from_url(s3_key, result_data, 'image/png')
+            image_url = s3_service.get_public_url(s3_key)
         else:
             raise Exception(f"Unknown result type: {result_type}")
 

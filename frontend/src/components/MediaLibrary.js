@@ -34,8 +34,11 @@ export function MediaLibrary({ onMediaSelect }) {
           params: { filename: file.name, content_type: file.type }
         });
 
+        const uploadUrl = presignedData.upload_url || presignedData.presigned_url;
+        const viewUrl = presignedData.view_url || presignedData.s3_url;
+
         // Upload to S3
-        await fetch(presignedData.presigned_url, {
+        await fetch(uploadUrl, {
           method: 'PUT',
           body: file,
           headers: { 'Content-Type': file.type }
@@ -45,9 +48,9 @@ export function MediaLibrary({ onMediaSelect }) {
         const newItem = {
           id: `media-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           name: file.name.replace(/\.[^.]+$/, ''),
-          url: presignedData.s3_url,
+          url: viewUrl,
           type: file.type.startsWith('video/') ? 'video' : 'image',
-          thumbnail: file.type.startsWith('image/') ? presignedData.s3_url : null,
+          thumbnail: file.type.startsWith('image/') ? viewUrl : null,
           duration: 5, // Default duration, can be updated later
           size: file.size
         };

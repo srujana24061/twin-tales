@@ -116,15 +116,18 @@ export const SceneGridEditor = () => {
         params: { filename: file.name, content_type: file.type }
       });
 
-      await fetch(presignedData.presigned_url, {
+      const uploadUrl = presignedData.upload_url || presignedData.presigned_url;
+      const viewUrl = presignedData.view_url || presignedData.s3_url;
+
+      await fetch(uploadUrl, {
         method: 'PUT',
         body: file,
         headers: { 'Content-Type': file.type }
       });
 
       const updateData = mediaType === 'image' 
-        ? { image_url: presignedData.s3_url }
-        : { video_url: presignedData.s3_url };
+        ? { image_url: viewUrl }
+        : { video_url: viewUrl };
       
       await api.put(`/scenes/${sceneId}`, updateData);
       toast.success(`${mediaType} uploaded!`);

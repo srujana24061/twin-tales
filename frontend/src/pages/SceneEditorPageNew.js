@@ -136,8 +136,11 @@ export const SceneEditorPageNew = () => {
         }
       });
 
+      const uploadUrl = presignedData.upload_url || presignedData.presigned_url;
+      const viewUrl = presignedData.view_url || presignedData.s3_url;
+
       // Upload to S3
-      await fetch(presignedData.presigned_url, {
+      await fetch(uploadUrl, {
         method: 'PUT',
         body: file,
         headers: { 'Content-Type': file.type }
@@ -145,8 +148,8 @@ export const SceneEditorPageNew = () => {
 
       // Update frame with S3 URL
       const updateData = mediaType === 'image' 
-        ? { image_url: presignedData.s3_url }
-        : { video_url: presignedData.s3_url };
+        ? { image_url: viewUrl }
+        : { video_url: viewUrl };
       
       await api.put(`/frames/${frameId}`, updateData);
       

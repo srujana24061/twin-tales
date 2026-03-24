@@ -118,6 +118,15 @@ class S3Service:
             ExpiresIn=expires
         )
 
+    def get_public_url(self, key: str) -> str:
+        """
+        Build a stable, non-presigned object URL for clients that should not
+        receive expiring query parameters.
+        """
+        if self.region and self.region != "us-east-1":
+            return f"https://{self.bucket}.s3.{self.region}.amazonaws.com/{key}"
+        return f"https://{self.bucket}.s3.amazonaws.com/{key}"
+
 
 class GeminiImageService:
     def __init__(self):

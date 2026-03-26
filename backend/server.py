@@ -2473,10 +2473,19 @@ async def generate_scene_video_v2(scene_id: str, user: dict = Depends(get_curren
     scene = await db.scenes.find_one({"id": scene_id}, {"_id": 0})
     if not scene:
         raise HTTPException(status_code=404, detail="Scene not found")
+
+    # Read provider from parent story
+    preferred_provider = "nano_banana"
+    if scene.get("story_id"):
+        story = await db.stories.find_one({"id": scene["story_id"]}, {"_id": 0})
+        if story:
+            preferred_provider = story.get("image_provider") or "nano_banana"
+    logger.info(f"Scene video provider: {preferred_provider} for scene {scene_id}")
+
     job_id = str(uuid.uuid4())
-    job_doc = {"id": job_id, "scene_id": scene_id, "user_id": user["id"], "job_type": "scene_video", "status": "pending", "progress": 0, "created_at": datetime.now(timezone.utc).isoformat()}
+    job_doc = {"id": job_id, "scene_id": scene_id, "user_id": user["id"], "job_type": "scene_video", "status": "pending", "progress": 0, "provider": preferred_provider, "created_at": datetime.now(timezone.utc).isoformat()}
     await db.generation_jobs.insert_one(job_doc)
-    enqueue_task(scene_video_task, scene_id, job_id, fallback_coro=run_scene_video_generation)
+    enqueue_task(scene_video_task, scene_id, job_id, preferred_provider, fallback_coro=run_scene_video_generation)
     return {"job_id": job_id, "status": "pending"}
 
 async def _get_character_photos(story_id: str) -> list:
@@ -2568,25 +2577,63 @@ async def generate_nano_banana_video(scene: dict, job_id: str) -> str:
     video_url = await s3_service.upload(s3_key, mp4_bytes, "video/mp4")
     return video_url
 
-
-async def run_scene_video_generation(scene_id: str, job_id: str):
+async def run_scene_video_generation(scene_id: str, job_id: str, provider: str = "nano_banana"):
     try:
-        await db.generation_jobs.update_one({"id": job_id}, {"$set": {"progress": 10, "message": "Generating video frames with Nano Banana..."}})
         scene = await db.scenes.find_one({"id": scene_id}, {"_id": 0})
         if not scene:
             raise Exception("Scene not found")
 
-        video_url = await generate_nano_banana_video(scene, job_id)
+        logger.info(f"Generating video for scene {scene_id} via provider={provider}")
+        video_url = None
+
+        if provider == "minimax":
+            await db.generation_jobs.update_one({"id": job_id}, {"$set": {"progress": 10, "message": "Sending to MiniMax Hailuo..."}})
+
+            vid_prompt = scene.get("video_prompt") or scene.get("image_prompt", "")
+            vid_prompt += ". Child-friendly, vibrant colors, cartoon style, smooth animation."
+            if len(vid_prompt) > 2000:
+                vid_prompt = vid_prompt[:2000]
+
+            first_frame_url = scene.get("image_url")
+            gen_type = "image-to-video" if first_frame_url else "text-to-video"
+            logger.info(f"MiniMax video mode: {gen_type}")
+
+            try:
+                result = await minimax_service.generate_video(
+                    vid_prompt,
+                    first_frame_image=first_frame_url,
+                    generation_type=gen_type
+                )
+                if result.get("url"):
+                    s3_key = f"videos/scenes/{scene_id}_{uuid.uuid4().hex[:8]}.mp4"
+                    video_url = await s3_service.upload_from_url(s3_key, result["url"], "video/mp4")
+                    logger.info(f"MiniMax video complete for scene {scene_id}: {video_url}")
+                else:
+                    raise Exception("MiniMax returned no video URL")
+            except Exception as mm_err:
+                logger.warning(f"MiniMax video failed: {mm_err}. Falling back to Nano Banana...")
+                await db.generation_jobs.update_one({"id": job_id}, {"$set": {"message": "MiniMax failed, falling back to Nano Banana..."}})
+                video_url = await generate_nano_banana_video(scene, job_id)
+                logger.info(f"Fallback Nano Banana video complete for scene {scene_id}: {video_url}")
+
+        else:
+            # Nano Banana (Gemini frames → imageio MP4)
+            await db.generation_jobs.update_one({"id": job_id}, {"$set": {"progress": 10, "message": "Generating video frames with Nano Banana..."}})
+            video_url = await generate_nano_banana_video(scene, job_id)
+            logger.info(f"Nano Banana video complete for scene {scene_id}: {video_url}")
+
+        if not video_url:
+            raise Exception("No video URL produced by any provider")
 
         await db.scenes.update_one({"id": scene_id}, {"$set": {"video_url": video_url}})
         await db.generation_jobs.update_one({"id": job_id}, {"$set": {"status": "completed", "progress": 100}})
-        logger.info(f"Nano Banana video complete for scene {scene_id}: {video_url}")
+
     except Exception as e:
         logger.error(f"Scene video generation failed: {e}")
         await db.generation_jobs.update_one({"id": job_id}, {"$set": {"status": "failed", "error_message": str(e)}})
 
-def scene_video_task(scene_id: str, job_id: str):
-    asyncio.run(run_scene_video_generation(scene_id, job_id))
+def scene_video_task(scene_id: str, job_id: str, provider: str = "nano_banana"):
+    asyncio.run(run_scene_video_generation(scene_id, job_id, provider))
 
 @api_router.post("/stories/{story_id}/batch-generate-videos")
 async def batch_generate_videos_v2(story_id: str, user: dict = Depends(get_current_user)):
@@ -2610,9 +2657,11 @@ async def run_batch_scene_videos(story_id: str, job_id: str):
         scenes_with_images = [s for s in scenes if s.get("image_url") and not s.get("video_url")]
         total = len(scenes_with_images)
         completed = 0
+        preferred_provider = story.get("image_provider") or "nano_banana"
+        logger.info(f"Batch video provider: {preferred_provider} for story {story_id}")
         for scene in scenes_with_images:
             try:
-                await run_scene_video_generation(scene["id"], job_id)
+                await run_scene_video_generation(scene["id"], job_id, preferred_provider)
                 completed += 1
                 await db.generation_jobs.update_one({"id": job_id}, {"$set": {"progress": int((completed/total)*100), "completed_scenes": completed}})
             except Exception as e:
